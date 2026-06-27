@@ -2,8 +2,8 @@ import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { adminCrudApi } from './api/adminCrudApi'
 import { authApi } from './api/authApi'
-import { settingsApi } from './api/settingsApi'
 import { roleApi } from './api/roleApi'
+import { settingsApi } from './api/settingsApi'
 import { systemApi } from './api/systemApi'
 
 const api = {

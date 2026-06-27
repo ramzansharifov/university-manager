@@ -4,15 +4,17 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initializeDatabase } from './database'
 import { registerAdminCrudIpcHandlers } from './ipc/adminCrudIpc'
-import { registerSettingsIpcHandlers } from './ipc/settingsIpc'
 import { registerAuthIpcHandlers } from './ipc/authIpc'
 import { registerRoleIpcHandlers } from './ipc/roleIpc'
+import { registerSettingsIpcHandlers } from './ipc/settingsIpc'
 import { registerSystemIpcHandlers } from './ipc/systemIpc'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1200,
+    height: 800,
+    minWidth: 1000,
+    minHeight: 700,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -40,18 +42,20 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.university.manager')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
   initializeDatabase()
+
   registerAdminCrudIpcHandlers()
   registerSettingsIpcHandlers()
   registerAuthIpcHandlers()
   registerRoleIpcHandlers()
   registerSystemIpcHandlers()
+
   ipcMain.on('ping', () => console.log('pong'))
 
   createWindow()
