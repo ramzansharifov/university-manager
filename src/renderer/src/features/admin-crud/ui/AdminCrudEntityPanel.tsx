@@ -16,7 +16,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    Input
+    Input,
+    ConfirmDialog,
 } from '../../../shared/ui'
 
 type AdminCrudListResult = Awaited<ReturnType<Window['api']['adminCrud']['list']>>
@@ -69,6 +70,7 @@ export function AdminCrudEntityPanel({
     const [dialogOpen, setDialogOpen] = useState(false)
     const [dialogMode, setDialogMode] = useState<DialogMode>('create')
     const [selectedRecord, setSelectedRecord] = useState<AdminCrudRecord | null>(null)
+    const [archiveRecord, setArchiveRecord] = useState<AdminCrudRecord | null>(null)
     const [formData, setFormData] = useState<Record<string, string>>({})
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -193,28 +195,30 @@ export function AdminCrudEntityPanel({
         }
     }
 
-    async function handleArchive(record: AdminCrudRecord) {
-        const recordName = getRecordName(record)
+    function requestArchive(record: AdminCrudRecord) {
+        setArchiveRecord(record)
+    }
 
-        const confirmed = window.confirm(
-            `Архивировать запись "${recordName}"? Она исчезнет из основного списка.`
-        )
-
-        if (!confirmed) {
+    async function confirmArchive() {
+        if (!archiveRecord?.id) {
             return
         }
 
+        setIsSubmitting(true)
         setError(null)
 
         try {
             await window.api.adminCrud.archive({
                 entity,
-                id: Number(record.id)
+                id: Number(archiveRecord.id)
             })
 
+            setArchiveRecord(null)
             await loadItems()
         } catch (archiveError) {
             setError(archiveError instanceof Error ? archiveError.message : 'Не удалось архивировать')
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -311,7 +315,7 @@ export function AdminCrudEntityPanel({
                                                     Изм.
                                                 </Button>
 
-                                                <Button size="sm" variant="ghost" onClick={() => void handleArchive(record)}>
+                                                <Button size="sm" variant="ghost" onClick={() => requestArchive(record)}>
                                                     <FiArchive />
                                                 </Button>
                                             </div>
@@ -421,6 +425,22 @@ export function AdminCrudEntityPanel({
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <ConfirmDialog
+                open={Boolean(archiveRecord)}
+                title="Архивировать запись?"
+                description={`Запись "${archiveRecord ? getRecordName(archiveRecord) : ''}" будет скрыта из основного списка. Данные не будут удалены физически и останутся в базе.`}
+                confirmText="Архивировать"
+                cancelText="Отмена"
+                danger
+                isLoading={isSubmitting}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setArchiveRecord(null)
+                    }
+                }}
+                onConfirm={confirmArchive}
+            />
         </Card>
     )
 }

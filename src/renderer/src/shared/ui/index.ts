@@ -11,6 +11,7 @@ export {
   DialogTitle,
   DialogTrigger
 } from './dialog'
+export { ConfirmDialog } from './confirm-dialog'
 export { Input } from './input'
 export {
   Sidebar,
