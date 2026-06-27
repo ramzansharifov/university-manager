@@ -4,12 +4,14 @@ import { adminCrudApi } from './api/adminCrudApi'
 import { authApi } from './api/authApi'
 import { settingsApi } from './api/settingsApi'
 import { roleApi } from './api/roleApi'
+import { systemApi } from './api/systemApi'
 
 const api = {
   adminCrud: adminCrudApi,
   auth: authApi,
   roles: roleApi,
-  settings: settingsApi
+  settings: settingsApi,
+  system: systemApi
 }
 
 if (process.contextIsolated) {

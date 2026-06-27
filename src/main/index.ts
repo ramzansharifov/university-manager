@@ -7,6 +7,7 @@ import { registerAdminCrudIpcHandlers } from './ipc/adminCrudIpc'
 import { registerSettingsIpcHandlers } from './ipc/settingsIpc'
 import { registerAuthIpcHandlers } from './ipc/authIpc'
 import { registerRoleIpcHandlers } from './ipc/roleIpc'
+import { registerSystemIpcHandlers } from './ipc/systemIpc'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -50,7 +51,7 @@ app.whenReady().then(() => {
   registerSettingsIpcHandlers()
   registerAuthIpcHandlers()
   registerRoleIpcHandlers()
-
+  registerSystemIpcHandlers()
   ipcMain.on('ping', () => console.log('pong'))
 
   createWindow()
