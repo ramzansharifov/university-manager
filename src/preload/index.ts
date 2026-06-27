@@ -1,9 +1,11 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { adminCrudApi } from './api/adminCrudApi'
+import { settingsApi } from './api/settingsApi'
 
 const api = {
-  adminCrud: adminCrudApi
+  adminCrud: adminCrudApi,
+  settings: settingsApi
 }
 
 if (process.contextIsolated) {

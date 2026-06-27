@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initializeDatabase } from './database'
 import { registerAdminCrudIpcHandlers } from './ipc/adminCrudIpc'
+import { registerSettingsIpcHandlers } from './ipc/settingsIpc'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -44,6 +45,7 @@ app.whenReady().then(() => {
 
   initializeDatabase()
   registerAdminCrudIpcHandlers()
+  registerSettingsIpcHandlers()
 
   ipcMain.on('ping', () => console.log('pong'))
 
