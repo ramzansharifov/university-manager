@@ -52,11 +52,13 @@ interface AdminCrudEntityPanelProps {
     filters?: AdminCrudFilterRecord
     fixedData?: AdminCrudRecord
     emptyMessage?: string
+    canCreate?: boolean
+    canEdit?: boolean
+    canArchive?: boolean
     onRowClick?: (record: AdminCrudRecord) => void
     extraRowActions?: (record: AdminCrudRecord) => ReactNode
     onAfterMutation?: () => void | Promise<void>
 }
-
 type DialogMode = 'create' | 'edit'
 
 const pageSize = 20
@@ -71,6 +73,9 @@ export function AdminCrudEntityPanel({
     filters,
     fixedData,
     emptyMessage = 'Записей пока нет.',
+    canCreate = true,
+    canEdit = true,
+    canArchive = true,
     onRowClick,
     extraRowActions,
     onAfterMutation
@@ -259,10 +264,12 @@ export function AdminCrudEntityPanel({
                         <CardDescription>{description}</CardDescription>
                     </div>
 
-                    <Button onClick={openCreateDialog}>
-                        <FiPlus />
-                        {createButtonLabel}
-                    </Button>
+                    {canCreate ? (
+                        <Button onClick={openCreateDialog}>
+                            <FiPlus />
+                            {createButtonLabel}
+                        </Button>
+                    ) : null}
                 </div>
             </CardHeader>
 
@@ -344,14 +351,18 @@ export function AdminCrudEntityPanel({
                                             <div className="flex justify-end gap-2">
                                                 {extraRowActions?.(record)}
 
-                                                <Button size="sm" variant="secondary" onClick={() => openEditDialog(record)}>
-                                                    <FiEdit2 />
-                                                    Изм.
-                                                </Button>
+                                                {canEdit ? (
+                                                    <Button size="sm" variant="secondary" onClick={() => openEditDialog(record)}>
+                                                        <FiEdit2 />
+                                                        Изм.
+                                                    </Button>
+                                                ) : null}
 
-                                                <Button size="sm" variant="ghost" onClick={() => requestArchive(record)}>
-                                                    <FiArchive />
-                                                </Button>
+                                                {canArchive ? (
+                                                    <Button size="sm" variant="ghost" onClick={() => requestArchive(record)}>
+                                                        <FiArchive />
+                                                    </Button>
+                                                ) : null}
                                             </div>
                                         </td>
                                     </tr>
