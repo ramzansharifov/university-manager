@@ -25,6 +25,8 @@ type AdminCrudListResult = Awaited<ReturnType<Window['api']['adminCrud']['list']
 
 export type AdminCrudRecord = AdminCrudListResult['items'][number]
 export type AdminEntityKey = Parameters<Window['api']['adminCrud']['list']>[0]['entity']
+type AdminCrudFilterValue = string | number | boolean | null
+type AdminCrudFilterRecord = Record<string, AdminCrudFilterValue>
 
 export interface AdminCrudFieldConfig {
     key: string
@@ -47,8 +49,8 @@ interface AdminCrudEntityPanelProps {
     createButtonLabel: string
     fields: AdminCrudFieldConfig[]
     columns: AdminCrudColumnConfig[]
-    filters?: Record<string, unknown>
-    fixedData?: Record<string, unknown>
+    filters?: AdminCrudFilterRecord
+    fixedData?: AdminCrudRecord
     emptyMessage?: string
     onRowClick?: (record: AdminCrudRecord) => void
     extraRowActions?: (record: AdminCrudRecord) => ReactNode
@@ -90,7 +92,6 @@ export function AdminCrudEntityPanel({
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
     const filtersKey = JSON.stringify(filters ?? {})
-    const fixedDataKey = JSON.stringify(fixedData ?? {})
 
     const emptyFormData = useMemo(() => {
         return fields.reduce<Record<string, string>>((result, field) => {
