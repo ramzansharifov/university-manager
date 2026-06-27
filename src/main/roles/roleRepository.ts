@@ -103,6 +103,27 @@ export class RoleRepository {
     }))
   }
 
+  getRolePermissions(roleId: number): Permission[] {
+    const rows = this.database
+      .prepare(
+        `
+        SELECT
+          permissions.id,
+          permissions.permission_key,
+          permissions.module,
+          permissions.action,
+          permissions.name
+        FROM role_permissions
+        JOIN permissions ON permissions.id = role_permissions.permission_id
+        WHERE role_permissions.role_id = ?
+        ORDER BY permissions.module ASC, permissions.action ASC
+      `
+      )
+      .all(roleId) as PermissionRow[]
+
+    return rows.map(mapPermissionRow)
+  }
+
   createRole(params: CreateRoleParams & { roleKey: string }): RoleDetails {
     const result = this.database
       .prepare(
