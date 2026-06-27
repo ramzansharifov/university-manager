@@ -1,51 +1,18 @@
 import { FiLogOut } from 'react-icons/fi'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../app/providers/AuthProvider'
+import { getNavigationItemByPath } from '../../shared/navigation/appNavigation'
 import { Badge, Button } from '../../shared/ui'
 
-const pageTitles: Record<string, { title: string; description: string }> = {
-    '/': {
-        title: 'Главная',
-        description: 'Админ-центр и состояние системы'
-    },
-    '/university': {
-        title: 'Университет',
-        description: 'Факультеты, кафедры, специальности, группы и подразделения'
-    },
-    '/people': {
-        title: 'Люди',
-        description: 'Студенты, преподаватели и сотрудники'
-    },
-    '/academic-process': {
-        title: 'Учебный процесс',
-        description: 'Предметы, учебные планы и дисциплины'
-    },
-    '/schedule': {
-        title: 'Расписание',
-        description: 'Пары, аудитории и расписание занятий'
-    },
-    '/learning-journal': {
-        title: 'Журнал обучения',
-        description: 'Посещаемость, оценки и проведённые занятия'
-    },
-    '/administration': {
-        title: 'Администрирование',
-        description: 'Пользователи, роли и права доступа'
-    },
-    '/audit-log': {
-        title: 'Журнал действий',
-        description: 'История важных изменений'
-    },
-    '/settings': {
-        title: 'Настройки',
-        description: 'Тема, акцентный цвет и язык интерфейса'
-    }
+const fallbackPage = {
+    title: 'Главная',
+    description: 'Админ-центр и состояние системы'
 }
 
 export function AppHeader() {
     const location = useLocation()
     const auth = useAuth()
-    const page = pageTitles[location.pathname] ?? pageTitles['/']
+    const page = getNavigationItemByPath(location.pathname) ?? fallbackPage
 
     return (
         <div className="flex h-full items-center justify-between gap-4">

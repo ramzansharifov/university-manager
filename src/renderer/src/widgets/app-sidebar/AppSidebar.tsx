@@ -1,16 +1,10 @@
-import {
-    FiActivity,
-    FiBookOpen,
-    FiCalendar,
-    FiClipboard,
-    FiDatabase,
-    FiHome,
-    FiSettings,
-    FiShield,
-    FiUsers
-} from 'react-icons/fi'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/providers/AuthProvider'
+import {
+    canAccessNavigationItem,
+    mainNavigationItems,
+    systemNavigationItems
+} from '../../shared/navigation/appNavigation'
 import {
     Sidebar,
     SidebarContent,
@@ -21,61 +15,18 @@ import {
     SidebarSectionTitle
 } from '../../shared/ui'
 
-const navigationItems = [
-    {
-        title: 'Главная',
-        path: '/',
-        icon: <FiHome />
-    },
-    {
-        title: 'Университет',
-        path: '/university',
-        icon: <FiDatabase />
-    },
-    {
-        title: 'Люди',
-        path: '/people',
-        icon: <FiUsers />
-    },
-    {
-        title: 'Учебный процесс',
-        path: '/academic-process',
-        icon: <FiBookOpen />
-    },
-    {
-        title: 'Расписание',
-        path: '/schedule',
-        icon: <FiCalendar />
-    },
-    {
-        title: 'Журнал обучения',
-        path: '/learning-journal',
-        icon: <FiClipboard />
-    }
-]
-
-const systemItems = [
-    {
-        title: 'Администрирование',
-        path: '/administration',
-        icon: <FiShield />
-    },
-    {
-        title: 'Журнал действий',
-        path: '/audit-log',
-        icon: <FiActivity />
-    },
-    {
-        title: 'Настройки',
-        path: '/settings',
-        icon: <FiSettings />
-    }
-]
-
 export function AppSidebar() {
     const location = useLocation()
     const navigate = useNavigate()
     const auth = useAuth()
+
+    const visibleMainItems = mainNavigationItems.filter((item) =>
+        canAccessNavigationItem(auth.user, item)
+    )
+
+    const visibleSystemItems = systemNavigationItems.filter((item) =>
+        canAccessNavigationItem(auth.user, item)
+    )
 
     return (
         <Sidebar>
@@ -91,7 +42,7 @@ export function AppSidebar() {
                     <SidebarSectionTitle>Основное</SidebarSectionTitle>
 
                     <div className="grid gap-1">
-                        {navigationItems.map((item) => (
+                        {visibleMainItems.map((item) => (
                             <SidebarItemButton
                                 key={item.path}
                                 icon={item.icon}
@@ -108,7 +59,7 @@ export function AppSidebar() {
                     <SidebarSectionTitle>Система</SidebarSectionTitle>
 
                     <div className="grid gap-1">
-                        {systemItems.map((item) => (
+                        {visibleSystemItems.map((item) => (
                             <SidebarItemButton
                                 key={item.path}
                                 icon={item.icon}
