@@ -1,5 +1,4 @@
 import type {
-  DataQualityCheckResult,
   DataQualityCheckStatus,
   DataQualityReport,
   DataQualitySeverity
