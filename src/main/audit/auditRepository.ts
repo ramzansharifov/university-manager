@@ -34,8 +34,8 @@ export class AuditRepository {
         module: params.module,
         entityName: params.entityName,
         entityId: params.entityId ?? null,
-        beforeJson: params.before ? JSON.stringify(params.before) : null,
-        afterJson: params.after ? JSON.stringify(params.after) : null
+        beforeJson: params.before == null ? null : JSON.stringify(params.before),
+        afterJson: params.after == null ? null : JSON.stringify(params.after)
       })
   }
 }

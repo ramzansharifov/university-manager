@@ -1,5 +1,3 @@
-import type { AdminCrudRecord } from '../../shared/types/adminCrud'
-
 export type AuditAction =
   | 'create'
   | 'update'
@@ -17,6 +15,6 @@ export interface CreateAuditLogParams {
   module: string
   entityName: string
   entityId?: number | null
-  before?: AdminCrudRecord | null
-  after?: AdminCrudRecord | null
+  before?: unknown
+  after?: unknown
 }
