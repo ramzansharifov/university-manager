@@ -31,3 +31,6 @@ export {
   SidebarSectionTitle
 } from './sidebar'
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
+export { DateInput } from './date-input'
+export { PhoneInput } from './phone-input'
+export { Textarea } from './textarea'

@@ -14,10 +14,21 @@ export interface AdminCrudEntityConfig {
 const commonSystemColumns = ['id', 'created_at', 'updated_at', 'is_archived']
 
 export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = {
-  faculties: entity('faculties', ['name', 'short_name', 'description'], ['name', 'short_name']),
+  faculties: entity(
+    'faculties',
+    ['name', 'short_name', 'description', 'dean_employee_id', 'deputy_dean_employee_id'],
+    ['name', 'short_name']
+  ),
   departments: entity(
     'departments',
-    ['faculty_id', 'name', 'short_name', 'description'],
+    [
+      'faculty_id',
+      'head_teacher_id',
+      'deputy_head_teacher_id',
+      'name',
+      'short_name',
+      'description'
+    ],
     ['name', 'short_name']
   ),
   specialties: entity(
@@ -77,8 +88,12 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'last_name',
       'first_name',
       'middle_name',
+      'birth_date',
       'email',
       'phone',
+      'address',
+      'hire_date',
+      'dismissal_date',
       'note'
     ],
     ['last_name', 'first_name', 'middle_name', 'email', 'phone']
@@ -92,8 +107,12 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'last_name',
       'first_name',
       'middle_name',
+      'birth_date',
       'email',
       'phone',
+      'address',
+      'hire_date',
+      'dismissal_date',
       'note'
     ],
     ['last_name', 'first_name', 'middle_name', 'email', 'phone']
@@ -109,8 +128,13 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'birth_date',
       'email',
       'phone',
+      'address',
       'admission_date',
       'student_card_number',
+      'social_status',
+      'public_activity',
+      'transfer_info',
+      'status_changed_at',
       'note'
     ],
     ['last_name', 'first_name', 'middle_name', 'email', 'phone', 'student_card_number']

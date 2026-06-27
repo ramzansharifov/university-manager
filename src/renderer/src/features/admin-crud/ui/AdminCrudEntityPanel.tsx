@@ -1,5 +1,8 @@
 import type { FormEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Controller, useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { FiArchive, FiEdit2, FiPlus, FiRefreshCcw, FiSearch } from 'react-icons/fi'
 import {
     Badge,
@@ -17,7 +20,15 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    Input
+    Input,
+    DateInput,
+    PhoneInput,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+    Textarea,
 } from '../../../shared/ui'
 import { cn } from '../../../shared/lib/cn'
 
@@ -28,17 +39,26 @@ export type AdminEntityKey = Parameters<Window['api']['adminCrud']['list']>[0]['
 type AdminCrudFilterValue = string | number | boolean | null
 type AdminCrudFilterRecord = Record<string, AdminCrudFilterValue>
 
+export interface AdminCrudSelectOption {
+    value: string
+    label: string
+}
+
 export interface AdminCrudFieldConfig {
     key: string
     label: string
     placeholder?: string
     required?: boolean
-    type?: 'text' | 'number'
+    type?: 'text' | 'number' | 'email' | 'phone' | 'date' | 'textarea' | 'select'
+    valueType?: 'string' | 'number'
+    options?: AdminCrudSelectOption[]
+    disabled?: boolean
 }
 
 export interface AdminCrudColumnConfig {
     key: string
     label: string
+    type?: 'text' | 'date'
     render?: (record: AdminCrudRecord) => ReactNode
 }
 
@@ -93,7 +113,12 @@ export function AdminCrudEntityPanel({
     const [dialogMode, setDialogMode] = useState<DialogMode>('create')
     const [selectedRecord, setSelectedRecord] = useState<AdminCrudRecord | null>(null)
     const [archiveRecord, setArchiveRecord] = useState<AdminCrudRecord | null>(null)
-    const [formData, setFormData] = useState<Record<string, string>>({})
+    const formSchema = useMemo(() => createFormSchema(fields), [fields])
+
+    const form = useForm<Record<string, string>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: emptyFormData
+    })
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
     const filtersKey = JSON.stringify(filters ?? {})
@@ -104,6 +129,10 @@ export function AdminCrudEntityPanel({
             return result
         }, {})
     }, [fields])
+
+    useEffect(() => {
+        form.reset(emptyFormData)
+    }, [emptyFormData, form])
 
     const loadItems = useCallback(async () => {
         setIsLoading(true)
@@ -140,7 +169,7 @@ export function AdminCrudEntityPanel({
     function openCreateDialog() {
         setDialogMode('create')
         setSelectedRecord(null)
-        setFormData(emptyFormData)
+        form.reset(emptyFormData)
         setDialogOpen(true)
     }
 
@@ -154,7 +183,7 @@ export function AdminCrudEntityPanel({
             return result
         }, {})
 
-        setFormData(nextFormData)
+        form.reset(nextFormData)
         setDialogOpen(true)
     }
 
@@ -188,15 +217,13 @@ export function AdminCrudEntityPanel({
         }))
     }
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault()
-
+    async function handleFormSubmit(formValues: Record<string, string>) {
         setIsSubmitting(true)
         setError(null)
 
         try {
             const payload = {
-                ...buildPayload(fields, formData),
+                ...buildPayload(fields, formValues),
                 ...(fixedData ?? {})
             }
 
@@ -343,7 +370,7 @@ export function AdminCrudEntityPanel({
                                     >
                                         {columns.map((column) => (
                                             <td key={column.key} className="px-4 py-3 text-[var(--color-text)]">
-                                                {column.render ? column.render(record) : formatValue(record[column.key])}
+                                                {column.render ? column.render(record) : formatValue(record[column.key], column)}
                                             </td>
                                         ))}
 
@@ -438,23 +465,38 @@ export function AdminCrudEntityPanel({
                         </DialogDescription>
                     </DialogHeader>
 
-                    <form className="mt-5 grid gap-4" onSubmit={handleSubmit}>
-                        {fields.map((field) => (
-                            <label key={field.key} className="grid gap-2">
-                                <span className="text-sm font-medium text-[var(--color-text)]">
-                                    {field.label}
-                                    {field.required ? <span className="text-[var(--color-danger)]"> *</span> : null}
-                                </span>
+                    <form className="mt-5 grid gap-4" onSubmit={(event) => void form.handleSubmit(handleFormSubmit)(event)}>
+                        {fields.map((field) => {
+                            const fieldError = form.formState.errors[field.key]?.message
 
-                                <Input
-                                    type={field.type ?? 'text'}
-                                    value={formData[field.key] ?? ''}
-                                    placeholder={field.placeholder}
-                                    required={field.required}
-                                    onChange={(event) => updateFieldValue(field.key, event.target.value)}
-                                />
-                            </label>
-                        ))}
+                            return (
+                                <label key={field.key} className="grid gap-2">
+                                    <span className="text-sm font-medium text-[var(--color-text)]">
+                                        {field.label}
+                                        {field.required ? <span className="text-[var(--color-danger)]"> *</span> : null}
+                                    </span>
+
+                                    <Controller
+                                        name={field.key}
+                                        control={form.control}
+                                        render={({ field: controllerField }) => (
+                                            <CrudFieldInput
+                                                field={field}
+                                                value={controllerField.value ?? ''}
+                                                onChange={controllerField.onChange}
+                                                onBlur={controllerField.onBlur}
+                                            />
+                                        )}
+                                    />
+
+                                    {fieldError ? (
+                                        <span className="text-xs font-medium text-[var(--color-danger)]">
+                                            {String(fieldError)}
+                                        </span>
+                                    ) : null}
+                                </label>
+                            )
+                        })}
 
                         <DialogFooter>
                             <DialogClose asChild>
@@ -490,6 +532,120 @@ export function AdminCrudEntityPanel({
     )
 }
 
+function CrudFieldInput({
+    field,
+    value,
+    onChange,
+    onBlur
+}: {
+    field: AdminCrudFieldConfig
+    value: string
+    onChange: (value: string) => void
+    onBlur: () => void
+}) {
+    if (field.type === 'textarea') {
+        return (
+            <Textarea
+                value={value}
+                placeholder={field.placeholder}
+                disabled={field.disabled}
+                onBlur={onBlur}
+                onChange={(event) => onChange(event.target.value)}
+            />
+        )
+    }
+
+    if (field.type === 'phone') {
+        return (
+            <PhoneInput
+                value={value}
+                placeholder={field.placeholder}
+                disabled={field.disabled}
+                onBlur={onBlur}
+                onChange={onChange}
+            />
+        )
+    }
+
+    if (field.type === 'date') {
+        return (
+            <DateInput
+                value={value}
+                placeholder={field.placeholder}
+                disabled={field.disabled}
+                onBlur={onBlur}
+                onChange={onChange}
+            />
+        )
+    }
+
+    if (field.type === 'select') {
+        return (
+            <Select
+                value={value || undefined}
+                disabled={field.disabled || field.options?.length === 0}
+                onValueChange={onChange}
+            >
+                <SelectTrigger>
+                    <SelectValue placeholder={field.placeholder ?? 'Выбери значение'} />
+                </SelectTrigger>
+
+                <SelectContent>
+                    {(field.options ?? []).map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        )
+    }
+
+    return (
+        <Input
+            type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'}
+            value={value}
+            placeholder={field.placeholder}
+            disabled={field.disabled}
+            onBlur={onBlur}
+            onChange={(event) => onChange(event.target.value)}
+        />
+    )
+}
+
+function createFormSchema(fields: AdminCrudFieldConfig[]) {
+    const shape: Record<string, z.ZodType<string>> = {}
+
+    for (const field of fields) {
+        let schema: z.ZodType<string> = z.string()
+
+        if (field.required) {
+            schema = schema.refine((value) => value.trim().length > 0, {
+                message: 'Поле обязательно'
+            })
+        }
+
+        if (field.type === 'email') {
+            schema = schema.refine(
+                (value) => !value.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+                {
+                    message: 'Некорректный email'
+                }
+            )
+        }
+
+        if (field.type === 'date') {
+            schema = schema.refine((value) => !value.trim() || /^\d{4}-\d{2}-\d{2}$/.test(value), {
+                message: 'Выбери дату'
+            })
+        }
+
+        shape[field.key] = schema
+    }
+
+    return z.object(shape)
+}
+
 function buildPayload(
     fields: AdminCrudFieldConfig[],
     formData: Record<string, string>
@@ -498,7 +654,7 @@ function buildPayload(
         const rawValue = formData[field.key] ?? ''
         const trimmedValue = rawValue.trim()
 
-        if (field.type === 'number') {
+        if (field.type === 'number' || field.valueType === 'number') {
             result[field.key] = trimmedValue ? Number(trimmedValue) : null
             return result
         }
@@ -509,12 +665,30 @@ function buildPayload(
     }, {})
 }
 
-function formatValue(value: unknown): string {
+function formatValue(value: unknown, column?: AdminCrudColumnConfig): string {
     if (value === null || value === undefined || value === '') {
         return '—'
     }
 
+    if (column?.type === 'date') {
+        return formatIsoDateToDisplay(String(value))
+    }
+
     return String(value)
+}
+
+function formatIsoDateToDisplay(value: string): string {
+    if (!value) {
+        return '—'
+    }
+
+    const [year, month, day] = value.split('-')
+
+    if (!year || !month || !day) {
+        return value
+    }
+
+    return `${day}.${month}.${year}`
 }
 
 function getRecordName(record: AdminCrudRecord): string {
