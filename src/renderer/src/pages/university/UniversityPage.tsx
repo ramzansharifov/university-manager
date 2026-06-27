@@ -1,6 +1,10 @@
+import { useMemo, useState } from 'react'
+import { FiArrowRight, FiChevronLeft } from 'react-icons/fi'
+import type { AdminCrudColumnConfig, AdminCrudFieldConfig, AdminCrudRecord } from '../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../features/admin-crud'
 import {
     Badge,
+    Button,
     Card,
     CardContent,
     CardDescription,
@@ -12,7 +16,7 @@ import {
     TabsTrigger
 } from '../../shared/ui'
 
-const simpleOrganizationFields = [
+const organizationFields: AdminCrudFieldConfig[] = [
     {
         key: 'name',
         label: 'Название',
@@ -31,7 +35,7 @@ const simpleOrganizationFields = [
     }
 ]
 
-const simpleOrganizationColumns = [
+const organizationColumns: AdminCrudColumnConfig[] = [
     {
         key: 'id',
         label: 'ID'
@@ -47,10 +51,130 @@ const simpleOrganizationColumns = [
     {
         key: 'description',
         label: 'Описание'
+    }
+]
+
+const departmentFields: AdminCrudFieldConfig[] = [
+    {
+        key: 'name',
+        label: 'Название кафедры',
+        placeholder: 'Например: Кафедра программной инженерии',
+        required: true
     },
     {
-        key: 'created_at',
-        label: 'Создано'
+        key: 'short_name',
+        label: 'Краткое название',
+        placeholder: 'Например: КПИ'
+    },
+    {
+        key: 'description',
+        label: 'Описание',
+        placeholder: 'Дополнительная информация'
+    }
+]
+
+const departmentColumns: AdminCrudColumnConfig[] = [
+    {
+        key: 'id',
+        label: 'ID'
+    },
+    {
+        key: 'name',
+        label: 'Кафедра'
+    },
+    {
+        key: 'short_name',
+        label: 'Краткое название'
+    },
+    {
+        key: 'description',
+        label: 'Описание'
+    }
+]
+
+const specialtyFields: AdminCrudFieldConfig[] = [
+    {
+        key: 'code',
+        label: 'Код специальности',
+        placeholder: 'Например: 09.03.04'
+    },
+    {
+        key: 'name',
+        label: 'Название специальности',
+        placeholder: 'Например: Программная инженерия',
+        required: true
+    },
+    {
+        key: 'degree',
+        label: 'Степень / уровень',
+        placeholder: 'Например: Бакалавриат'
+    },
+    {
+        key: 'description',
+        label: 'Описание',
+        placeholder: 'Дополнительная информация'
+    }
+]
+
+const specialtyColumns: AdminCrudColumnConfig[] = [
+    {
+        key: 'id',
+        label: 'ID'
+    },
+    {
+        key: 'code',
+        label: 'Код'
+    },
+    {
+        key: 'name',
+        label: 'Специальность'
+    },
+    {
+        key: 'degree',
+        label: 'Уровень'
+    },
+    {
+        key: 'description',
+        label: 'Описание'
+    }
+]
+
+const groupFields: AdminCrudFieldConfig[] = [
+    {
+        key: 'name',
+        label: 'Название группы',
+        placeholder: 'Например: ПИ-21-1',
+        required: true
+    },
+    {
+        key: 'course',
+        label: 'Курс',
+        placeholder: 'Например: 2',
+        type: 'number'
+    },
+    {
+        key: 'description',
+        label: 'Описание',
+        placeholder: 'Дополнительная информация'
+    }
+]
+
+const groupColumns: AdminCrudColumnConfig[] = [
+    {
+        key: 'id',
+        label: 'ID'
+    },
+    {
+        key: 'name',
+        label: 'Группа'
+    },
+    {
+        key: 'course',
+        label: 'Курс'
+    },
+    {
+        key: 'description',
+        label: 'Описание'
     }
 ]
 
@@ -64,24 +188,14 @@ export function UniversityPage() {
                 </p>
             </div>
 
-            <Tabs defaultValue="faculties">
+            <Tabs defaultValue="structure">
                 <TabsList>
-                    <TabsTrigger value="faculties">Факультеты</TabsTrigger>
+                    <TabsTrigger value="structure">Учебная структура</TabsTrigger>
                     <TabsTrigger value="divisions">Подразделения</TabsTrigger>
-                    <TabsTrigger value="departments">Кафедры</TabsTrigger>
-                    <TabsTrigger value="specialties">Специальности</TabsTrigger>
-                    <TabsTrigger value="groups">Группы</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="faculties">
-                    <AdminCrudEntityPanel
-                        entity="faculties"
-                        title="Факультеты"
-                        description="Создание, редактирование, поиск и архивирование факультетов."
-                        createButtonLabel="Добавить факультет"
-                        fields={simpleOrganizationFields}
-                        columns={simpleOrganizationColumns}
-                    />
+                <TabsContent value="structure">
+                    <UniversityStructureDrilldown />
                 </TabsContent>
 
                 <TabsContent value="divisions">
@@ -90,32 +204,8 @@ export function UniversityPage() {
                         title="Подразделения"
                         description="Административные подразделения университета: отделы, службы, управления."
                         createButtonLabel="Добавить подразделение"
-                        fields={simpleOrganizationFields}
-                        columns={simpleOrganizationColumns}
-                    />
-                </TabsContent>
-
-                <TabsContent value="departments">
-                    <DraftTab
-                        title="Кафедры"
-                        description="Кафедры будут подключены после базовых справочников факультетов."
-                        items={['faculty_id', 'name', 'short_name', 'description']}
-                    />
-                </TabsContent>
-
-                <TabsContent value="specialties">
-                    <DraftTab
-                        title="Специальности"
-                        description="Специальности требуют выбора факультета и кафедры."
-                        items={['faculty_id', 'department_id', 'code', 'name', 'degree']}
-                    />
-                </TabsContent>
-
-                <TabsContent value="groups">
-                    <DraftTab
-                        title="Группы"
-                        description="Группы требуют выбора специальности, учебного года, формы обучения и куратора."
-                        items={['specialty_id', 'academic_year_id', 'education_form_id', 'curator_teacher_id']}
+                        fields={organizationFields}
+                        columns={organizationColumns}
                     />
                 </TabsContent>
             </Tabs>
@@ -123,40 +213,301 @@ export function UniversityPage() {
     )
 }
 
-function DraftTab({
+function UniversityStructureDrilldown() {
+    const [selectedFaculty, setSelectedFaculty] = useState<AdminCrudRecord | null>(null)
+    const [selectedDepartment, setSelectedDepartment] = useState<AdminCrudRecord | null>(null)
+    const [selectedSpecialty, setSelectedSpecialty] = useState<AdminCrudRecord | null>(null)
+
+    const departmentFilters = useMemo(
+        () => (selectedFaculty ? { faculty_id: Number(selectedFaculty.id) } : undefined),
+        [selectedFaculty]
+    )
+
+    const departmentFixedData = useMemo(
+        () => (selectedFaculty ? { faculty_id: Number(selectedFaculty.id) } : undefined),
+        [selectedFaculty]
+    )
+
+    const specialtyFilters = useMemo(
+        () =>
+            selectedFaculty && selectedDepartment
+                ? {
+                    faculty_id: Number(selectedFaculty.id),
+                    department_id: Number(selectedDepartment.id)
+                }
+                : undefined,
+        [selectedDepartment, selectedFaculty]
+    )
+
+    const specialtyFixedData = useMemo(
+        () =>
+            selectedFaculty && selectedDepartment
+                ? {
+                    faculty_id: Number(selectedFaculty.id),
+                    department_id: Number(selectedDepartment.id)
+                }
+                : undefined,
+        [selectedDepartment, selectedFaculty]
+    )
+
+    const groupFilters = useMemo(
+        () => (selectedSpecialty ? { specialty_id: Number(selectedSpecialty.id) } : undefined),
+        [selectedSpecialty]
+    )
+
+    const groupFixedData = useMemo(
+        () => (selectedSpecialty ? { specialty_id: Number(selectedSpecialty.id) } : undefined),
+        [selectedSpecialty]
+    )
+
+    function openFaculty(record: AdminCrudRecord) {
+        setSelectedFaculty(record)
+        setSelectedDepartment(null)
+        setSelectedSpecialty(null)
+    }
+
+    function openDepartment(record: AdminCrudRecord) {
+        setSelectedDepartment(record)
+        setSelectedSpecialty(null)
+    }
+
+    function openSpecialty(record: AdminCrudRecord) {
+        setSelectedSpecialty(record)
+    }
+
+    function backToFaculties() {
+        setSelectedFaculty(null)
+        setSelectedDepartment(null)
+        setSelectedSpecialty(null)
+    }
+
+    function backToDepartments() {
+        setSelectedDepartment(null)
+        setSelectedSpecialty(null)
+    }
+
+    function backToSpecialties() {
+        setSelectedSpecialty(null)
+    }
+
+    return (
+        <div className="grid gap-4">
+            <StructureBreadcrumb
+                faculty={selectedFaculty}
+                department={selectedDepartment}
+                specialty={selectedSpecialty}
+                onFacultiesClick={backToFaculties}
+                onDepartmentsClick={selectedFaculty ? backToDepartments : undefined}
+                onSpecialtiesClick={selectedDepartment ? backToSpecialties : undefined}
+            />
+
+            {!selectedFaculty ? (
+                <AdminCrudEntityPanel
+                    entity="faculties"
+                    title="Факультеты"
+                    description="Выбери факультет, чтобы перейти к его кафедрам. Можно кликнуть по строке или нажать «Открыть»."
+                    createButtonLabel="Добавить факультет"
+                    fields={organizationFields}
+                    columns={organizationColumns}
+                    onRowClick={openFaculty}
+                    extraRowActions={(record) => (
+                        <Button size="sm" variant="primary" onClick={() => openFaculty(record)}>
+                            Открыть
+                            <FiArrowRight />
+                        </Button>
+                    )}
+                />
+            ) : null}
+
+            {selectedFaculty && !selectedDepartment ? (
+                <div className="grid gap-4">
+                    <SelectedContextCard
+                        title="Выбран факультет"
+                        record={selectedFaculty}
+                        onBack={backToFaculties}
+                    />
+
+                    <AdminCrudEntityPanel
+                        entity="departments"
+                        title="Кафедры"
+                        description={`Кафедры факультета: ${getRecordName(selectedFaculty)}.`}
+                        createButtonLabel="Добавить кафедру"
+                        fields={departmentFields}
+                        columns={departmentColumns}
+                        filters={departmentFilters}
+                        fixedData={departmentFixedData}
+                        emptyMessage="У этого факультета пока нет кафедр."
+                        onRowClick={openDepartment}
+                        extraRowActions={(record) => (
+                            <Button size="sm" variant="primary" onClick={() => openDepartment(record)}>
+                                Открыть
+                                <FiArrowRight />
+                            </Button>
+                        )}
+                    />
+                </div>
+            ) : null}
+
+            {selectedFaculty && selectedDepartment && !selectedSpecialty ? (
+                <div className="grid gap-4">
+                    <SelectedContextCard
+                        title="Выбрана кафедра"
+                        record={selectedDepartment}
+                        parentLabel={getRecordName(selectedFaculty)}
+                        onBack={backToDepartments}
+                    />
+
+                    <AdminCrudEntityPanel
+                        entity="specialties"
+                        title="Специальности"
+                        description={`Специальности кафедры: ${getRecordName(selectedDepartment)}.`}
+                        createButtonLabel="Добавить специальность"
+                        fields={specialtyFields}
+                        columns={specialtyColumns}
+                        filters={specialtyFilters}
+                        fixedData={specialtyFixedData}
+                        emptyMessage="У этой кафедры пока нет специальностей."
+                        onRowClick={openSpecialty}
+                        extraRowActions={(record) => (
+                            <Button size="sm" variant="primary" onClick={() => openSpecialty(record)}>
+                                Открыть
+                                <FiArrowRight />
+                            </Button>
+                        )}
+                    />
+                </div>
+            ) : null}
+
+            {selectedFaculty && selectedDepartment && selectedSpecialty ? (
+                <div className="grid gap-4">
+                    <SelectedContextCard
+                        title="Выбрана специальность"
+                        record={selectedSpecialty}
+                        parentLabel={`${getRecordName(selectedFaculty)} / ${getRecordName(selectedDepartment)}`}
+                        onBack={backToSpecialties}
+                    />
+
+                    <AdminCrudEntityPanel
+                        entity="student_groups"
+                        title="Группы"
+                        description={`Учебные группы специальности: ${getRecordName(selectedSpecialty)}.`}
+                        createButtonLabel="Добавить группу"
+                        fields={groupFields}
+                        columns={groupColumns}
+                        filters={groupFilters}
+                        fixedData={groupFixedData}
+                        emptyMessage="У этой специальности пока нет учебных групп."
+                    />
+                </div>
+            ) : null}
+        </div>
+    )
+}
+
+function StructureBreadcrumb({
+    faculty,
+    department,
+    specialty,
+    onFacultiesClick,
+    onDepartmentsClick,
+    onSpecialtiesClick
+}: {
+    faculty: AdminCrudRecord | null
+    department: AdminCrudRecord | null
+    specialty: AdminCrudRecord | null
+    onFacultiesClick: () => void
+    onDepartmentsClick?: () => void
+    onSpecialtiesClick?: () => void
+}) {
+    return (
+        <Card>
+            <CardContent className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant={faculty ? 'secondary' : 'primary'} onClick={onFacultiesClick}>
+                    Факультеты
+                </Button>
+
+                {faculty ? (
+                    <>
+                        <BreadcrumbSeparator />
+                        <Button
+                            size="sm"
+                            variant={department ? 'secondary' : 'primary'}
+                            onClick={onDepartmentsClick}
+                        >
+                            {getRecordName(faculty)}
+                        </Button>
+                    </>
+                ) : null}
+
+                {department ? (
+                    <>
+                        <BreadcrumbSeparator />
+                        <Button
+                            size="sm"
+                            variant={specialty ? 'secondary' : 'primary'}
+                            onClick={onSpecialtiesClick}
+                        >
+                            {getRecordName(department)}
+                        </Button>
+                    </>
+                ) : null}
+
+                {specialty ? (
+                    <>
+                        <BreadcrumbSeparator />
+                        <Badge>{getRecordName(specialty)}</Badge>
+                    </>
+                ) : null}
+            </CardContent>
+        </Card>
+    )
+}
+
+function SelectedContextCard({
     title,
-    description,
-    items
+    record,
+    parentLabel,
+    onBack
 }: {
     title: string
-    description: string
-    items: string[]
+    record: AdminCrudRecord
+    parentLabel?: string
+    onBack: () => void
 }) {
     return (
         <Card>
             <CardHeader>
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                         <CardTitle>{title}</CardTitle>
-                        <CardDescription>{description}</CardDescription>
+                        <CardDescription>
+                            {parentLabel ? `${parentLabel} → ` : ''}
+                            {getRecordName(record)}
+                        </CardDescription>
                     </div>
 
-                    <Badge variant="warning">следующий этап</Badge>
+                    <Button variant="secondary" onClick={onBack}>
+                        <FiChevronLeft />
+                        Назад
+                    </Button>
                 </div>
             </CardHeader>
-
-            <CardContent>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {items.map((item) => (
-                        <div
-                            key={item}
-                            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
-                        >
-                            <p className="text-sm font-medium text-[var(--color-text)]">{item}</p>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
         </Card>
     )
+}
+
+function BreadcrumbSeparator() {
+    return <span className="text-sm text-[var(--color-text-muted)]">/</span>
+}
+
+function getRecordName(record: AdminCrudRecord): string {
+    if (record.name) {
+        return String(record.name)
+    }
+
+    if (record.short_name) {
+        return String(record.short_name)
+    }
+
+    return `#${String(record.id)}`
 }

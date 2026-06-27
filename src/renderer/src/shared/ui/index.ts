@@ -14,6 +14,14 @@ export {
 export { ConfirmDialog } from './confirm-dialog'
 export { Input } from './input'
 export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from './select'
+export {
   Sidebar,
   SidebarContent,
   SidebarFooter,

@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FiArchive, FiEdit2, FiPlus, FiRefreshCcw, FiSearch } from 'react-icons/fi'
 import {
@@ -9,6 +9,7 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
+    ConfirmDialog,
     Dialog,
     DialogClose,
     DialogContent,
@@ -16,13 +17,14 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    Input,
-    ConfirmDialog,
+    Input
 } from '../../../shared/ui'
+import { cn } from '../../../shared/lib/cn'
 
 type AdminCrudListResult = Awaited<ReturnType<Window['api']['adminCrud']['list']>>
-type AdminCrudRecord = AdminCrudListResult['items'][number]
-type AdminEntityKey = Parameters<Window['api']['adminCrud']['list']>[0]['entity']
+
+export type AdminCrudRecord = AdminCrudListResult['items'][number]
+export type AdminEntityKey = Parameters<Window['api']['adminCrud']['list']>[0]['entity']
 
 export interface AdminCrudFieldConfig {
     key: string
@@ -35,6 +37,7 @@ export interface AdminCrudFieldConfig {
 export interface AdminCrudColumnConfig {
     key: string
     label: string
+    render?: (record: AdminCrudRecord) => ReactNode
 }
 
 interface AdminCrudEntityPanelProps {
@@ -44,6 +47,12 @@ interface AdminCrudEntityPanelProps {
     createButtonLabel: string
     fields: AdminCrudFieldConfig[]
     columns: AdminCrudColumnConfig[]
+    filters?: Record<string, unknown>
+    fixedData?: Record<string, unknown>
+    emptyMessage?: string
+    onRowClick?: (record: AdminCrudRecord) => void
+    extraRowActions?: (record: AdminCrudRecord) => ReactNode
+    onAfterMutation?: () => void | Promise<void>
 }
 
 type DialogMode = 'create' | 'edit'
@@ -56,7 +65,13 @@ export function AdminCrudEntityPanel({
     description,
     createButtonLabel,
     fields,
-    columns
+    columns,
+    filters,
+    fixedData,
+    emptyMessage = 'Записей пока нет.',
+    onRowClick,
+    extraRowActions,
+    onAfterMutation
 }: AdminCrudEntityPanelProps) {
     const [items, setItems] = useState<AdminCrudRecord[]>([])
     const [total, setTotal] = useState(0)
@@ -74,6 +89,8 @@ export function AdminCrudEntityPanel({
     const [formData, setFormData] = useState<Record<string, string>>({})
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
+    const filtersKey = JSON.stringify(filters ?? {})
+    const fixedDataKey = JSON.stringify(fixedData ?? {})
 
     const emptyFormData = useMemo(() => {
         return fields.reduce<Record<string, string>>((result, field) => {
@@ -92,6 +109,7 @@ export function AdminCrudEntityPanel({
                 page,
                 pageSize,
                 search: search || undefined,
+                filters,
                 orderBy: 'id',
                 orderDirection: 'desc'
             })
@@ -103,7 +121,11 @@ export function AdminCrudEntityPanel({
         } finally {
             setIsLoading(false)
         }
-    }, [entity, page, search])
+    }, [entity, page, search, filtersKey])
+
+    useEffect(() => {
+        setPage(1)
+    }, [entity, filtersKey])
 
     useEffect(() => {
         void loadItems()
@@ -167,7 +189,10 @@ export function AdminCrudEntityPanel({
         setError(null)
 
         try {
-            const payload = buildPayload(fields, formData)
+            const payload = {
+                ...buildPayload(fields, formData),
+                ...(fixedData ?? {})
+            }
 
             if (dialogMode === 'create') {
                 await window.api.adminCrud.create({
@@ -188,6 +213,7 @@ export function AdminCrudEntityPanel({
 
             setDialogOpen(false)
             await loadItems()
+            await onAfterMutation?.()
         } catch (submitError) {
             setError(submitError instanceof Error ? submitError.message : 'Не удалось сохранить запись')
         } finally {
@@ -215,6 +241,7 @@ export function AdminCrudEntityPanel({
 
             setArchiveRecord(null)
             await loadItems()
+            await onAfterMutation?.()
         } catch (archiveError) {
             setError(archiveError instanceof Error ? archiveError.message : 'Не удалось архивировать')
         } finally {
@@ -290,7 +317,7 @@ export function AdminCrudEntityPanel({
                                         </th>
                                     ))}
 
-                                    <th className="w-48 border-b border-[var(--color-border)] px-4 py-3 text-right font-semibold text-[var(--color-text-muted)]">
+                                    <th className="w-56 border-b border-[var(--color-border)] px-4 py-3 text-right font-semibold text-[var(--color-text-muted)]">
                                         Действия
                                     </th>
                                 </tr>
@@ -300,16 +327,22 @@ export function AdminCrudEntityPanel({
                                 {items.map((record) => (
                                     <tr
                                         key={String(record.id)}
-                                        className="border-b border-[var(--color-border)] last:border-b-0"
+                                        className={cn(
+                                            'border-b border-[var(--color-border)] last:border-b-0',
+                                            onRowClick ? 'cursor-pointer hover:bg-[var(--color-surface-muted)]' : ''
+                                        )}
+                                        onClick={() => onRowClick?.(record)}
                                     >
                                         {columns.map((column) => (
                                             <td key={column.key} className="px-4 py-3 text-[var(--color-text)]">
-                                                {formatValue(record[column.key])}
+                                                {column.render ? column.render(record) : formatValue(record[column.key])}
                                             </td>
                                         ))}
 
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
                                             <div className="flex justify-end gap-2">
+                                                {extraRowActions?.(record)}
+
                                                 <Button size="sm" variant="secondary" onClick={() => openEditDialog(record)}>
                                                     <FiEdit2 />
                                                     Изм.
@@ -329,7 +362,7 @@ export function AdminCrudEntityPanel({
                                             colSpan={columns.length + 1}
                                             className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
                                         >
-                                            Записей пока нет.
+                                            {emptyMessage}
                                         </td>
                                     </tr>
                                 ) : null}
