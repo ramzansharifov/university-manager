@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react'
-import { FiArrowRight, FiChevronLeft } from 'react-icons/fi'
-import type { AdminCrudColumnConfig, AdminCrudFieldConfig, AdminCrudRecord } from '../../features/admin-crud'
+import { FiArrowRight } from 'react-icons/fi'
+import type {
+    AdminCrudColumnConfig,
+    AdminCrudFieldConfig,
+    AdminCrudRecord
+} from '../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../features/admin-crud'
 import {
     Badge,
@@ -320,85 +324,59 @@ function UniversityStructureDrilldown() {
             ) : null}
 
             {selectedFaculty && !selectedDepartment ? (
-                <div className="grid gap-4">
-                    <SelectedContextCard
-                        title="Выбран факультет"
-                        record={selectedFaculty}
-                        onBack={backToFaculties}
-                    />
-
-                    <AdminCrudEntityPanel
-                        entity="departments"
-                        title="Кафедры"
-                        description={`Кафедры факультета: ${getRecordName(selectedFaculty)}.`}
-                        createButtonLabel="Добавить кафедру"
-                        fields={departmentFields}
-                        columns={departmentColumns}
-                        filters={departmentFilters}
-                        fixedData={departmentFixedData}
-                        emptyMessage="У этого факультета пока нет кафедр."
-                        onRowClick={openDepartment}
-                        extraRowActions={(record) => (
-                            <Button size="sm" variant="primary" onClick={() => openDepartment(record)}>
-                                Открыть
-                                <FiArrowRight />
-                            </Button>
-                        )}
-                    />
-                </div>
+                <AdminCrudEntityPanel
+                    entity="departments"
+                    title={`Кафедры: ${getRecordName(selectedFaculty)}`}
+                    description="Кафедры выбранного факультета. Клик по кафедре откроет список специальностей."
+                    createButtonLabel="Добавить кафедру"
+                    fields={departmentFields}
+                    columns={departmentColumns}
+                    filters={departmentFilters}
+                    fixedData={departmentFixedData}
+                    emptyMessage="У этого факультета пока нет кафедр."
+                    onRowClick={openDepartment}
+                    extraRowActions={(record) => (
+                        <Button size="sm" variant="primary" onClick={() => openDepartment(record)}>
+                            Открыть
+                            <FiArrowRight />
+                        </Button>
+                    )}
+                />
             ) : null}
 
             {selectedFaculty && selectedDepartment && !selectedSpecialty ? (
-                <div className="grid gap-4">
-                    <SelectedContextCard
-                        title="Выбрана кафедра"
-                        record={selectedDepartment}
-                        parentLabel={getRecordName(selectedFaculty)}
-                        onBack={backToDepartments}
-                    />
-
-                    <AdminCrudEntityPanel
-                        entity="specialties"
-                        title="Специальности"
-                        description={`Специальности кафедры: ${getRecordName(selectedDepartment)}.`}
-                        createButtonLabel="Добавить специальность"
-                        fields={specialtyFields}
-                        columns={specialtyColumns}
-                        filters={specialtyFilters}
-                        fixedData={specialtyFixedData}
-                        emptyMessage="У этой кафедры пока нет специальностей."
-                        onRowClick={openSpecialty}
-                        extraRowActions={(record) => (
-                            <Button size="sm" variant="primary" onClick={() => openSpecialty(record)}>
-                                Открыть
-                                <FiArrowRight />
-                            </Button>
-                        )}
-                    />
-                </div>
+                <AdminCrudEntityPanel
+                    entity="specialties"
+                    title={`Специальности: ${getRecordName(selectedDepartment)}`}
+                    description="Специальности выбранной кафедры. Клик по специальности откроет список групп."
+                    createButtonLabel="Добавить специальность"
+                    fields={specialtyFields}
+                    columns={specialtyColumns}
+                    filters={specialtyFilters}
+                    fixedData={specialtyFixedData}
+                    emptyMessage="У этой кафедры пока нет специальностей."
+                    onRowClick={openSpecialty}
+                    extraRowActions={(record) => (
+                        <Button size="sm" variant="primary" onClick={() => openSpecialty(record)}>
+                            Открыть
+                            <FiArrowRight />
+                        </Button>
+                    )}
+                />
             ) : null}
 
             {selectedFaculty && selectedDepartment && selectedSpecialty ? (
-                <div className="grid gap-4">
-                    <SelectedContextCard
-                        title="Выбрана специальность"
-                        record={selectedSpecialty}
-                        parentLabel={`${getRecordName(selectedFaculty)} / ${getRecordName(selectedDepartment)}`}
-                        onBack={backToSpecialties}
-                    />
-
-                    <AdminCrudEntityPanel
-                        entity="student_groups"
-                        title="Группы"
-                        description={`Учебные группы специальности: ${getRecordName(selectedSpecialty)}.`}
-                        createButtonLabel="Добавить группу"
-                        fields={groupFields}
-                        columns={groupColumns}
-                        filters={groupFilters}
-                        fixedData={groupFixedData}
-                        emptyMessage="У этой специальности пока нет учебных групп."
-                    />
-                </div>
+                <AdminCrudEntityPanel
+                    entity="student_groups"
+                    title={`Группы: ${getRecordName(selectedSpecialty)}`}
+                    description="Учебные группы выбранной специальности."
+                    createButtonLabel="Добавить группу"
+                    fields={groupFields}
+                    columns={groupColumns}
+                    filters={groupFilters}
+                    fixedData={groupFixedData}
+                    emptyMessage="У этой специальности пока нет учебных групп."
+                />
             ) : null}
         </div>
     )
@@ -459,39 +437,6 @@ function StructureBreadcrumb({
                     </>
                 ) : null}
             </CardContent>
-        </Card>
-    )
-}
-
-function SelectedContextCard({
-    title,
-    record,
-    parentLabel,
-    onBack
-}: {
-    title: string
-    record: AdminCrudRecord
-    parentLabel?: string
-    onBack: () => void
-}) {
-    return (
-        <Card>
-            <CardHeader>
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div>
-                        <CardTitle>{title}</CardTitle>
-                        <CardDescription>
-                            {parentLabel ? `${parentLabel} → ` : ''}
-                            {getRecordName(record)}
-                        </CardDescription>
-                    </div>
-
-                    <Button variant="secondary" onClick={onBack}>
-                        <FiChevronLeft />
-                        Назад
-                    </Button>
-                </div>
-            </CardHeader>
         </Card>
     )
 }
