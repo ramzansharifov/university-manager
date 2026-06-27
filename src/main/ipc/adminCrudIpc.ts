@@ -7,13 +7,20 @@ import type {
   AdminCrudListParams,
   AdminCrudUpdateParams
 } from '../../shared/types/adminCrud'
+import { AuditRepository } from '../audit/auditRepository'
+import { AuditService } from '../audit/auditService'
 import { getDatabase } from '../database/connection'
 import { AdminCrudRepository } from '../repositories/adminCrudRepository'
 import { AdminCrudService } from '../services/adminCrudService'
 
 export function registerAdminCrudIpcHandlers(): void {
-  const repository = new AdminCrudRepository(getDatabase())
-  const service = new AdminCrudService(repository)
+  const database = getDatabase()
+
+  const auditRepository = new AuditRepository(database)
+  const auditService = new AuditService(auditRepository)
+
+  const repository = new AdminCrudRepository(database)
+  const service = new AdminCrudService(repository, auditService)
 
   ipcMain.handle('adminCrud:list', (_event, params: AdminCrudListParams) => {
     return service.list(params)

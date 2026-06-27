@@ -9,11 +9,15 @@ import type {
   AdminCrudRecord,
   AdminCrudUpdateParams
 } from '../../shared/types/adminCrud'
+import type { AuditService } from '../audit/auditService'
 import { getAdminCrudEntityConfig } from '../admin/adminCrudEntities'
 import type { AdminCrudRepository } from '../repositories/adminCrudRepository'
 
 export class AdminCrudService {
-  constructor(private readonly repository: AdminCrudRepository) {}
+  constructor(
+    private readonly repository: AdminCrudRepository,
+    private readonly auditService: AuditService
+  ) {}
 
   list(params: AdminCrudListParams): AdminCrudListResult {
     const config = getAdminCrudEntityConfig(params.entity)
@@ -31,7 +35,7 @@ export class AdminCrudService {
     const config = getAdminCrudEntityConfig(params.entity)
     const created = this.repository.create(config, params.data)
 
-    this.writeAuditLog({
+    this.auditService.write({
       action: 'create',
       module: 'admin_crud',
       entityName: params.entity,
@@ -56,7 +60,7 @@ export class AdminCrudService {
 
     const updated = this.repository.update(config, params.id, params.data)
 
-    this.writeAuditLog({
+    this.auditService.write({
       action: 'update',
       module: 'admin_crud',
       entityName: params.entity,
@@ -81,7 +85,7 @@ export class AdminCrudService {
 
     const archived = this.repository.archive(config, params.id)
 
-    this.writeAuditLog({
+    this.auditService.write({
       action: 'archive',
       module: 'admin_crud',
       entityName: params.entity,
@@ -106,7 +110,7 @@ export class AdminCrudService {
 
     this.repository.delete(config, params.id)
 
-    this.writeAuditLog({
+    this.auditService.write({
       action: 'delete',
       module: 'admin_crud',
       entityName: params.entity,
@@ -118,46 +122,5 @@ export class AdminCrudService {
     return {
       success: true
     }
-  }
-
-  private writeAuditLog(params: {
-    action: string
-    module: string
-    entityName: string
-    entityId: number | null
-    before: AdminCrudRecord | null
-    after: AdminCrudRecord | null
-  }): void {
-    this.repository['database']
-      .prepare(
-        `
-        INSERT INTO audit_logs (
-          user_id,
-          action,
-          module,
-          entity_name,
-          entity_id,
-          before_json,
-          after_json
-        )
-        VALUES (
-          NULL,
-          @action,
-          @module,
-          @entityName,
-          @entityId,
-          @beforeJson,
-          @afterJson
-        )
-      `
-      )
-      .run({
-        action: params.action,
-        module: params.module,
-        entityName: params.entityName,
-        entityId: params.entityId,
-        beforeJson: params.before ? JSON.stringify(params.before) : null,
-        afterJson: params.after ? JSON.stringify(params.after) : null
-      })
   }
 }
