@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import { hashPassword } from '../security/password'
 
 const systemRoles = [
   {
@@ -39,6 +40,7 @@ export function seedDatabase(database: Database.Database): void {
     seedRoles(database)
     seedPermissions(database)
     seedSuperAdminPermissions(database)
+    seedDefaultAdminUser(database)
     seedDictionaries(database)
     seedSettings(database)
   })
@@ -156,4 +158,52 @@ function seedSettings(database: Database.Database): void {
   insertSetting.run('theme.mode', 'light')
   insertSetting.run('theme.accent', 'blue')
   insertSetting.run('i18n.language', 'ru')
+}
+
+function seedDefaultAdminUser(database: Database.Database): void {
+  const existingAdmin = database
+    .prepare('SELECT id FROM app_users WHERE username = ? LIMIT 1')
+    .get('admin')
+
+  if (existingAdmin) {
+    return
+  }
+
+  const superAdminRole = database
+    .prepare('SELECT id FROM roles WHERE role_key = ? LIMIT 1')
+    .get('super_admin') as { id: number } | undefined
+
+  if (!superAdminRole) {
+    return
+  }
+
+  database
+    .prepare(
+      `
+      INSERT INTO app_users (
+        role_id,
+        username,
+        password_hash,
+        profile_type,
+        profile_id,
+        is_active
+      )
+      VALUES (
+        @roleId,
+        @username,
+        @passwordHash,
+        @profileType,
+        @profileId,
+        @isActive
+      )
+    `
+    )
+    .run({
+      roleId: superAdminRole.id,
+      username: 'admin',
+      passwordHash: hashPassword('admin'),
+      profileType: 'system',
+      profileId: 0,
+      isActive: 1
+    })
 }

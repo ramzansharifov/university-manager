@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { initializeDatabase } from './database'
 import { registerAdminCrudIpcHandlers } from './ipc/adminCrudIpc'
 import { registerSettingsIpcHandlers } from './ipc/settingsIpc'
+import { registerAuthIpcHandlers } from './ipc/authIpc'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -46,6 +47,7 @@ app.whenReady().then(() => {
   initializeDatabase()
   registerAdminCrudIpcHandlers()
   registerSettingsIpcHandlers()
+  registerAuthIpcHandlers()
 
   ipcMain.on('ping', () => console.log('pong'))
 
