@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # university-manager
 
 An Electron application with React and TypeScript
@@ -32,3 +33,6 @@ $ npm run build:mac
 # For Linux
 $ npm run build:linux
 ```
+=======
+# university-manager
+>>>>>>> ba5b52d10e3988152d5bbbf1ae281168d88d6cb8
