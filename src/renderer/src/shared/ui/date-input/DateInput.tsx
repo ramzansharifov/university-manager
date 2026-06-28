@@ -1,8 +1,4 @@
-import { format, isValid, parse, parseISO } from 'date-fns'
-import { useEffect, useRef, useState } from 'react'
-import { FiCalendar } from 'react-icons/fi'
 import { cn } from '../../lib/cn'
-import { Button } from '../button'
 
 interface DateInputProps {
     value: string
@@ -15,113 +11,25 @@ interface DateInputProps {
 
 export function DateInput({
     value,
-    placeholder = 'дд.мм.гггг',
     disabled,
     className,
     onChange,
     onBlur
 }: DateInputProps) {
-    const nativeDateInputRef = useRef<HTMLInputElement | null>(null)
-    const [displayValue, setDisplayValue] = useState(formatIsoDateToDisplay(value))
-
-    useEffect(() => {
-        setDisplayValue(formatIsoDateToDisplay(value))
-    }, [value])
-
-    function handleTextChange(rawValue: string) {
-        const nextDisplayValue = formatDateTypingValue(rawValue)
-
-        setDisplayValue(nextDisplayValue)
-
-        if (!nextDisplayValue) {
-            onChange('')
-            return
-        }
-
-        if (nextDisplayValue.length === 10) {
-            const parsedDate = parse(nextDisplayValue, 'dd.MM.yyyy', new Date())
-
-            if (isValid(parsedDate)) {
-                onChange(format(parsedDate, 'yyyy-MM-dd'))
-            }
-        }
-    }
-
-    function handleNativeDateChange(nextValue: string) {
-        onChange(nextValue)
-        setDisplayValue(formatIsoDateToDisplay(nextValue))
-    }
-
-    function openNativeDatePicker() {
-        const picker = nativeDateInputRef.current as
-            | (HTMLInputElement & { showPicker?: () => void })
-            | null
-
-        picker?.focus()
-        picker?.showPicker?.()
-    }
-
     return (
-        <div className={cn('flex gap-2', className)}>
-            <input
-                value={displayValue}
-                disabled={disabled}
-                placeholder={placeholder}
-                onBlur={onBlur}
-                onChange={(event) => handleTextChange(event.target.value)}
-                className={cn(
-                    'h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition-colors',
-                    'placeholder:text-[var(--color-text-muted)]',
-                    'focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20',
-                    'disabled:cursor-not-allowed disabled:opacity-50'
-                )}
-            />
-
-            <div className="relative shrink-0">
-                <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={disabled}
-                    aria-label="Выбрать дату"
-                    onClick={openNativeDatePicker}
-                >
-                    <FiCalendar />
-                </Button>
-
-                <input
-                    ref={nativeDateInputRef}
-                    type="date"
-                    value={value || ''}
-                    disabled={disabled}
-                    tabIndex={-1}
-                    aria-label="Выбрать дату"
-                    onChange={(event) => handleNativeDateChange(event.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                />
-            </div>
-        </div>
+        <input
+            type="date"
+            lang="ru-RU"
+            value={value || ''}
+            disabled={disabled}
+            onBlur={onBlur}
+            onChange={(event) => onChange(event.target.value)}
+            className={cn(
+                'h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition-colors',
+                'focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20',
+                'disabled:cursor-not-allowed disabled:opacity-50',
+                className
+            )}
+        />
     )
-}
-
-function formatIsoDateToDisplay(value: string): string {
-    if (!value) {
-        return ''
-    }
-
-    const parsedDate = parseISO(value)
-
-    if (!isValid(parsedDate)) {
-        return value
-    }
-
-    return format(parsedDate, 'dd.MM.yyyy')
-}
-
-function formatDateTypingValue(value: string): string {
-    const digits = value.replace(/\D/g, '').slice(0, 8)
-    const day = digits.slice(0, 2)
-    const month = digits.slice(2, 4)
-    const year = digits.slice(4, 8)
-
-    return [day, month, year].filter(Boolean).join('.')
 }
