@@ -11,6 +11,7 @@ import {
     createOptions,
     createOptionsMap,
     getRecordName,
+    getSemesterName,
     specialtySelectorColumns
 } from '../config/academicProcessCrudConfig'
 
@@ -24,7 +25,7 @@ export function CurriculumPlansDrilldown() {
     const [semesterOptions, setSemesterOptions] = useState<AdminCrudSelectOption[]>([])
 
     const loadOptions = useCallback(async () => {
-        const [academicYears, educationForms, subjects, semesters] = await Promise.all([
+        const [academicYears, educationForms, subjects] = await Promise.all([
             window.api.adminCrud.list({
                 entity: 'academic_years',
                 page: 1,
@@ -47,19 +48,56 @@ export function CurriculumPlansDrilldown() {
                 orderBy: 'name',
                 orderDirection: 'asc'
             }),
-            window.api.adminCrud.list({
-                entity: 'semesters',
-                page: 1,
-                pageSize: 100,
-                orderBy: 'number',
-                orderDirection: 'asc'
-            })
         ])
 
         setAcademicYearOptions(createOptions(academicYears.items, getRecordName))
         setEducationFormOptions(createOptions(educationForms.items, getRecordName))
         setSubjectOptions(createOptions(subjects.items, getRecordName))
-        setSemesterOptions(createOptions(semesters.items, getRecordName))
+    }, [])
+
+    const loadSemestersForPlan = useCallback(async (plan: AdminCrudRecord) => {
+        const academicYearId = Number(plan.academic_year_id)
+
+        if (!Number.isFinite(academicYearId)) {
+            setSemesterOptions([])
+            return
+        }
+
+        const existingSemesters = await window.api.adminCrud.list({
+            entity: 'semesters',
+            page: 1,
+            pageSize: 100,
+            filters: { academic_year_id: academicYearId },
+            orderBy: 'number',
+            orderDirection: 'asc'
+        })
+
+        const existingNumbers = new Set(existingSemesters.items.map((semester) => Number(semester.number)))
+
+        for (const semesterNumber of [1, 2]) {
+            if (!existingNumbers.has(semesterNumber)) {
+                await window.api.adminCrud.create({
+                    entity: 'semesters',
+                    data: {
+                        academic_year_id: academicYearId,
+                        number: semesterNumber,
+                        name: `${semesterNumber} семестр`,
+                        status: 'active'
+                    }
+                })
+            }
+        }
+
+        const semesters = await window.api.adminCrud.list({
+            entity: 'semesters',
+            page: 1,
+            pageSize: 100,
+            filters: { academic_year_id: academicYearId },
+            orderBy: 'number',
+            orderDirection: 'asc'
+        })
+
+        setSemesterOptions(createOptions(semesters.items, getSemesterName))
     }, [])
 
     useEffect(() => {
@@ -149,6 +187,7 @@ export function CurriculumPlansDrilldown() {
 
     function openPlan(record: AdminCrudRecord) {
         setSelectedPlan(record)
+        void loadSemestersForPlan(record)
     }
 
     function backToSpecialties() {
@@ -158,6 +197,7 @@ export function CurriculumPlansDrilldown() {
 
     function backToPlans() {
         setSelectedPlan(null)
+        setSemesterOptions([])
     }
 
     return (

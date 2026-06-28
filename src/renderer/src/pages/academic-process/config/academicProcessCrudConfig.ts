@@ -248,8 +248,10 @@ export function createCurriculumItemFields(options: {
     },
     {
       key: 'control_form',
-      label: 'Форма контроля',
-      placeholder: 'Например: экзамен, зачёт, курсовая'
+      label: 'Формы контроля',
+      placeholder: 'Например: экзамен',
+      type: 'multiText',
+      fullWidth: true
     }
   ]
 }
@@ -295,7 +297,220 @@ export function createCurriculumItemColumns(maps: {
     },
     {
       key: 'control_form',
-      label: 'Контроль'
+      label: 'Контроль',
+      render: (record) => formatControlForms(record.control_form)
     }
   ]
+}
+export const academicYearFields: AdminCrudFieldConfig[] = [
+  {
+    key: 'name',
+    label: 'Название учебного года',
+    placeholder: 'Например: 2025-2026',
+    required: true
+  },
+  {
+    key: 'starts_at',
+    label: 'Дата начала',
+    placeholder: 'дд.мм.гггг',
+    type: 'date'
+  },
+  {
+    key: 'ends_at',
+    label: 'Дата окончания',
+    placeholder: 'дд.мм.гггг',
+    type: 'date'
+  },
+  {
+    key: 'status',
+    label: 'Статус',
+    placeholder: 'Например: active'
+  }
+]
+
+export const academicYearColumns: AdminCrudColumnConfig[] = [
+  {
+    key: 'id',
+    label: 'ID'
+  },
+  {
+    key: 'name',
+    label: 'Учебный год'
+  },
+  {
+    key: 'starts_at',
+    label: 'Начало',
+    type: 'date'
+  },
+  {
+    key: 'ends_at',
+    label: 'Окончание',
+    type: 'date'
+  },
+  {
+    key: 'status',
+    label: 'Статус'
+  }
+]
+
+export const groupSelectorColumns: AdminCrudColumnConfig[] = [
+  {
+    key: 'id',
+    label: 'ID'
+  },
+  {
+    key: 'name',
+    label: 'Группа'
+  },
+  {
+    key: 'course',
+    label: 'Курс'
+  },
+  {
+    key: 'description',
+    label: 'Описание'
+  }
+]
+
+export function createCurriculumItemOptions(
+  items: AdminCrudRecord[],
+  maps: {
+    subjectNameById: Map<number, string>
+    semesterNameById: Map<number, string>
+  }
+): AdminCrudSelectOption[] {
+  return items.map((item) => {
+    const subjectName = renderRelation(item.subject_id, maps.subjectNameById)
+    const semesterName = renderRelation(item.semester_id, maps.semesterNameById)
+
+    return {
+      value: String(item.id),
+      label: `${subjectName} / ${semesterName}`,
+      meta: {
+        subject_id:
+          item.subject_id === null || item.subject_id === undefined
+            ? null
+            : String(item.subject_id),
+        semester_id:
+          item.semester_id === null || item.semester_id === undefined
+            ? null
+            : String(item.semester_id)
+      }
+    }
+  })
+}
+
+export function createDisciplineFields(options: {
+  curriculumItemOptions: AdminCrudSelectOption[]
+  subjectOptions: AdminCrudSelectOption[]
+  teacherOptions: AdminCrudSelectOption[]
+  semesterOptions: AdminCrudSelectOption[]
+}): AdminCrudFieldConfig[] {
+  return [
+    {
+      key: 'curriculum_item_id',
+      label: 'Пункт учебного плана',
+      placeholder: 'Выбери пункт плана',
+      type: 'select',
+      valueType: 'number',
+      options: options.curriculumItemOptions
+    },
+    {
+      key: 'subject_id',
+      label: 'Предмет',
+      placeholder: 'Выбери предмет',
+      type: 'select',
+      valueType: 'number',
+      options: options.subjectOptions,
+      required: true
+    },
+    {
+      key: 'teacher_id',
+      label: 'Преподаватель',
+      placeholder: 'Выбери преподавателя',
+      type: 'select',
+      valueType: 'number',
+      options: options.teacherOptions,
+      required: true
+    },
+    {
+      key: 'semester_id',
+      label: 'Семестр',
+      placeholder: 'Выбери семестр',
+      type: 'select',
+      valueType: 'number',
+      options: options.semesterOptions,
+      required: true
+    },
+    {
+      key: 'name',
+      label: 'Название дисциплины',
+      placeholder: 'Можно оставить пустым, если совпадает с предметом'
+    }
+  ]
+}
+
+export function createDisciplineColumns(maps: {
+  curriculumItemNameById: Map<number, string>
+  subjectNameById: Map<number, string>
+  teacherNameById: Map<number, string>
+  semesterNameById: Map<number, string>
+}): AdminCrudColumnConfig[] {
+  return [
+    {
+      key: 'id',
+      label: 'ID'
+    },
+    {
+      key: 'curriculum_item_id',
+      label: 'Пункт плана',
+      render: (record) => renderRelation(record.curriculum_item_id, maps.curriculumItemNameById)
+    },
+    {
+      key: 'subject_id',
+      label: 'Предмет',
+      render: (record) => renderRelation(record.subject_id, maps.subjectNameById)
+    },
+    {
+      key: 'teacher_id',
+      label: 'Преподаватель',
+      render: (record) => renderRelation(record.teacher_id, maps.teacherNameById)
+    },
+    {
+      key: 'semester_id',
+      label: 'Семестр',
+      render: (record) => renderRelation(record.semester_id, maps.semesterNameById)
+    },
+    {
+      key: 'name',
+      label: 'Название'
+    }
+  ]
+}
+
+export function getPersonName(record: AdminCrudRecord): string {
+  return [record.last_name, record.first_name, record.middle_name]
+    .filter(Boolean)
+    .map(String)
+    .join(' ')
+}
+
+export function getSemesterName(record: AdminCrudRecord): string {
+  if (record.number) {
+    return `${String(record.number)} семестр`
+  }
+
+  return getRecordName(record)
+}
+
+export function formatControlForms(value: unknown): string {
+  if (value === null || value === undefined || value === '') {
+    return '—'
+  }
+
+  return String(value)
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(', ')
 }

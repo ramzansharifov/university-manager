@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { Resolver } from 'react-hook-form'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { FiArchive, FiEdit2, FiPlus, FiRefreshCcw, FiSearch } from 'react-icons/fi'
+import { FiArchive, FiEdit2, FiPlus, FiRefreshCcw, FiSearch, FiTrash2 } from 'react-icons/fi'
 import {
     Badge,
     Button,
@@ -51,7 +51,7 @@ export interface AdminCrudFieldConfig {
     label: string
     placeholder?: string
     required?: boolean
-    type?: 'text' | 'number' | 'email' | 'phone' | 'date' | 'textarea' | 'select'
+    type?: 'text' | 'number' | 'email' | 'phone' | 'date' | 'textarea' | 'select' | 'multiText'
     valueType?: 'string' | 'number'
     options?: AdminCrudSelectOption[]
     disabled?: boolean
@@ -642,6 +642,18 @@ function CrudFieldInput({
         )
     }
 
+    if (field.type === 'multiText') {
+        return (
+            <MultiTextInput
+                value={value}
+                placeholder={field.placeholder}
+                disabled={field.disabled}
+                onChange={onChange}
+                onBlur={onBlur}
+            />
+        )
+    }
+
     if (field.type === 'select') {
         const availableOptions = getAvailableSelectOptions(field, formValues)
         const dependencyValue = field.dependsOn ? formValues[field.dependsOn] : null
@@ -684,6 +696,74 @@ function CrudFieldInput({
             onChange={(event) => onChange(event.target.value)}
         />
     )
+}
+
+function MultiTextInput({
+    value,
+    placeholder,
+    disabled,
+    onChange,
+    onBlur
+}: {
+    value: string
+    placeholder?: string
+    disabled?: boolean
+    onChange: (value: string) => void
+    onBlur: () => void
+}) {
+    const items = value ? value.split('\n') : ['']
+
+    function updateItem(index: number, nextValue: string) {
+        const nextItems = [...items]
+        nextItems[index] = nextValue
+        onChange(normalizeMultiTextValue(nextItems))
+    }
+
+    function addItem() {
+        onChange([...items, ''].join('\n'))
+    }
+
+    function removeItem(index: number) {
+        const nextItems = items.filter((_, itemIndex) => itemIndex !== index)
+        onChange(normalizeMultiTextValue(nextItems.length > 0 ? nextItems : ['']))
+    }
+
+    return (
+        <div className="grid gap-2">
+            {items.map((item, index) => (
+                <div key={index} className="flex gap-2">
+                    <Input
+                        value={item}
+                        placeholder={index === 0 ? placeholder : 'Дополнительная форма контроля'}
+                        disabled={disabled}
+                        onBlur={onBlur}
+                        onChange={(event) => updateItem(index, event.target.value)}
+                    />
+
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        title="Удалить форму контроля"
+                        aria-label="Удалить форму контроля"
+                        disabled={disabled || items.length === 1}
+                        onClick={() => removeItem(index)}
+                    >
+                        <FiTrash2 />
+                    </Button>
+                </div>
+            ))}
+
+            <Button type="button" size="sm" variant="secondary" disabled={disabled} onClick={addItem}>
+                <FiPlus />
+                Добавить форму контроля
+            </Button>
+        </div>
+    )
+}
+
+function normalizeMultiTextValue(items: string[]): string {
+    return items.map((item) => item.trim()).filter(Boolean).join('\n')
 }
 
 function createFormSchema(fields: AdminCrudFieldConfig[]) {
