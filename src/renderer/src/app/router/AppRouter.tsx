@@ -11,6 +11,7 @@ import { SchedulePage } from '../../pages/schedule/SchedulePage'
 import { SettingsPage } from '../../pages/settings/SettingsPage'
 import { UniversityPage } from '../../pages/university/UniversityPage'
 import { RequireAuth } from './RequireAuth'
+import { StudentDetailsPage } from '../../pages/people/StudentDetailsPage'
 
 export function AppRouter() {
     return (
@@ -22,6 +23,7 @@ export function AppRouter() {
                     <Route path="/" element={<AdminDashboardPage />} />
                     <Route path="/university" element={<UniversityPage />} />
                     <Route path="/people" element={<PeoplePage />} />
+                    <Route path="/people/students/:studentId" element={<StudentDetailsPage />} />
                     <Route path="/academic-process" element={<AcademicProcessPage />} />
                     <Route path="/schedule" element={<SchedulePage />} />
                     <Route path="/learning-journal" element={<LearningJournalPage />} />

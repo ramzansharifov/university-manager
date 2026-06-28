@@ -374,14 +374,25 @@ export function AdminCrudEntityPanel({
                                                 {extraRowActions?.(record)}
 
                                                 {canEdit ? (
-                                                    <Button size="sm" variant="secondary" onClick={() => openEditDialog(record)}>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        title="Редактировать"
+                                                        aria-label="Редактировать запись"
+                                                        onClick={() => openEditDialog(record)}
+                                                    >
                                                         <FiEdit2 />
-                                                        Изм.
                                                     </Button>
                                                 ) : null}
 
                                                 {canArchive ? (
-                                                    <Button size="sm" variant="ghost" onClick={() => requestArchive(record)}>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        title="Архивировать"
+                                                        aria-label="Архивировать запись"
+                                                        onClick={() => requestArchive(record)}
+                                                    >
                                                         <FiArchive />
                                                     </Button>
                                                 ) : null}

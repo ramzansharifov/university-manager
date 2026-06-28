@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { FiArrowRight } from 'react-icons/fi'
+import { FiArrowRight, FiEye } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
@@ -17,6 +18,7 @@ interface StudentsByGroupPanelProps {
 
 export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPanelProps) {
     const [selectedGroup, setSelectedGroup] = useState<AdminCrudRecord | null>(null)
+    const navigate = useNavigate()
 
     const studentFilters = useMemo(
         () => (selectedGroup ? { group_id: Number(selectedGroup.id) } : undefined),
@@ -67,6 +69,14 @@ export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPa
         setSelectedGroup(null)
     }
 
+    function openStudentDetails(record: AdminCrudRecord) {
+        if (!record.id) {
+            return
+        }
+
+        navigate(`/people/students/${String(record.id)}`)
+    }
+
     return (
         <div className="grid gap-4">
             <StudentsBreadcrumb selectedGroup={selectedGroup} onGroupsClick={backToGroups} />
@@ -104,6 +114,17 @@ export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPa
                     filters={studentFilters}
                     fixedData={studentFixedData}
                     emptyMessage="В этой группе пока нет студентов."
+                    extraRowActions={(record) => (
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Открыть карточку"
+                            aria-label="Открыть карточку студента"
+                            onClick={() => openStudentDetails(record)}
+                        >
+                            <FiEye />
+                        </Button>
+                    )}
                 />
             ) : null}
         </div>
