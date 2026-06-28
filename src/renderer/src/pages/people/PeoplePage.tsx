@@ -134,7 +134,7 @@ export function PeoplePage() {
     const teacherColumns = useMemo(() => createTeacherColumns(columnMaps), [columnMaps])
 
     const employeeFields = useMemo(() => createEmployeeFields(fieldOptions), [fieldOptions])
-
+    const employeeColumns = useMemo(() => createEmployeeColumns(columnMaps), [columnMaps])
 
     const positionFields = useMemo(() => createPositionFields(fieldOptions), [fieldOptions])
     const positionColumns = useMemo(() => createPositionColumns(columnMaps), [columnMaps])
