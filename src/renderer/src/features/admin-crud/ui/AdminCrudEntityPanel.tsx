@@ -54,6 +54,7 @@ export interface AdminCrudFieldConfig {
     valueType?: 'string' | 'number'
     options?: AdminCrudSelectOption[]
     disabled?: boolean
+    fullWidth?: boolean
 }
 
 export interface AdminCrudColumnConfig {
@@ -448,8 +449,8 @@ export function AdminCrudEntityPanel({
             </CardContent>
 
             <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-                <DialogContent>
-                    <DialogHeader>
+                <DialogContent className="flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] !max-w-5xl flex-col overflow-hidden p-0">
+                    <DialogHeader className="border-b border-[var(--color-border)] px-6 py-5 pr-14">
                         <DialogTitle>
                             {dialogMode === 'create' ? createButtonLabel : 'Редактировать запись'}
                         </DialogTitle>
@@ -459,40 +460,47 @@ export function AdminCrudEntityPanel({
                         </DialogDescription>
                     </DialogHeader>
 
-                    <form className="mt-5 grid gap-4" onSubmit={(event) => void form.handleSubmit(handleFormSubmit)(event)}>
-                        {fields.map((field) => {
-                            const fieldError = form.formState.errors[field.key]?.message
+                    <form
+                        className="flex min-h-0 flex-1 flex-col"
+                        onSubmit={(event) => void form.handleSubmit(handleFormSubmit)(event)}
+                    >
+                        <div className="grid min-h-0 grid-cols-1 gap-4 overflow-y-auto px-6 py-5 md:grid-cols-2 xl:grid-cols-3">
+                            {fields.map((field) => {
+                                const fieldError = form.formState.errors[field.key]?.message
 
-                            return (
-                                <label key={field.key} className="grid gap-2">
-                                    <span className="text-sm font-medium text-[var(--color-text)]">
-                                        {field.label}
-                                        {field.required ? <span className="text-[var(--color-danger)]"> *</span> : null}
-                                    </span>
-
-                                    <Controller
-                                        name={field.key}
-                                        control={form.control}
-                                        render={({ field: controllerField }) => (
-                                            <CrudFieldInput
-                                                field={field}
-                                                value={controllerField.value ?? ''}
-                                                onChange={controllerField.onChange}
-                                                onBlur={controllerField.onBlur}
-                                            />
-                                        )}
-                                    />
-
-                                    {fieldError ? (
-                                        <span className="text-xs font-medium text-[var(--color-danger)]">
-                                            {String(fieldError)}
+                                return (
+                                    <label key={field.key} className={getFieldWrapperClassName(field)}>
+                                        <span className="text-sm font-medium text-[var(--color-text)]">
+                                            {field.label}
+                                            {field.required ? (
+                                                <span className="text-[var(--color-danger)]"> *</span>
+                                            ) : null}
                                         </span>
-                                    ) : null}
-                                </label>
-                            )
-                        })}
 
-                        <DialogFooter>
+                                        <Controller
+                                            name={field.key}
+                                            control={form.control}
+                                            render={({ field: controllerField }) => (
+                                                <CrudFieldInput
+                                                    field={field}
+                                                    value={controllerField.value ?? ''}
+                                                    onChange={controllerField.onChange}
+                                                    onBlur={controllerField.onBlur}
+                                                />
+                                            )}
+                                        />
+
+                                        {fieldError ? (
+                                            <span className="text-xs font-medium text-[var(--color-danger)]">
+                                                {String(fieldError)}
+                                            </span>
+                                        ) : null}
+                                    </label>
+                                )
+                            })}
+                        </div>
+
+                        <DialogFooter className="mt-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4">
                             <DialogClose asChild>
                                 <Button type="button" variant="secondary">
                                     Отмена
@@ -506,7 +514,6 @@ export function AdminCrudEntityPanel({
                     </form>
                 </DialogContent>
             </Dialog>
-
             <ConfirmDialog
                 open={Boolean(archiveRecord)}
                 title="Архивировать запись?"
@@ -523,6 +530,13 @@ export function AdminCrudEntityPanel({
                 onConfirm={confirmArchive}
             />
         </Card>
+    )
+}
+
+function getFieldWrapperClassName(field: AdminCrudFieldConfig): string {
+    return cn(
+        'grid gap-2',
+        (field.fullWidth || field.type === 'textarea') && 'md:col-span-2 xl:col-span-3'
     )
 }
 
