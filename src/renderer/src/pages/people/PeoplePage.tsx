@@ -140,7 +140,7 @@ export function PeoplePage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Люди</h1>
                 <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                    Студенты, преподаватели, сотрудники и должности.
+                    Студенты, преподаватели, сотрудники и должности сотрудников.
                 </p>
             </div>
 
@@ -184,7 +184,7 @@ export function PeoplePage() {
                     <AdminCrudEntityPanel
                         entity="positions"
                         title="Должности"
-                        description="Справочник должностей для преподавателей и сотрудников."
+                        description="Справочник должностей для сотрудников университета."
                         createButtonLabel="Добавить должность"
                         fields={positionFields}
                         columns={positionColumns}

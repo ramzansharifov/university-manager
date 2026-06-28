@@ -191,12 +191,9 @@ export function createTeacherFields(options: PeopleFieldOptions): AdminCrudField
       options: options.departmentOptions
     },
     {
-      key: 'position_id',
-      label: 'Должность',
-      placeholder: 'Выбери должность',
-      type: 'select',
-      valueType: 'number',
-      options: options.positionOptions
+      key: 'teaching_subjects',
+      label: 'Преподаёт',
+      placeholder: 'Например: Математика, программирование, базы данных'
     },
     {
       key: 'status_id',
@@ -297,9 +294,8 @@ export function createTeacherColumns(maps: PeopleColumnMaps): AdminCrudColumnCon
       render: (record) => renderRelation(record.department_id, maps.departmentNameById)
     },
     {
-      key: 'position_id',
-      label: 'Должность',
-      render: (record) => renderRelation(record.position_id, maps.positionNameById)
+      key: 'teaching_subjects',
+      label: 'Преподаёт'
     },
     {
       key: 'phone',

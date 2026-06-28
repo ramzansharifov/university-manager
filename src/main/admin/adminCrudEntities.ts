@@ -83,8 +83,8 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     'teachers',
     [
       'department_id',
-      'position_id',
       'status_id',
+      'teaching_subjects',
       'last_name',
       'first_name',
       'middle_name',
@@ -96,7 +96,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'dismissal_date',
       'note'
     ],
-    ['last_name', 'first_name', 'middle_name', 'email', 'phone']
+    ['last_name', 'first_name', 'middle_name', 'email', 'phone', 'teaching_subjects']
   ),
   employees: entity(
     'employees',
