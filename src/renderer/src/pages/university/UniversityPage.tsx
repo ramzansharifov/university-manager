@@ -1,6 +1,5 @@
-import { AdminCrudEntityPanel } from '../../features/admin-crud'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
-import { organizationColumns, organizationFields } from './config/universityCrudConfig'
+import { UniversityAdministrativeStructureDrilldown } from './ui/UniversityAdministrativeStructureDrilldown'
 import { UniversityStructureDrilldown } from './ui/UniversityStructureDrilldown'
 
 export function UniversityPage() {
@@ -9,29 +8,22 @@ export function UniversityPage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Университет</h1>
                 <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                    Структура университета: факультеты, кафедры, специальности, группы и подразделения.
+                    Учебная и административная структура университета.
                 </p>
             </div>
 
             <Tabs defaultValue="structure">
                 <TabsList>
                     <TabsTrigger value="structure">Учебная структура</TabsTrigger>
-                    <TabsTrigger value="divisions">Подразделения</TabsTrigger>
+                    <TabsTrigger value="administration">Административная структура</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="structure">
                     <UniversityStructureDrilldown />
                 </TabsContent>
 
-                <TabsContent value="divisions">
-                    <AdminCrudEntityPanel
-                        entity="divisions"
-                        title="Подразделения"
-                        description="Административные подразделения университета: отделы, службы, управления."
-                        createButtonLabel="Добавить подразделение"
-                        fields={organizationFields}
-                        columns={organizationColumns}
-                    />
+                <TabsContent value="administration">
+                    <UniversityAdministrativeStructureDrilldown />
                 </TabsContent>
             </Tabs>
         </div>

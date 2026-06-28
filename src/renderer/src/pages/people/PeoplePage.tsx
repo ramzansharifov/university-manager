@@ -3,13 +3,8 @@ import type { AdminCrudSelectOption } from '../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../features/admin-crud'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
 import {
-    createEmployeeColumns,
-    createEmployeeFields,
     createOptions,
     createOptionsMap,
-    createPositionColumns,
-    createPositionFields,
-    createPositionOptions,
     createTeacherColumns,
     createTeacherFields,
     getRecordName
@@ -19,20 +14,10 @@ import { StudentsByGroupPanel } from './ui/StudentsByGroupPanel'
 export function PeoplePage() {
     const [studentStatusOptions, setStudentStatusOptions] = useState<AdminCrudSelectOption[]>([])
     const [teacherStatusOptions, setTeacherStatusOptions] = useState<AdminCrudSelectOption[]>([])
-    const [employeeStatusOptionsState, setEmployeeStatusOptionsState] = useState<AdminCrudSelectOption[]>([])
     const [departmentOptions, setDepartmentOptions] = useState<AdminCrudSelectOption[]>([])
-    const [divisionOptions, setDivisionOptions] = useState<AdminCrudSelectOption[]>([])
-    const [positionOptions, setPositionOptions] = useState<AdminCrudSelectOption[]>([])
 
     const loadOptions = useCallback(async () => {
-        const [
-            studentStatuses,
-            teacherStatuses,
-            employeeStatuses,
-            departments,
-            divisions,
-            positions
-        ] = await Promise.all([
+        const [studentStatuses, teacherStatuses, departments] = await Promise.all([
             window.api.adminCrud.list({
                 entity: 'dictionary_items',
                 page: 1,
@@ -50,29 +35,7 @@ export function PeoplePage() {
                 orderDirection: 'asc'
             }),
             window.api.adminCrud.list({
-                entity: 'dictionary_items',
-                page: 1,
-                pageSize: 100,
-                filters: { dictionary_key: 'employee_statuses' },
-                orderBy: 'sort_order',
-                orderDirection: 'asc'
-            }),
-            window.api.adminCrud.list({
                 entity: 'departments',
-                page: 1,
-                pageSize: 100,
-                orderBy: 'name',
-                orderDirection: 'asc'
-            }),
-            window.api.adminCrud.list({
-                entity: 'divisions',
-                page: 1,
-                pageSize: 100,
-                orderBy: 'name',
-                orderDirection: 'asc'
-            }),
-            window.api.adminCrud.list({
-                entity: 'positions',
                 page: 1,
                 pageSize: 100,
                 orderBy: 'name',
@@ -82,10 +45,7 @@ export function PeoplePage() {
 
         setStudentStatusOptions(createOptions(studentStatuses.items, getRecordName))
         setTeacherStatusOptions(createOptions(teacherStatuses.items, getRecordName))
-        setEmployeeStatusOptionsState(createOptions(employeeStatuses.items, getRecordName))
         setDepartmentOptions(createOptions(departments.items, getRecordName))
-        setDivisionOptions(createOptions(divisions.items, getRecordName))
-        setPositionOptions(createPositionOptions(positions.items))
     }, [])
 
     useEffect(() => {
@@ -96,55 +56,35 @@ export function PeoplePage() {
         () => ({
             studentStatusOptions,
             teacherStatusOptions,
-            employeeStatusOptions: employeeStatusOptionsState,
+            employeeStatusOptions: [],
             departmentOptions,
-            divisionOptions,
-            positionOptions
+            divisionOptions: [],
+            positionOptions: []
         }),
-        [
-            departmentOptions,
-            divisionOptions,
-            employeeStatusOptionsState,
-            positionOptions,
-            studentStatusOptions,
-            teacherStatusOptions
-        ]
+        [departmentOptions, studentStatusOptions, teacherStatusOptions]
     )
 
     const columnMaps = useMemo(
         () => ({
             studentStatusNameById: createOptionsMap(studentStatusOptions),
             teacherStatusNameById: createOptionsMap(teacherStatusOptions),
-            employeeStatusNameById: createOptionsMap(employeeStatusOptionsState),
+            employeeStatusNameById: new Map<number, string>(),
             departmentNameById: createOptionsMap(departmentOptions),
-            divisionNameById: createOptionsMap(divisionOptions),
-            positionNameById: createOptionsMap(positionOptions)
+            divisionNameById: new Map<number, string>(),
+            positionNameById: new Map<number, string>()
         }),
-        [
-            departmentOptions,
-            divisionOptions,
-            employeeStatusOptionsState,
-            positionOptions,
-            studentStatusOptions,
-            teacherStatusOptions
-        ]
+        [departmentOptions, studentStatusOptions, teacherStatusOptions]
     )
 
     const teacherFields = useMemo(() => createTeacherFields(fieldOptions), [fieldOptions])
     const teacherColumns = useMemo(() => createTeacherColumns(columnMaps), [columnMaps])
-
-    const employeeFields = useMemo(() => createEmployeeFields(fieldOptions), [fieldOptions])
-    const employeeColumns = useMemo(() => createEmployeeColumns(columnMaps), [columnMaps])
-
-    const positionFields = useMemo(() => createPositionFields(fieldOptions), [fieldOptions])
-    const positionColumns = useMemo(() => createPositionColumns(columnMaps), [columnMaps])
 
     return (
         <div className="grid gap-6">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Люди</h1>
                 <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                    Студенты, преподаватели, сотрудники и должности сотрудников.
+                    Студенты и преподаватели университета.
                 </p>
             </div>
 
@@ -152,8 +92,6 @@ export function PeoplePage() {
                 <TabsList>
                     <TabsTrigger value="students">Студенты</TabsTrigger>
                     <TabsTrigger value="teachers">Преподаватели</TabsTrigger>
-                    <TabsTrigger value="employees">Сотрудники</TabsTrigger>
-                    <TabsTrigger value="positions">Должности</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="students">
@@ -168,30 +106,6 @@ export function PeoplePage() {
                         createButtonLabel="Добавить преподавателя"
                         fields={teacherFields}
                         columns={teacherColumns}
-                        onAfterMutation={loadOptions}
-                    />
-                </TabsContent>
-
-                <TabsContent value="employees">
-                    <AdminCrudEntityPanel
-                        entity="employees"
-                        title="Сотрудники"
-                        description="Создание, редактирование, поиск и архивирование сотрудников университета."
-                        createButtonLabel="Добавить сотрудника"
-                        fields={employeeFields}
-                        columns={employeeColumns}
-                        onAfterMutation={loadOptions}
-                    />
-                </TabsContent>
-
-                <TabsContent value="positions">
-                    <AdminCrudEntityPanel
-                        entity="positions"
-                        title="Должности"
-                        description="Справочник должностей по подразделениям. При выборе подразделения у сотрудника список должностей будет сужаться."
-                        createButtonLabel="Добавить должность"
-                        fields={positionFields}
-                        columns={positionColumns}
                         onAfterMutation={loadOptions}
                     />
                 </TabsContent>
