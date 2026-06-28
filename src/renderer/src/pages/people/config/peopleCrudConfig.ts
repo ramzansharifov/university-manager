@@ -320,7 +320,9 @@ export function createEmployeeFields(options: PeopleFieldOptions): AdminCrudFiel
       placeholder: 'Выбери должность',
       type: 'select',
       valueType: 'number',
-      options: options.positionOptions
+      options: options.positionOptions,
+      dependsOn: 'division_id',
+      dependencyPlaceholder: 'Сначала выбери подразделение'
     },
     {
       key: 'status_id',
@@ -432,35 +434,53 @@ export function createEmployeeColumns(maps: PeopleColumnMaps): AdminCrudColumnCo
   ]
 }
 
-export const positionFields: AdminCrudFieldConfig[] = [
-  {
-    key: 'name',
-    label: 'Название должности',
-    placeholder: 'Например: Доцент',
-    required: true
-  },
-  {
-    key: 'description',
-    label: 'Описание',
-    placeholder: 'Дополнительная информация',
-    type: 'textarea'
-  }
-]
+export function createPositionFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
+  return [
+    {
+      key: 'division_id',
+      label: 'Подразделение',
+      placeholder: 'Выбери подразделение',
+      type: 'select',
+      valueType: 'number',
+      options: options.divisionOptions,
+      required: true
+    },
+    {
+      key: 'name',
+      label: 'Название должности',
+      placeholder: 'Например: Заведующий учебной частью',
+      required: true
+    },
+    {
+      key: 'description',
+      label: 'Описание',
+      placeholder: 'Дополнительная информация',
+      type: 'textarea'
+    }
+  ]
+}
 
-export const positionColumns: AdminCrudColumnConfig[] = [
-  {
-    key: 'id',
-    label: 'ID'
-  },
-  {
-    key: 'name',
-    label: 'Должность'
-  },
-  {
-    key: 'description',
-    label: 'Описание'
-  }
-]
+export function createPositionColumns(maps: PeopleColumnMaps): AdminCrudColumnConfig[] {
+  return [
+    {
+      key: 'id',
+      label: 'ID'
+    },
+    {
+      key: 'division_id',
+      label: 'Подразделение',
+      render: (record) => renderRelation(record.division_id, maps.divisionNameById)
+    },
+    {
+      key: 'name',
+      label: 'Должность'
+    },
+    {
+      key: 'description',
+      label: 'Описание'
+    }
+  ]
+}
 
 function renderRelation(value: unknown, labelsById: Map<number, string>): string {
   if (value === null || value === undefined || value === '') {
@@ -474,6 +494,19 @@ function renderRelation(value: unknown, labelsById: Map<number, string>): string
   }
 
   return labelsById.get(id) ?? `#${id}`
+}
+
+export function createPositionOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
+  return items.map((item) => ({
+    value: String(item.id),
+    label: getRecordName(item),
+    meta: {
+      division_id:
+        item.division_id === null || item.division_id === undefined
+          ? null
+          : String(item.division_id)
+    }
+  }))
 }
 
 export function createOptions(

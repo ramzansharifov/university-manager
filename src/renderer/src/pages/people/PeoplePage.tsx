@@ -7,11 +7,12 @@ import {
     createEmployeeFields,
     createOptions,
     createOptionsMap,
+    createPositionColumns,
+    createPositionFields,
+    createPositionOptions,
     createTeacherColumns,
     createTeacherFields,
-    getRecordName,
-    positionColumns,
-    positionFields
+    getRecordName
 } from './config/peopleCrudConfig'
 import { StudentsByGroupPanel } from './ui/StudentsByGroupPanel'
 
@@ -84,7 +85,7 @@ export function PeoplePage() {
         setEmployeeStatusOptionsState(createOptions(employeeStatuses.items, getRecordName))
         setDepartmentOptions(createOptions(departments.items, getRecordName))
         setDivisionOptions(createOptions(divisions.items, getRecordName))
-        setPositionOptions(createOptions(positions.items, getRecordName))
+        setPositionOptions(createPositionOptions(positions.items))
     }, [])
 
     useEffect(() => {
@@ -133,7 +134,10 @@ export function PeoplePage() {
     const teacherColumns = useMemo(() => createTeacherColumns(columnMaps), [columnMaps])
 
     const employeeFields = useMemo(() => createEmployeeFields(fieldOptions), [fieldOptions])
-    const employeeColumns = useMemo(() => createEmployeeColumns(columnMaps), [columnMaps])
+
+
+    const positionFields = useMemo(() => createPositionFields(fieldOptions), [fieldOptions])
+    const positionColumns = useMemo(() => createPositionColumns(columnMaps), [columnMaps])
 
     return (
         <div className="grid gap-6">
@@ -184,7 +188,7 @@ export function PeoplePage() {
                     <AdminCrudEntityPanel
                         entity="positions"
                         title="Должности"
-                        description="Справочник должностей для сотрудников университета."
+                        description="Справочник должностей по подразделениям. При выборе подразделения у сотрудника список должностей будет сужаться."
                         createButtonLabel="Добавить должность"
                         fields={positionFields}
                         columns={positionColumns}

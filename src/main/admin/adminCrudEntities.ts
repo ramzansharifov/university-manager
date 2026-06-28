@@ -50,7 +50,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['name']
   ),
   divisions: entity('divisions', ['name', 'short_name', 'description'], ['name', 'short_name']),
-  positions: entity('positions', ['name', 'description'], ['name']),
+  positions: entity('positions', ['division_id', 'name', 'description'], ['name', 'description']),
 
   dictionary_items: entity(
     'dictionary_items',

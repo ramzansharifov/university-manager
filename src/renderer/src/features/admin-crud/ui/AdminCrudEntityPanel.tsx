@@ -43,6 +43,7 @@ type AdminCrudFilterRecord = Record<string, AdminCrudFilterValue>
 export interface AdminCrudSelectOption {
     value: string
     label: string
+    meta?: Record<string, string | number | boolean | null>
 }
 
 export interface AdminCrudFieldConfig {
@@ -55,6 +56,8 @@ export interface AdminCrudFieldConfig {
     options?: AdminCrudSelectOption[]
     disabled?: boolean
     fullWidth?: boolean
+    dependsOn?: string
+    dependencyPlaceholder?: string
 }
 
 export interface AdminCrudColumnConfig {
@@ -129,12 +132,35 @@ export function AdminCrudEntityPanel({
         defaultValues: emptyFormData
     })
 
+    const watchedFormValues = form.watch()
+
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
     const filtersKey = JSON.stringify(filters ?? {})
 
     useEffect(() => {
         form.reset(emptyFormData)
     }, [emptyFormData, form])
+
+    useEffect(() => {
+        fields.forEach((field) => {
+            if (field.type !== 'select' || !field.dependsOn) {
+                return
+            }
+
+            const currentValue = watchedFormValues[field.key]
+
+            if (!currentValue) {
+                return
+            }
+
+            const availableOptions = getAvailableSelectOptions(field, watchedFormValues)
+            const hasCurrentValue = availableOptions.some((option) => option.value === currentValue)
+
+            if (!hasCurrentValue) {
+                form.setValue(field.key, '')
+            }
+        })
+    }, [fields, form, watchedFormValues])
 
     const loadItems = useCallback(async () => {
         setIsLoading(true)
@@ -510,6 +536,7 @@ export function AdminCrudEntityPanel({
                                                 <CrudFieldInput
                                                     field={field}
                                                     value={controllerField.value ?? ''}
+                                                    formValues={watchedFormValues}
                                                     onChange={controllerField.onChange}
                                                     onBlur={controllerField.onBlur}
                                                 />
@@ -569,11 +596,13 @@ function getFieldWrapperClassName(field: AdminCrudFieldConfig): string {
 function CrudFieldInput({
     field,
     value,
+    formValues,
     onChange,
     onBlur
 }: {
     field: AdminCrudFieldConfig
     value: string
+    formValues: Record<string, string>
     onChange: (value: string) => void
     onBlur: () => void
 }) {
@@ -614,18 +643,28 @@ function CrudFieldInput({
     }
 
     if (field.type === 'select') {
+        const availableOptions = getAvailableSelectOptions(field, formValues)
+        const dependencyValue = field.dependsOn ? formValues[field.dependsOn] : null
+        const isDisabledByDependency = Boolean(field.dependsOn && !dependencyValue)
+
         return (
             <Select
                 value={value || undefined}
-                disabled={field.disabled || field.options?.length === 0}
+                disabled={field.disabled || isDisabledByDependency || availableOptions.length === 0}
                 onValueChange={onChange}
             >
                 <SelectTrigger>
-                    <SelectValue placeholder={field.placeholder ?? 'Выбери значение'} />
+                    <SelectValue
+                        placeholder={
+                            isDisabledByDependency
+                                ? field.dependencyPlaceholder ?? 'Сначала выбери связанное поле'
+                                : field.placeholder ?? 'Выбери значение'
+                        }
+                    />
                 </SelectTrigger>
 
                 <SelectContent>
-                    {(field.options ?? []).map((option) => (
+                    {availableOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                             {option.label}
                         </SelectItem>
@@ -678,6 +717,29 @@ function createFormSchema(fields: AdminCrudFieldConfig[]) {
     }
 
     return z.object(shape)
+}
+
+function getAvailableSelectOptions(
+    field: AdminCrudFieldConfig,
+    formValues: Record<string, string>
+): AdminCrudSelectOption[] {
+    const options = field.options ?? []
+
+    if (!field.dependsOn) {
+        return options
+    }
+
+    const dependencyValue = formValues[field.dependsOn]
+
+    if (!dependencyValue) {
+        return []
+    }
+
+    return options.filter((option) => {
+        const optionDependencyValue = option.meta?.[field.dependsOn as string]
+
+        return String(optionDependencyValue ?? '') === String(dependencyValue)
+    })
 }
 
 function buildPayload(

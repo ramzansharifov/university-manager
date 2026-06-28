@@ -33,7 +33,8 @@ export class AdminCrudService {
 
   create(params: AdminCrudCreateParams): AdminCrudOperationResult {
     const config = getAdminCrudEntityConfig(params.entity)
-    const created = this.repository.create(config, params.data)
+    const preparedData = this.prepareDataForSave(params.entity, params.data)
+    const created = this.repository.create(config, preparedData)
 
     this.auditService.write({
       action: 'create',
@@ -58,7 +59,8 @@ export class AdminCrudService {
       throw new Error('Record not found')
     }
 
-    const updated = this.repository.update(config, params.id, params.data)
+    const preparedData = this.prepareDataForSave(params.entity, params.data, before)
+    const updated = this.repository.update(config, params.id, preparedData)
 
     this.auditService.write({
       action: 'update',
@@ -123,4 +125,56 @@ export class AdminCrudService {
       success: true
     }
   }
+
+  private prepareDataForSave(
+    entity: string,
+    data: AdminCrudRecord,
+    before?: AdminCrudRecord
+  ): AdminCrudRecord {
+    if (entity === 'employees') {
+      this.validateEmployeePosition(data, before)
+    }
+
+    return data
+  }
+
+  private validateEmployeePosition(data: AdminCrudRecord, before?: AdminCrudRecord): void {
+    const nextDivisionId = normalizeNullableNumber(data.division_id ?? before?.division_id)
+    const nextPositionId = normalizeNullableNumber(data.position_id ?? before?.position_id)
+
+    if (nextPositionId === null) {
+      return
+    }
+
+    if (nextDivisionId === null) {
+      throw new Error('Для выбора должности сначала укажи подразделение сотрудника')
+    }
+
+    const positionConfig = getAdminCrudEntityConfig('positions')
+    const position = this.repository.getById(positionConfig, nextPositionId)
+
+    if (!position) {
+      throw new Error('Выбранная должность не найдена')
+    }
+
+    const positionDivisionId = normalizeNullableNumber(position.division_id)
+
+    if (positionDivisionId === null) {
+      throw new Error('У выбранной должности не указано подразделение')
+    }
+
+    if (positionDivisionId !== nextDivisionId) {
+      throw new Error('Выбранная должность не относится к выбранному подразделению')
+    }
+  }
+}
+
+function normalizeNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numberValue = Number(value)
+
+  return Number.isFinite(numberValue) ? numberValue : null
 }
