@@ -605,7 +605,6 @@ function CrudFieldInput({
     if (field.type === 'select') {
         return (
             <Select
-                modal={false}
                 value={value || undefined}
                 disabled={field.disabled || field.options?.length === 0}
                 onValueChange={onChange}

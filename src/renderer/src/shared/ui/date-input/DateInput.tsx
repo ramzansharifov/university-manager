@@ -1,6 +1,5 @@
-import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { format, isValid, parse, parseISO } from 'date-fns'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FiCalendar } from 'react-icons/fi'
 import { cn } from '../../lib/cn'
 import { Button } from '../button'
@@ -22,6 +21,7 @@ export function DateInput({
     onChange,
     onBlur
 }: DateInputProps) {
+    const nativeDateInputRef = useRef<HTMLInputElement | null>(null)
     const [displayValue, setDisplayValue] = useState(formatIsoDateToDisplay(value))
 
     useEffect(() => {
@@ -47,6 +47,20 @@ export function DateInput({
         }
     }
 
+    function handleNativeDateChange(nextValue: string) {
+        onChange(nextValue)
+        setDisplayValue(formatIsoDateToDisplay(nextValue))
+    }
+
+    function openNativeDatePicker() {
+        const picker = nativeDateInputRef.current as
+            | (HTMLInputElement & { showPicker?: () => void })
+            | null
+
+        picker?.focus()
+        picker?.showPicker?.()
+    }
+
     return (
         <div className={cn('flex gap-2', className)}>
             <input
@@ -63,31 +77,28 @@ export function DateInput({
                 )}
             />
 
-            <PopoverPrimitive.Root>
-                <PopoverPrimitive.Trigger asChild>
-                    <Button type="button" variant="secondary" disabled={disabled} aria-label="Выбрать дату">
-                        <FiCalendar />
-                    </Button>
-                </PopoverPrimitive.Trigger>
+            <div className="relative shrink-0">
+                <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={disabled}
+                    aria-label="Выбрать дату"
+                    onClick={openNativeDatePicker}
+                >
+                    <FiCalendar />
+                </Button>
 
-                <PopoverPrimitive.Portal>
-                    <PopoverPrimitive.Content
-                        align="end"
-                        sideOffset={8}
-                        className="z-50 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl"
-                    >
-                        <input
-                            type="date"
-                            value={value || ''}
-                            onChange={(event) => onChange(event.target.value)}
-                            className={cn(
-                                'h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none',
-                                'focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20'
-                            )}
-                        />
-                    </PopoverPrimitive.Content>
-                </PopoverPrimitive.Portal>
-            </PopoverPrimitive.Root>
+                <input
+                    ref={nativeDateInputRef}
+                    type="date"
+                    value={value || ''}
+                    disabled={disabled}
+                    tabIndex={-1}
+                    aria-label="Выбрать дату"
+                    onChange={(event) => handleNativeDateChange(event.target.value)}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
+            </div>
         </div>
     )
 }

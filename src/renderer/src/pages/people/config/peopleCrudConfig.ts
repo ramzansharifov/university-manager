@@ -84,7 +84,7 @@ export function createStudentFields(options: PeopleFieldOptions): AdminCrudField
     {
       key: 'phone',
       label: 'Телефон',
-      placeholder: '+7 (___) ___-__-__',
+      placeholder: 'Например: 999 123-45-67',
       type: 'phone'
     },
     {
@@ -238,7 +238,7 @@ export function createTeacherFields(options: PeopleFieldOptions): AdminCrudField
     {
       key: 'phone',
       label: 'Телефон',
-      placeholder: '+7 (___) ___-__-__',
+      placeholder: 'Например: 999 123-45-67',
       type: 'phone'
     },
     {
@@ -366,7 +366,7 @@ export function createEmployeeFields(options: PeopleFieldOptions): AdminCrudFiel
     {
       key: 'phone',
       label: 'Телефон',
-      placeholder: '+7 (___) ___-__-__',
+      placeholder: 'Например: 999 123-45-67',
       type: 'phone'
     },
     {
