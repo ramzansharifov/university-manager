@@ -1,12 +1,21 @@
 import { useMemo, useState } from 'react'
 import { FiArrowRight } from 'react-icons/fi'
-import type { AdminCrudRecord } from '../../../features/admin-crud'
+import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
-import { groupColumns, studentColumns, studentFields } from '../config/peopleCrudConfig'
+import {
+    createOptionsMap,
+    createStudentColumns,
+    createStudentFields,
+    groupColumns
+} from '../config/peopleCrudConfig'
 import { getRecordName } from '../lib/getRecordName'
 
-export function StudentsByGroupPanel() {
+interface StudentsByGroupPanelProps {
+    studentStatusOptions: AdminCrudSelectOption[]
+}
+
+export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPanelProps) {
     const [selectedGroup, setSelectedGroup] = useState<AdminCrudRecord | null>(null)
 
     const studentFilters = useMemo(
@@ -17,6 +26,37 @@ export function StudentsByGroupPanel() {
     const studentFixedData = useMemo(
         () => (selectedGroup ? { group_id: Number(selectedGroup.id) } : undefined),
         [selectedGroup]
+    )
+
+    const studentStatusNameById = useMemo(
+        () => createOptionsMap(studentStatusOptions),
+        [studentStatusOptions]
+    )
+
+    const studentFields = useMemo(
+        () =>
+            createStudentFields({
+                studentStatusOptions,
+                teacherStatusOptions: [],
+                employeeStatusOptions: [],
+                departmentOptions: [],
+                divisionOptions: [],
+                positionOptions: []
+            }),
+        [studentStatusOptions]
+    )
+
+    const studentColumns = useMemo(
+        () =>
+            createStudentColumns({
+                studentStatusNameById,
+                teacherStatusNameById: new Map(),
+                employeeStatusNameById: new Map(),
+                departmentNameById: new Map(),
+                divisionNameById: new Map(),
+                positionNameById: new Map()
+            }),
+        [studentStatusNameById]
     )
 
     function openGroup(record: AdminCrudRecord) {

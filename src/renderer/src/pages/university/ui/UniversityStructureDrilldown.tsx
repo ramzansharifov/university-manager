@@ -1,15 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FiArrowRight } from 'react-icons/fi'
-import type { AdminCrudRecord } from '../../../features/admin-crud'
+import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Button } from '../../../shared/ui'
 import {
-    departmentColumns,
-    departmentFields,
-    groupColumns,
-    groupFields,
-    organizationColumns,
-    organizationFields,
+    createDepartmentColumns,
+    createDepartmentFields,
+    createFacultyColumns,
+    createFacultyFields,
+    createGroupColumns,
+    createGroupFields,
+    createOptions,
+    createOptionsMap,
+    getPersonName,
     specialtyColumns,
     specialtyFields
 } from '../config/universityCrudConfig'
@@ -20,6 +23,47 @@ export function UniversityStructureDrilldown() {
     const [selectedFaculty, setSelectedFaculty] = useState<AdminCrudRecord | null>(null)
     const [selectedDepartment, setSelectedDepartment] = useState<AdminCrudRecord | null>(null)
     const [selectedSpecialty, setSelectedSpecialty] = useState<AdminCrudRecord | null>(null)
+
+    const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
+    const [employeeOptions, setEmployeeOptions] = useState<AdminCrudSelectOption[]>([])
+
+    const loadRelationOptions = useCallback(async () => {
+        const [teachers, employees] = await Promise.all([
+            window.api.adminCrud.list({
+                entity: 'teachers',
+                page: 1,
+                pageSize: 100,
+                orderBy: 'last_name',
+                orderDirection: 'asc'
+            }),
+            window.api.adminCrud.list({
+                entity: 'employees',
+                page: 1,
+                pageSize: 100,
+                orderBy: 'last_name',
+                orderDirection: 'asc'
+            })
+        ])
+
+        setTeacherOptions(createOptions(teachers.items, getPersonName))
+        setEmployeeOptions(createOptions(employees.items, getPersonName))
+    }, [])
+
+    useEffect(() => {
+        void loadRelationOptions()
+    }, [loadRelationOptions])
+
+    const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
+    const employeeNameById = useMemo(() => createOptionsMap(employeeOptions), [employeeOptions])
+
+    const facultyFields = useMemo(() => createFacultyFields(employeeOptions), [employeeOptions])
+    const facultyColumns = useMemo(() => createFacultyColumns(employeeNameById), [employeeNameById])
+
+    const departmentFields = useMemo(() => createDepartmentFields(teacherOptions), [teacherOptions])
+    const departmentColumns = useMemo(() => createDepartmentColumns(teacherNameById), [teacherNameById])
+
+    const groupFields = useMemo(() => createGroupFields(teacherOptions), [teacherOptions])
+    const groupColumns = useMemo(() => createGroupColumns(teacherNameById), [teacherNameById])
 
     const departmentFilters = useMemo(
         () => (selectedFaculty ? { faculty_id: Number(selectedFaculty.id) } : undefined),
@@ -110,8 +154,9 @@ export function UniversityStructureDrilldown() {
                     title="Факультеты"
                     description="Выбери факультет, чтобы перейти к его кафедрам. Можно кликнуть по строке или нажать «Открыть»."
                     createButtonLabel="Добавить факультет"
-                    fields={organizationFields}
-                    columns={organizationColumns}
+                    fields={facultyFields}
+                    columns={facultyColumns}
+                    onAfterMutation={loadRelationOptions}
                     onRowClick={openFaculty}
                     extraRowActions={(record) => (
                         <Button size="sm" variant="primary" onClick={() => openFaculty(record)}>
@@ -133,6 +178,7 @@ export function UniversityStructureDrilldown() {
                     filters={departmentFilters}
                     fixedData={departmentFixedData}
                     emptyMessage="У этого факультета пока нет кафедр."
+                    onAfterMutation={loadRelationOptions}
                     onRowClick={openDepartment}
                     extraRowActions={(record) => (
                         <Button size="sm" variant="primary" onClick={() => openDepartment(record)}>
@@ -175,6 +221,7 @@ export function UniversityStructureDrilldown() {
                     filters={groupFilters}
                     fixedData={groupFixedData}
                     emptyMessage="У этой специальности пока нет учебных групп."
+                    onAfterMutation={loadRelationOptions}
                 />
             ) : null}
         </div>

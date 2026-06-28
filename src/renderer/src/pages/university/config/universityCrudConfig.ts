@@ -1,21 +1,27 @@
-import type { AdminCrudColumnConfig, AdminCrudFieldConfig } from '../../../features/admin-crud'
+import type {
+  AdminCrudColumnConfig,
+  AdminCrudFieldConfig,
+  AdminCrudRecord,
+  AdminCrudSelectOption
+} from '../../../features/admin-crud'
 
 export const organizationFields: AdminCrudFieldConfig[] = [
   {
     key: 'name',
     label: 'Название',
-    placeholder: 'Например: Факультет информационных технологий',
+    placeholder: 'Например: Управление кадров',
     required: true
   },
   {
     key: 'short_name',
     label: 'Краткое название',
-    placeholder: 'Например: ФИТ'
+    placeholder: 'Например: УК'
   },
   {
     key: 'description',
     label: 'Описание',
-    placeholder: 'Дополнительная информация'
+    placeholder: 'Дополнительная информация',
+    type: 'textarea'
   }
 ]
 
@@ -38,43 +44,143 @@ export const organizationColumns: AdminCrudColumnConfig[] = [
   }
 ]
 
-export const departmentFields: AdminCrudFieldConfig[] = [
-  {
-    key: 'name',
-    label: 'Название кафедры',
-    placeholder: 'Например: Кафедра программной инженерии',
-    required: true
-  },
-  {
-    key: 'short_name',
-    label: 'Краткое название',
-    placeholder: 'Например: КПИ'
-  },
-  {
-    key: 'description',
-    label: 'Описание',
-    placeholder: 'Дополнительная информация'
-  }
-]
+export function createFacultyFields(
+  employeeOptions: AdminCrudSelectOption[]
+): AdminCrudFieldConfig[] {
+  return [
+    {
+      key: 'name',
+      label: 'Название факультета',
+      placeholder: 'Например: Факультет информационных технологий',
+      required: true
+    },
+    {
+      key: 'short_name',
+      label: 'Краткое название',
+      placeholder: 'Например: ФИТ'
+    },
+    {
+      key: 'dean_employee_id',
+      label: 'Декан',
+      placeholder: 'Выбери декана из сотрудников',
+      type: 'select',
+      valueType: 'number',
+      options: employeeOptions
+    },
+    {
+      key: 'deputy_dean_employee_id',
+      label: 'Заместитель декана',
+      placeholder: 'Выбери заместителя декана',
+      type: 'select',
+      valueType: 'number',
+      options: employeeOptions
+    },
+    {
+      key: 'description',
+      label: 'Описание',
+      placeholder: 'Дополнительная информация',
+      type: 'textarea'
+    }
+  ]
+}
 
-export const departmentColumns: AdminCrudColumnConfig[] = [
-  {
-    key: 'id',
-    label: 'ID'
-  },
-  {
-    key: 'name',
-    label: 'Кафедра'
-  },
-  {
-    key: 'short_name',
-    label: 'Краткое название'
-  },
-  {
-    key: 'description',
-    label: 'Описание'
-  }
-]
+export function createFacultyColumns(
+  employeeNameById: Map<number, string>
+): AdminCrudColumnConfig[] {
+  return [
+    {
+      key: 'id',
+      label: 'ID'
+    },
+    {
+      key: 'name',
+      label: 'Факультет'
+    },
+    {
+      key: 'short_name',
+      label: 'Краткое'
+    },
+    {
+      key: 'dean_employee_id',
+      label: 'Декан',
+      render: (record) => renderRelation(record.dean_employee_id, employeeNameById)
+    },
+    {
+      key: 'deputy_dean_employee_id',
+      label: 'Зам. декана',
+      render: (record) => renderRelation(record.deputy_dean_employee_id, employeeNameById)
+    }
+  ]
+}
+
+export function createDepartmentFields(
+  teacherOptions: AdminCrudSelectOption[]
+): AdminCrudFieldConfig[] {
+  return [
+    {
+      key: 'name',
+      label: 'Название кафедры',
+      placeholder: 'Например: Кафедра программной инженерии',
+      required: true
+    },
+    {
+      key: 'short_name',
+      label: 'Краткое название',
+      placeholder: 'Например: КПИ'
+    },
+    {
+      key: 'head_teacher_id',
+      label: 'Заведующий кафедрой',
+      placeholder: 'Выбери преподавателя',
+      type: 'select',
+      valueType: 'number',
+      options: teacherOptions
+    },
+    {
+      key: 'deputy_head_teacher_id',
+      label: 'Заместитель заведующего',
+      placeholder: 'Выбери преподавателя',
+      type: 'select',
+      valueType: 'number',
+      options: teacherOptions
+    },
+    {
+      key: 'description',
+      label: 'Описание',
+      placeholder: 'Дополнительная информация',
+      type: 'textarea'
+    }
+  ]
+}
+
+export function createDepartmentColumns(
+  teacherNameById: Map<number, string>
+): AdminCrudColumnConfig[] {
+  return [
+    {
+      key: 'id',
+      label: 'ID'
+    },
+    {
+      key: 'name',
+      label: 'Кафедра'
+    },
+    {
+      key: 'short_name',
+      label: 'Краткое'
+    },
+    {
+      key: 'head_teacher_id',
+      label: 'Заведующий',
+      render: (record) => renderRelation(record.head_teacher_id, teacherNameById)
+    },
+    {
+      key: 'deputy_head_teacher_id',
+      label: 'Заместитель',
+      render: (record) => renderRelation(record.deputy_head_teacher_id, teacherNameById)
+    }
+  ]
+}
 
 export const specialtyFields: AdminCrudFieldConfig[] = [
   {
@@ -96,7 +202,8 @@ export const specialtyFields: AdminCrudFieldConfig[] = [
   {
     key: 'description',
     label: 'Описание',
-    placeholder: 'Дополнительная информация'
+    placeholder: 'Дополнительная информация',
+    type: 'textarea'
   }
 ]
 
@@ -123,41 +230,94 @@ export const specialtyColumns: AdminCrudColumnConfig[] = [
   }
 ]
 
-export const groupFields: AdminCrudFieldConfig[] = [
-  {
-    key: 'name',
-    label: 'Название группы',
-    placeholder: 'Например: ПИ-21-1',
-    required: true
-  },
-  {
-    key: 'course',
-    label: 'Курс',
-    placeholder: 'Например: 2',
-    type: 'number'
-  },
-  {
-    key: 'description',
-    label: 'Описание',
-    placeholder: 'Дополнительная информация'
-  }
-]
+export function createGroupFields(teacherOptions: AdminCrudSelectOption[]): AdminCrudFieldConfig[] {
+  return [
+    {
+      key: 'name',
+      label: 'Название группы',
+      placeholder: 'Например: ПИ-21-1',
+      required: true
+    },
+    {
+      key: 'course',
+      label: 'Курс',
+      placeholder: 'Например: 2',
+      type: 'number'
+    },
+    {
+      key: 'curator_teacher_id',
+      label: 'Куратор группы',
+      placeholder: 'Выбери куратора из преподавателей',
+      type: 'select',
+      valueType: 'number',
+      options: teacherOptions
+    },
+    {
+      key: 'description',
+      label: 'Описание',
+      placeholder: 'Дополнительная информация',
+      type: 'textarea'
+    }
+  ]
+}
 
-export const groupColumns: AdminCrudColumnConfig[] = [
-  {
-    key: 'id',
-    label: 'ID'
-  },
-  {
-    key: 'name',
-    label: 'Группа'
-  },
-  {
-    key: 'course',
-    label: 'Курс'
-  },
-  {
-    key: 'description',
-    label: 'Описание'
+export function createGroupColumns(teacherNameById: Map<number, string>): AdminCrudColumnConfig[] {
+  return [
+    {
+      key: 'id',
+      label: 'ID'
+    },
+    {
+      key: 'name',
+      label: 'Группа'
+    },
+    {
+      key: 'course',
+      label: 'Курс'
+    },
+    {
+      key: 'curator_teacher_id',
+      label: 'Куратор',
+      render: (record) => renderRelation(record.curator_teacher_id, teacherNameById)
+    },
+    {
+      key: 'description',
+      label: 'Описание'
+    }
+  ]
+}
+
+export function createOptions(
+  items: AdminCrudRecord[],
+  labelFactory: (record: AdminCrudRecord) => string
+) {
+  return items.map((item) => ({
+    value: String(item.id),
+    label: labelFactory(item)
+  }))
+}
+
+export function createOptionsMap(options: AdminCrudSelectOption[]): Map<number, string> {
+  return new Map(options.map((option) => [Number(option.value), option.label]))
+}
+
+export function getPersonName(record: AdminCrudRecord): string {
+  return [record.last_name, record.first_name, record.middle_name]
+    .filter(Boolean)
+    .map(String)
+    .join(' ')
+}
+
+function renderRelation(value: unknown, labelsById: Map<number, string>): string {
+  if (value === null || value === undefined || value === '') {
+    return '—'
   }
-]
+
+  const id = Number(value)
+
+  if (!Number.isFinite(id)) {
+    return String(value)
+  }
+
+  return labelsById.get(id) ?? `#${id}`
+}
