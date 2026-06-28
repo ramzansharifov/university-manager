@@ -1,6 +1,7 @@
 import type { FormEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
+import type { Resolver } from 'react-hook-form'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FiArchive, FiEdit2, FiPlus, FiRefreshCcw, FiSearch } from 'react-icons/fi'
@@ -113,22 +114,22 @@ export function AdminCrudEntityPanel({
     const [dialogMode, setDialogMode] = useState<DialogMode>('create')
     const [selectedRecord, setSelectedRecord] = useState<AdminCrudRecord | null>(null)
     const [archiveRecord, setArchiveRecord] = useState<AdminCrudRecord | null>(null)
-    const formSchema = useMemo(() => createFormSchema(fields), [fields])
-
-    const form = useForm<Record<string, string>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: emptyFormData
-    })
-
-    const totalPages = Math.max(1, Math.ceil(total / pageSize))
-    const filtersKey = JSON.stringify(filters ?? {})
-
     const emptyFormData = useMemo(() => {
         return fields.reduce<Record<string, string>>((result, field) => {
             result[field.key] = ''
             return result
         }, {})
     }, [fields])
+
+    const formSchema = useMemo(() => createFormSchema(fields), [fields])
+
+    const form = useForm<Record<string, string>>({
+        resolver: zodResolver(formSchema) as Resolver<Record<string, string>>,
+        defaultValues: emptyFormData
+    })
+
+    const totalPages = Math.max(1, Math.ceil(total / pageSize))
+    const filtersKey = JSON.stringify(filters ?? {})
 
     useEffect(() => {
         form.reset(emptyFormData)
@@ -193,7 +194,7 @@ export function AdminCrudEntityPanel({
         if (!open) {
             setDialogMode('create')
             setSelectedRecord(null)
-            setFormData(emptyFormData)
+            form.reset(emptyFormData)
             setIsSubmitting(false)
         }
     }
@@ -208,13 +209,6 @@ export function AdminCrudEntityPanel({
         setSearchInput('')
         setSearch('')
         setPage(1)
-    }
-
-    function updateFieldValue(fieldKey: string, value: string) {
-        setFormData((current) => ({
-            ...current,
-            [fieldKey]: value
-        }))
     }
 
     async function handleFormSubmit(formValues: Record<string, string>) {
