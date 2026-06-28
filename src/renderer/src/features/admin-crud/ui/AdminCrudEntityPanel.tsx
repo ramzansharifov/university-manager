@@ -449,7 +449,22 @@ export function AdminCrudEntityPanel({
             </CardContent>
 
             <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-                <DialogContent className="flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] !max-w-5xl flex-col overflow-hidden p-0">
+                <DialogContent
+                    className="flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] !max-w-5xl flex-col overflow-hidden p-0"
+                    onPointerDownOutside={(event) => {
+                        event.preventDefault()
+                    }}
+                    onInteractOutside={(event) => {
+                        const target = event.target
+
+                        if (
+                            target instanceof HTMLElement &&
+                            target.closest('[data-university-manager-select-content]')
+                        ) {
+                            event.preventDefault()
+                        }
+                    }}
+                >
                     <DialogHeader className="border-b border-[var(--color-border)] px-6 py-5 pr-14">
                         <DialogTitle>
                             {dialogMode === 'create' ? createButtonLabel : 'Редактировать запись'}
@@ -590,6 +605,7 @@ function CrudFieldInput({
     if (field.type === 'select') {
         return (
             <Select
+                modal={false}
                 value={value || undefined}
                 disabled={field.disabled || field.options?.length === 0}
                 onValueChange={onChange}

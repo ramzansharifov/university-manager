@@ -40,9 +40,10 @@ const SelectContent = forwardRef<
     <SelectPrimitive.Portal>
         <SelectPrimitive.Content
             ref={ref}
+            data-university-manager-select-content=""
             position={position}
             className={cn(
-                'z-50 max-h-72 min-w-[8rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] shadow-xl',
+                'z-[70] max-h-72 min-w-[8rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] shadow-xl',
                 'data-[state=open]:animate-in data-[state=closed]:animate-out',
                 position === 'popper' &&
                 'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
