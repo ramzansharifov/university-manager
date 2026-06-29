@@ -39,6 +39,7 @@ export type AdminCrudRecord = AdminCrudListResult['items'][number]
 export type AdminEntityKey = Parameters<Window['api']['adminCrud']['list']>[0]['entity']
 type AdminCrudFilterValue = string | number | boolean | null
 type AdminCrudFilterRecord = Record<string, AdminCrudFilterValue>
+type AdminCrudOrderDirection = 'asc' | 'desc'
 
 export interface AdminCrudSelectOption {
     value: string
@@ -59,10 +60,13 @@ export interface AdminCrudFieldConfig {
     dependsOn?: string
     dependencyPlaceholder?: string
     virtual?: boolean
+    defaultValue?: string
+    persistKey?: string
+    persistWhenCheckedKey?: string
     autoFillTimeEnd?: {
         startKey: string
         durationKey: string
-        enabledKey: string
+        enabledKey?: string
     }
 }
 
@@ -86,6 +90,8 @@ interface AdminCrudEntityPanelProps {
     canCreate?: boolean
     canEdit?: boolean
     canArchive?: boolean
+    orderBy?: string
+    orderDirection?: AdminCrudOrderDirection
     onRowClick?: (record: AdminCrudRecord) => void
     extraRowActions?: (record: AdminCrudRecord) => ReactNode
     onAfterMutation?: () => void | Promise<void>
@@ -107,6 +113,8 @@ export function AdminCrudEntityPanel({
     canCreate = true,
     canEdit = true,
     canArchive = true,
+    orderBy = 'id',
+    orderDirection = 'asc',
     onRowClick,
     extraRowActions,
     onAfterMutation
@@ -124,12 +132,7 @@ export function AdminCrudEntityPanel({
     const [dialogMode, setDialogMode] = useState<DialogMode>('create')
     const [selectedRecord, setSelectedRecord] = useState<AdminCrudRecord | null>(null)
     const [archiveRecord, setArchiveRecord] = useState<AdminCrudRecord | null>(null)
-    const emptyFormData = useMemo(() => {
-        return fields.reduce<Record<string, string>>((result, field) => {
-            result[field.key] = ''
-            return result
-        }, {})
-    }, [fields])
+    const emptyFormData = useMemo(() => createEmptyFormData(fields), [fields])
 
     const formSchema = useMemo(() => createFormSchema(fields), [fields])
 
@@ -153,9 +156,9 @@ export function AdminCrudEntityPanel({
                 return
             }
 
-            const enabledValue = watchedFormValues[field.autoFillTimeEnd.enabledKey]
+            const enabledKey = field.autoFillTimeEnd.enabledKey
 
-            if (enabledValue !== 'true') {
+            if (enabledKey && watchedFormValues[enabledKey] !== 'true') {
                 return
             }
 
@@ -209,8 +212,8 @@ export function AdminCrudEntityPanel({
                 pageSize,
                 search: search || undefined,
                 filters,
-                orderBy: 'id',
-                orderDirection: 'desc'
+                orderBy,
+                orderDirection
             })
 
             setItems(result.items)
@@ -220,7 +223,7 @@ export function AdminCrudEntityPanel({
         } finally {
             setIsLoading(false)
         }
-    }, [entity, page, search, filtersKey])
+    }, [entity, page, search, filtersKey, orderBy, orderDirection])
 
     useEffect(() => {
         setPage(1)
@@ -233,7 +236,7 @@ export function AdminCrudEntityPanel({
     function openCreateDialog() {
         setDialogMode('create')
         setSelectedRecord(null)
-        form.reset(emptyFormData)
+        form.reset(createEmptyFormData(fields))
         setDialogOpen(true)
     }
 
@@ -300,7 +303,7 @@ export function AdminCrudEntityPanel({
                     data: payload
                 })
             }
-
+            persistFormValues(fields, formValues)
             setDialogOpen(false)
             await loadItems()
             await onAfterMutation?.()
@@ -911,6 +914,41 @@ function parseTimeToMinutes(value: string): number | null {
     }
 
     return hours * 60 + minutes
+}
+
+function createEmptyFormData(fields: AdminCrudFieldConfig[]): Record<string, string> {
+    return fields.reduce<Record<string, string>>((result, field) => {
+        result[field.key] = getFieldDefaultValue(field)
+        return result
+    }, {})
+}
+
+function getFieldDefaultValue(field: AdminCrudFieldConfig): string {
+    if (field.persistKey) {
+        return localStorage.getItem(field.persistKey) ?? field.defaultValue ?? ''
+    }
+
+    return field.defaultValue ?? ''
+}
+
+function persistFormValues(fields: AdminCrudFieldConfig[], formData: Record<string, string>): void {
+    fields.forEach((field) => {
+        if (!field.persistKey) {
+            return
+        }
+
+        if (field.persistWhenCheckedKey && formData[field.persistWhenCheckedKey] !== 'true') {
+            return
+        }
+
+        const value = formData[field.key]?.trim()
+
+        if (!value) {
+            return
+        }
+
+        localStorage.setItem(field.persistKey, value)
+    })
 }
 
 function buildPayload(

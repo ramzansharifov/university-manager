@@ -156,17 +156,19 @@ export const lessonPeriodFields: AdminCrudFieldConfig[] = [
     required: true
   },
   {
-    key: 'use_duration',
-    label: 'Рассчитать конец',
-    placeholder: 'Рассчитать конец пары по длительности',
-    type: 'checkbox',
-    virtual: true
-  },
-  {
     key: 'duration_minutes',
-    label: 'Длительность пары',
+    label: 'Длительность пары, минут',
     placeholder: 'Например: 90',
     type: 'number',
+    virtual: true,
+    persistKey: 'university-manager.lesson-period.duration-minutes',
+    persistWhenCheckedKey: 'remember_duration'
+  },
+  {
+    key: 'remember_duration',
+    label: 'Запомнить длительность',
+    placeholder: 'Запомнить эту длительность для следующих пар',
+    type: 'checkbox',
     virtual: true
   },
   {
@@ -177,8 +179,7 @@ export const lessonPeriodFields: AdminCrudFieldConfig[] = [
     required: true,
     autoFillTimeEnd: {
       startKey: 'starts_at',
-      durationKey: 'duration_minutes',
-      enabledKey: 'use_duration'
+      durationKey: 'duration_minutes'
     }
   }
 ]

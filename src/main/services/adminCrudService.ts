@@ -209,29 +209,52 @@ export class AdminCrudService {
       page: 1,
       pageSize: 1000,
       includeArchived: true,
-      orderBy: 'starts_at',
+      orderBy: 'id',
       orderDirection: 'asc'
     })
 
-    periods.items.forEach((period, index) => {
+    const normalizedPeriods = periods.items
+      .map((period) => {
+        const startsAt = normalizeLessonPeriodTime(String(period.starts_at ?? ''), 'начала')
+        const endsAt = normalizeLessonPeriodTime(String(period.ends_at ?? ''), 'окончания')
+
+        return {
+          ...period,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          startMinutes: timeToMinutes(startsAt)
+        }
+      })
+      .sort((firstPeriod, secondPeriod) => {
+        const timeDiff = firstPeriod.startMinutes - secondPeriod.startMinutes
+
+        if (timeDiff !== 0) {
+          return timeDiff
+        }
+
+        return Number(firstPeriod.id) - Number(secondPeriod.id)
+      })
+
+    normalizedPeriods.forEach((period, index) => {
       this.repository.update(config, Number(period.id), {
         number: 100000 + index,
         name: `Временная пара ${Number(period.id)}`
       })
     })
 
-    periods.items.forEach((period, index) => {
+    normalizedPeriods.forEach((period, index) => {
       const periodNumber = index + 1
 
       this.repository.update(config, Number(period.id), {
         number: periodNumber,
-        name: `${periodNumber} пара`
+        name: `${periodNumber} пара`,
+        starts_at: period.starts_at,
+        ends_at: period.ends_at
       })
     })
 
-    return this.repository.getById(config, savedRecordId) ?? periods.items[0]
+    return this.repository.getById(config, savedRecordId) ?? normalizedPeriods[0]
   }
-
   private prepareAudienceData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
     const nextData = { ...data }
     const nextName = String(nextData.name ?? before?.name ?? '').trim()
