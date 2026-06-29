@@ -162,11 +162,14 @@ export class AdminCrudService {
     data: AdminCrudRecord,
     before?: AdminCrudRecord
   ): AdminCrudRecord {
-    const startsAt = String(data.starts_at ?? before?.starts_at ?? '').trim()
-    const endsAt = String(data.ends_at ?? before?.ends_at ?? '').trim()
-
-    validateLessonPeriodTime(startsAt, 'начала')
-    validateLessonPeriodTime(endsAt, 'окончания')
+    const startsAt = normalizeLessonPeriodTime(
+      String(data.starts_at ?? before?.starts_at ?? ''),
+      'начала'
+    )
+    const endsAt = normalizeLessonPeriodTime(
+      String(data.ends_at ?? before?.ends_at ?? ''),
+      'окончания'
+    )
 
     if (timeToMinutes(endsAt) <= timeToMinutes(startsAt)) {
       throw new Error('Время окончания пары должно быть позже времени начала')
@@ -291,16 +294,22 @@ function deriveAudienceFloor(name: string): number | null {
   return Number.isFinite(floor) ? floor : null
 }
 
-function validateLessonPeriodTime(value: string, label: string): void {
-  if (!/^\d{2}:\d{2}$/.test(value)) {
+function normalizeLessonPeriodTime(value: string, label: string): string {
+  const trimmedValue = value.trim()
+  const match = trimmedValue.match(/^(\d{1,2}):(\d{2})$/)
+
+  if (!match) {
     throw new Error(`Укажи время ${label} пары в формате ЧЧ:ММ`)
   }
 
-  const [hours, minutes] = value.split(':').map(Number)
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
 
-  if (hours > 23 || minutes > 59) {
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours > 23 || minutes > 59) {
     throw new Error(`Некорректное время ${label} пары`)
   }
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
 function timeToMinutes(value: string): number {

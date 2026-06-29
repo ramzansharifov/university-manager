@@ -51,13 +51,19 @@ export interface AdminCrudFieldConfig {
     label: string
     placeholder?: string
     required?: boolean
-    type?: 'text' | 'number' | 'email' | 'phone' | 'date' | 'textarea' | 'select' | 'multiText'
+    type?: 'text' | 'number' | 'email' | 'phone' | 'date' | 'time' | 'textarea' | 'select' | 'multiText' | 'checkbox'
     valueType?: 'string' | 'number'
     options?: AdminCrudSelectOption[]
     disabled?: boolean
     fullWidth?: boolean
     dependsOn?: string
     dependencyPlaceholder?: string
+    virtual?: boolean
+    autoFillTimeEnd?: {
+        startKey: string
+        durationKey: string
+        enabledKey: string
+    }
 }
 
 export interface AdminCrudColumnConfig {
@@ -140,6 +146,36 @@ export function AdminCrudEntityPanel({
     useEffect(() => {
         form.reset(emptyFormData)
     }, [emptyFormData, form])
+
+    useEffect(() => {
+        fields.forEach((field) => {
+            if (!field.autoFillTimeEnd) {
+                return
+            }
+
+            const enabledValue = watchedFormValues[field.autoFillTimeEnd.enabledKey]
+
+            if (enabledValue !== 'true') {
+                return
+            }
+
+            const startValue = watchedFormValues[field.autoFillTimeEnd.startKey]
+            const durationValue = watchedFormValues[field.autoFillTimeEnd.durationKey]
+
+            const nextEndTime = addMinutesToTime(startValue, durationValue)
+
+            if (!nextEndTime) {
+                return
+            }
+
+            if (watchedFormValues[field.key] !== nextEndTime) {
+                form.setValue(field.key, nextEndTime, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                })
+            }
+        })
+    }, [fields, form, watchedFormValues])
 
     useEffect(() => {
         fields.forEach((field) => {
@@ -606,6 +642,21 @@ function CrudFieldInput({
     onChange: (value: string) => void
     onBlur: () => void
 }) {
+    if (field.type === 'checkbox') {
+        return (
+            <label className="flex min-h-10 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)]">
+                <input
+                    type="checkbox"
+                    checked={value === 'true'}
+                    disabled={field.disabled}
+                    onBlur={onBlur}
+                    onChange={(event) => onChange(event.target.checked ? 'true' : 'false')}
+                />
+                <span>{field.placeholder ?? field.label}</span>
+            </label>
+        )
+    }
+
     if (field.type === 'textarea') {
         return (
             <Textarea
@@ -688,7 +739,15 @@ function CrudFieldInput({
 
     return (
         <Input
-            type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'}
+            type={
+                field.type === 'email'
+                    ? 'email'
+                    : field.type === 'number'
+                        ? 'number'
+                        : field.type === 'time'
+                            ? 'time'
+                            : 'text'
+            }
             value={value}
             placeholder={field.placeholder}
             disabled={field.disabled}
@@ -822,11 +881,47 @@ function getAvailableSelectOptions(
     })
 }
 
+function addMinutesToTime(startValue: string, durationValue: string): string | null {
+    const startMinutes = parseTimeToMinutes(startValue)
+    const durationMinutes = Number(durationValue)
+
+    if (startMinutes === null || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+        return null
+    }
+
+    const totalMinutes = startMinutes + durationMinutes
+    const hours = Math.floor(totalMinutes / 60) % 24
+    const minutes = totalMinutes % 60
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
+function parseTimeToMinutes(value: string): number | null {
+    const match = value.trim().match(/^(\d{1,2}):(\d{2})$/)
+
+    if (!match) {
+        return null
+    }
+
+    const hours = Number(match[1])
+    const minutes = Number(match[2])
+
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours > 23 || minutes > 59) {
+        return null
+    }
+
+    return hours * 60 + minutes
+}
+
 function buildPayload(
     fields: AdminCrudFieldConfig[],
     formData: Record<string, string>
 ): AdminCrudRecord {
     return fields.reduce<AdminCrudRecord>((result, field) => {
+        if (field.virtual) {
+            return result
+        }
+
         const rawValue = formData[field.key] ?? ''
         const trimmedValue = rawValue.trim()
 

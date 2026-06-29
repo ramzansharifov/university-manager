@@ -152,13 +152,34 @@ export const lessonPeriodFields: AdminCrudFieldConfig[] = [
     key: 'starts_at',
     label: 'Начало пары',
     placeholder: 'Например: 08:30',
+    type: 'time',
     required: true
+  },
+  {
+    key: 'use_duration',
+    label: 'Рассчитать конец',
+    placeholder: 'Рассчитать конец пары по длительности',
+    type: 'checkbox',
+    virtual: true
+  },
+  {
+    key: 'duration_minutes',
+    label: 'Длительность пары',
+    placeholder: 'Например: 90',
+    type: 'number',
+    virtual: true
   },
   {
     key: 'ends_at',
     label: 'Конец пары',
     placeholder: 'Например: 10:00',
-    required: true
+    type: 'time',
+    required: true,
+    autoFillTimeEnd: {
+      startKey: 'starts_at',
+      durationKey: 'duration_minutes',
+      enabledKey: 'use_duration'
+    }
   }
 ]
 
