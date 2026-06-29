@@ -167,10 +167,18 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['name', 'status']
   ),
 
+  audience_types: entity('audience_types', ['name', 'description'], ['name', 'description']),
+
+  buildings: entity(
+    'buildings',
+    ['name', 'address', 'description'],
+    ['name', 'address', 'description']
+  ),
+
   audiences: entity(
     'audiences',
-    ['audience_type_id', 'name', 'building', 'floor', 'capacity', 'note'],
-    ['name', 'building']
+    ['audience_type_id', 'building_id', 'name', 'capacity', 'note'],
+    ['name', 'note']
   ),
 
   schedule_items: entity(

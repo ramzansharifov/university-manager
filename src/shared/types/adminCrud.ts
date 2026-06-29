@@ -17,6 +17,8 @@ export type AdminEntityKey =
   | 'curriculum_plans'
   | 'curriculum_items'
   | 'disciplines'
+  | 'audience_types'
+  | 'buildings'
   | 'audiences'
   | 'schedule_items'
   | 'lesson_sessions'

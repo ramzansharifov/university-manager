@@ -135,13 +135,7 @@ function seedDictionaries(database: Database.Database): void {
     ['lesson_types', 'lab', 'Лабораторная работа', 40],
     ['lesson_types', 'consultation', 'Консультация', 50],
     ['lesson_types', 'exam', 'Экзамен', 60],
-    ['lesson_types', 'credit', 'Зачёт', 70],
-
-    ['audience_types', 'lecture_room', 'Лекционная аудитория', 10],
-    ['audience_types', 'computer_lab', 'Компьютерный класс', 20],
-    ['audience_types', 'laboratory', 'Лаборатория', 30],
-    ['audience_types', 'gym', 'Спортивный зал', 40],
-    ['audience_types', 'seminar_room', 'Кабинет для семинаров', 50]
+    ['lesson_types', 'credit', 'Зачёт', 70]
   ]
 
   for (const item of items) {

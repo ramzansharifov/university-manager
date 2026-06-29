@@ -133,9 +133,24 @@ export class AdminCrudService {
   ): AdminCrudRecord {
     if (entity === 'employees') {
       this.validateEmployeePosition(data, before)
+
+      return data
+    }
+
+    if (entity === 'audiences') {
+      return this.prepareAudienceData(data, before)
     }
 
     return data
+  }
+
+  private prepareAudienceData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
+    const nextData = { ...data }
+    const nextName = String(nextData.name ?? before?.name ?? '').trim()
+
+    nextData.floor = deriveAudienceFloor(nextName)
+
+    return nextData
   }
 
   private validateEmployeePosition(data: AdminCrudRecord, before?: AdminCrudRecord): void {
@@ -177,4 +192,16 @@ function normalizeNullableNumber(value: unknown): number | null {
   const numberValue = Number(value)
 
   return Number.isFinite(numberValue) ? numberValue : null
+}
+
+function deriveAudienceFloor(name: string): number | null {
+  const firstDigit = name.trim().match(/^\d/)?.[0]
+
+  if (!firstDigit) {
+    return null
+  }
+
+  const floor = Number(firstDigit)
+
+  return Number.isFinite(floor) ? floor : null
 }
