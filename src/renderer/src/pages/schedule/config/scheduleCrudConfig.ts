@@ -149,27 +149,14 @@ export function createAudienceColumns(maps: ScheduleColumnMaps): AdminCrudColumn
 
 export const lessonPeriodFields: AdminCrudFieldConfig[] = [
   {
-    key: 'number',
-    label: 'Номер пары',
-    placeholder: 'Например: 1',
-    type: 'number',
-    required: true
-  },
-  {
-    key: 'name',
-    label: 'Название',
-    placeholder: 'Например: 1 пара',
-    required: true
-  },
-  {
     key: 'starts_at',
-    label: 'Начало',
+    label: 'Начало пары',
     placeholder: 'Например: 08:30',
     required: true
   },
   {
     key: 'ends_at',
-    label: 'Окончание',
+    label: 'Конец пары',
     placeholder: 'Например: 10:00',
     required: true
   }
@@ -177,16 +164,12 @@ export const lessonPeriodFields: AdminCrudFieldConfig[] = [
 
 export const lessonPeriodColumns: AdminCrudColumnConfig[] = [
   {
-    key: 'id',
-    label: 'ID'
-  },
-  {
     key: 'number',
-    label: '№'
+    label: '№ пары'
   },
   {
     key: 'name',
-    label: 'Пара'
+    label: 'Название'
   },
   {
     key: 'starts_at',
@@ -194,7 +177,12 @@ export const lessonPeriodColumns: AdminCrudColumnConfig[] = [
   },
   {
     key: 'ends_at',
-    label: 'Окончание'
+    label: 'Конец'
+  },
+  {
+    key: 'break_after',
+    label: 'Перерыв после',
+    render: (record) => getBreakAfterText(record)
   }
 ]
 
@@ -236,4 +224,12 @@ function renderRelation(value: unknown, labelsById: Map<number, string>): string
   }
 
   return labelsById.get(id) ?? `#${id}`
+}
+
+function getBreakAfterText(record: AdminCrudRecord): string {
+  if (!record.starts_at || !record.ends_at) {
+    return '—'
+  }
+
+  return 'Автоматически по следующей паре'
 }

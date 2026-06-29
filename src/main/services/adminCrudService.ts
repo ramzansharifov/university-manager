@@ -35,19 +35,20 @@ export class AdminCrudService {
     const config = getAdminCrudEntityConfig(params.entity)
     const preparedData = this.prepareDataForSave(params.entity, params.data)
     const created = this.repository.create(config, preparedData)
+    const finalItem = this.afterDataSaved(params.entity, created)
 
     this.auditService.write({
       action: 'create',
       module: 'admin_crud',
       entityName: params.entity,
-      entityId: Number(created.id),
+      entityId: Number(finalItem.id),
       before: null,
-      after: created
+      after: finalItem
     })
 
     return {
       success: true,
-      item: created
+      item: finalItem
     }
   }
 
@@ -61,6 +62,7 @@ export class AdminCrudService {
 
     const preparedData = this.prepareDataForSave(params.entity, params.data, before)
     const updated = this.repository.update(config, params.id, preparedData)
+    const finalItem = this.afterDataSaved(params.entity, updated)
 
     this.auditService.write({
       action: 'update',
@@ -68,12 +70,12 @@ export class AdminCrudService {
       entityName: params.entity,
       entityId: params.id,
       before,
-      after: updated
+      after: finalItem
     })
 
     return {
       success: true,
-      item: updated
+      item: finalItem
     }
   }
 
@@ -141,7 +143,90 @@ export class AdminCrudService {
       return this.prepareAudienceData(data, before)
     }
 
+    if (entity === 'lesson_periods') {
+      return this.prepareLessonPeriodData(data, before)
+    }
+
     return data
+  }
+
+  private afterDataSaved(entity: string, savedRecord: AdminCrudRecord): AdminCrudRecord {
+    if (entity === 'lesson_periods') {
+      return this.renumberLessonPeriods(Number(savedRecord.id))
+    }
+
+    return savedRecord
+  }
+
+  private prepareLessonPeriodData(
+    data: AdminCrudRecord,
+    before?: AdminCrudRecord
+  ): AdminCrudRecord {
+    const startsAt = String(data.starts_at ?? before?.starts_at ?? '').trim()
+    const endsAt = String(data.ends_at ?? before?.ends_at ?? '').trim()
+
+    validateLessonPeriodTime(startsAt, 'начала')
+    validateLessonPeriodTime(endsAt, 'окончания')
+
+    if (timeToMinutes(endsAt) <= timeToMinutes(startsAt)) {
+      throw new Error('Время окончания пары должно быть позже времени начала')
+    }
+
+    return {
+      ...data,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      number: normalizeNullableNumber(before?.number) ?? this.getNextLessonPeriodNumber(),
+      name: before?.name ? String(before.name) : 'Пара'
+    }
+  }
+
+  private getNextLessonPeriodNumber(): number {
+    const config = getAdminCrudEntityConfig('lesson_periods')
+    const periods = this.repository.list(config, {
+      entity: 'lesson_periods',
+      page: 1,
+      pageSize: 1000,
+      includeArchived: true,
+      orderBy: 'number',
+      orderDirection: 'asc'
+    })
+
+    const numbers = periods.items
+      .map((period) => Number(period.number))
+      .filter((number) => Number.isFinite(number))
+
+    return numbers.length > 0 ? Math.max(...numbers) + 1 : 1
+  }
+
+  private renumberLessonPeriods(savedRecordId: number): AdminCrudRecord {
+    const config = getAdminCrudEntityConfig('lesson_periods')
+    const periods = this.repository.list(config, {
+      entity: 'lesson_periods',
+      page: 1,
+      pageSize: 1000,
+      includeArchived: true,
+      orderBy: 'starts_at',
+      orderDirection: 'asc'
+    })
+
+    periods.items.forEach((period, index) => {
+      this.repository.update(config, Number(period.id), {
+        number: 100000 + index,
+        name: `Временная пара ${Number(period.id)}`
+      })
+    })
+
+    periods.items.forEach((period, index) => {
+      const periodNumber = index + 1
+
+      this.repository.update(config, Number(period.id), {
+        number: periodNumber,
+        name: `${periodNumber} пара`
+      })
+    })
+
+    return this.repository.getById(config, savedRecordId) ?? periods.items[0]
   }
 
   private prepareAudienceData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
@@ -204,4 +289,22 @@ function deriveAudienceFloor(name: string): number | null {
   const floor = Number(firstDigit)
 
   return Number.isFinite(floor) ? floor : null
+}
+
+function validateLessonPeriodTime(value: string, label: string): void {
+  if (!/^\d{2}:\d{2}$/.test(value)) {
+    throw new Error(`Укажи время ${label} пары в формате ЧЧ:ММ`)
+  }
+
+  const [hours, minutes] = value.split(':').map(Number)
+
+  if (hours > 23 || minutes > 59) {
+    throw new Error(`Некорректное время ${label} пары`)
+  }
+}
+
+function timeToMinutes(value: string): number {
+  const [hours, minutes] = value.split(':').map(Number)
+
+  return hours * 60 + minutes
 }

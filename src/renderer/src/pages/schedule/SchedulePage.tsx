@@ -142,7 +142,7 @@ export function SchedulePage() {
                     <AdminCrudEntityPanel
                         entity="lesson_periods"
                         title="Пары"
-                        description="Справочник учебных пар: номер, название, время начала и окончания."
+                        description="Правила времени пар. Укажи только начало и конец, номер пары система рассчитает автоматически по времени."
                         createButtonLabel="Добавить пару"
                         fields={lessonPeriodFields}
                         columns={lessonPeriodColumns}
