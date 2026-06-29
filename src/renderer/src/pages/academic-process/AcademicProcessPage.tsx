@@ -1,17 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AdminCrudSelectOption } from '../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../features/admin-crud'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger
-} from '../../shared/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
 import {
     academicYearColumns,
     academicYearFields,
@@ -113,28 +103,5 @@ export function AcademicProcessPage() {
                 </TabsContent>
             </Tabs>
         </div>
-    )
-}
-
-function ComingSoonCard({
-    title,
-    description
-}: {
-    title: string
-    description: string
-}) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
-            </CardHeader>
-
-            <CardContent>
-                <p className="text-sm text-[var(--color-text-muted)]">
-                    Этот блок подготовлен, но его таблицы подключим следующим шагом.
-                </p>
-            </CardContent>
-        </Card>
     )
 }
