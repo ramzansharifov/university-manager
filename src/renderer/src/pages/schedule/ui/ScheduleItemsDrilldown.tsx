@@ -43,6 +43,7 @@ export function ScheduleItemsDrilldown() {
       disciplinesResult,
       semestersResult,
       weeksResult,
+      academicYearsResult,
       lessonPeriodsResult,
       teachersResult,
       audiencesResult,
@@ -75,6 +76,13 @@ export function ScheduleItemsDrilldown() {
         page: 1,
         pageSize: 500,
         orderBy: 'number',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
+        page: 1,
+        pageSize: 100,
+        orderBy: 'name',
         orderDirection: 'asc'
       }),
       window.api.adminCrud.list({
@@ -119,7 +127,13 @@ export function ScheduleItemsDrilldown() {
     setDisciplines(disciplinesResult.items)
 
     setSemesterOptions(createOptions(semestersResult.items, getSemesterName))
-    setWeekOptions(createWeekOptions(weeksResult.items))
+    const availableWeeks = await ensureWeeksForSemesters({
+      semesters: semestersResult.items,
+      existingWeeks: weeksResult.items,
+      academicYears: academicYearsResult.items
+    })
+
+    setWeekOptions(createWeekOptions(availableWeeks))
     setLessonPeriodOptions(createLessonPeriodOptions(lessonPeriodsResult.items))
     setTeacherOptions(createOptions(teachersResult.items, getPersonName))
     setAudienceOptions(createOptions(audiencesResult.items, getRecordName))
@@ -448,4 +462,214 @@ function ScheduleBreadcrumb({
       </CardContent>
     </Card>
   )
+}
+
+async function ensureWeeksForSemesters({
+  semesters,
+  existingWeeks,
+  academicYears
+}: {
+  semesters: AdminCrudRecord[]
+  existingWeeks: AdminCrudRecord[]
+  academicYears: AdminCrudRecord[]
+}): Promise<AdminCrudRecord[]> {
+  const weeksBySemesterId = new Map<number, AdminCrudRecord[]>()
+
+  existingWeeks.forEach((week) => {
+    const semesterId = toNumberOrNull(week.semester_id)
+
+    if (semesterId === null) {
+      return
+    }
+
+    const weeks = weeksBySemesterId.get(semesterId) ?? []
+    weeks.push(week)
+    weeksBySemesterId.set(semesterId, weeks)
+  })
+
+  let hasCreatedWeeks = false
+
+  for (const semester of semesters) {
+    const semesterId = toNumberOrNull(semester.id)
+
+    if (semesterId === null) {
+      continue
+    }
+
+    const existingSemesterWeeks = weeksBySemesterId.get(semesterId) ?? []
+
+    if (existingSemesterWeeks.length > 0) {
+      continue
+    }
+
+    const range = resolveSemesterDateRange(semester, academicYears)
+
+    if (!range) {
+      continue
+    }
+
+    const weekPayloads = buildWeekPayloads(semesterId, range.startsAt, range.endsAt)
+
+    for (const weekPayload of weekPayloads) {
+      await window.api.adminCrud.create({
+        entity: 'weeks',
+        data: weekPayload
+      })
+    }
+
+    hasCreatedWeeks = true
+  }
+
+  if (!hasCreatedWeeks) {
+    return existingWeeks
+  }
+
+  const weeksResult = await window.api.adminCrud.list({
+    entity: 'weeks',
+    page: 1,
+    pageSize: 500,
+    orderBy: 'number',
+    orderDirection: 'asc'
+  })
+
+  return weeksResult.items
+}
+
+function resolveSemesterDateRange(
+  semester: AdminCrudRecord,
+  academicYears: AdminCrudRecord[]
+): { startsAt: string; endsAt: string } | null {
+  const semesterStartsAt = normalizeDateString(semester.starts_at)
+  const semesterEndsAt = normalizeDateString(semester.ends_at)
+
+  if (semesterStartsAt && semesterEndsAt) {
+    return {
+      startsAt: semesterStartsAt,
+      endsAt: semesterEndsAt
+    }
+  }
+
+  const academicYearId = toNumberOrNull(semester.academic_year_id)
+
+  if (academicYearId === null) {
+    return null
+  }
+
+  const academicYear = academicYears.find((item) => Number(item.id) === academicYearId)
+
+  if (!academicYear) {
+    return null
+  }
+
+  const academicYearStartsAt = normalizeDateString(academicYear.starts_at)
+  const academicYearEndsAt = normalizeDateString(academicYear.ends_at)
+
+  if (!academicYearStartsAt || !academicYearEndsAt) {
+    return null
+  }
+
+  const semesterNumber = toNumberOrNull(semester.number)
+  const academicYearStartDate = parseDate(academicYearStartsAt)
+  const academicYearEndDate = parseDate(academicYearEndsAt)
+
+  if (semesterNumber === 1) {
+    const firstSemesterEndDate = minDate(
+      addDays(academicYearStartDate, 7 * 18 - 1),
+      academicYearEndDate
+    )
+
+    return {
+      startsAt: formatDate(academicYearStartDate),
+      endsAt: formatDate(firstSemesterEndDate)
+    }
+  }
+
+  if (semesterNumber === 2) {
+    const secondSemesterStartDate = minDate(
+      addDays(academicYearStartDate, 7 * 18),
+      academicYearEndDate
+    )
+
+    return {
+      startsAt: formatDate(secondSemesterStartDate),
+      endsAt: formatDate(academicYearEndDate)
+    }
+  }
+
+  return {
+    startsAt: academicYearStartsAt,
+    endsAt: academicYearEndsAt
+  }
+}
+
+function buildWeekPayloads(
+  semesterId: number,
+  startsAt: string,
+  endsAt: string
+): AdminCrudRecord[] {
+  const payloads: AdminCrudRecord[] = []
+
+  let weekNumber = 1
+  let currentDate = parseDate(startsAt)
+  const endDate = parseDate(endsAt)
+
+  while (currentDate.getTime() <= endDate.getTime()) {
+    const weekEndDate = minDate(addDays(currentDate, 6), endDate)
+
+    payloads.push({
+      semester_id: semesterId,
+      number: weekNumber,
+      starts_at: formatDate(currentDate),
+      ends_at: formatDate(weekEndDate),
+      week_type: weekNumber % 2 === 1 ? 'odd' : 'even',
+      status: 'active'
+    })
+
+    currentDate = addDays(weekEndDate, 1)
+    weekNumber += 1
+  }
+
+  return payloads
+}
+
+function normalizeDateString(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const stringValue = String(value)
+
+  return /^\d{4}-\d{2}-\d{2}$/.test(stringValue) ? stringValue : null
+}
+
+function parseDate(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number)
+
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+function formatDate(date: Date): string {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
+}
+
+function minDate(firstDate: Date, secondDate: Date): Date {
+  return firstDate.getTime() <= secondDate.getTime() ? firstDate : secondDate
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numberValue = Number(value)
+
+  return Number.isFinite(numberValue) ? numberValue : null
 }
