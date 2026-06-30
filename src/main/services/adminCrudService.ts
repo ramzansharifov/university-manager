@@ -377,6 +377,10 @@ export class AdminCrudService {
       throw new Error('Укажи тип элемента: промежуточный или итоговый')
     }
 
+    if (isIntermediate && isFinal) {
+      throw new Error('Оценочный элемент не может быть одновременно промежуточным и итоговым')
+    }
+
     if (gradingMode === 'score') {
       if (minScore === null || maxScore === null) {
         throw new Error('Для балльного элемента укажи минимальный и максимальный балл')

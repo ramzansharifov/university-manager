@@ -77,17 +77,19 @@ export const gradeElementTypeFields: AdminCrudFieldConfig[] = [
     key: 'is_intermediate',
     label: 'Промежуточный элемент',
     placeholder: 'Промежуточный элемент, например контрольная',
-    type: 'checkbox',
+    type: 'toggle',
     valueType: 'number',
-    defaultValue: '0'
+    defaultValue: '0',
+    exclusiveGroup: 'grade-element-kind'
   },
   {
     key: 'is_final',
     label: 'Итоговый элемент',
     placeholder: 'Итоговый элемент, например экзамен или зачёт',
-    type: 'checkbox',
+    type: 'toggle',
     valueType: 'number',
-    defaultValue: '0'
+    defaultValue: '0',
+    exclusiveGroup: 'grade-element-kind'
   },
   {
     key: 'description',

@@ -63,6 +63,7 @@ export interface AdminCrudFieldConfig {
     | 'select'
     | 'multiText'
     | 'checkbox'
+    | 'toggle'
   valueType?: 'string' | 'number'
   options?: AdminCrudSelectOption[]
   disabled?: boolean
@@ -76,6 +77,7 @@ export interface AdminCrudFieldConfig {
     value: string
   }
   defaultValue?: string
+  exclusiveGroup?: string
   persistKey?: string
   persistWhenCheckedKey?: string
   autoFillTargets?: Array<{
@@ -628,18 +630,19 @@ export function AdminCrudEntityPanel({
                         ) : null}
                       </span>
 
-                      <Controller
-                        name={field.key}
-                        control={form.control}
-                        render={({ field: controllerField }) => (
-                          <CrudFieldInput
-                            field={field}
-                            value={controllerField.value ?? ''}
-                            formValues={watchedFormValues}
-                            onChange={controllerField.onChange}
-                            onBlur={controllerField.onBlur}
-                          />
-                        )}
+                      <CrudFieldInput
+                        field={field}
+                        allFields={fields}
+                        value={controllerField.value ?? ''}
+                        formValues={watchedFormValues}
+                        onChange={controllerField.onChange}
+                        onBlur={controllerField.onBlur}
+                        onSetValue={(fieldKey, nextValue) => {
+                          form.setValue(fieldKey, nextValue, {
+                            shouldDirty: true,
+                            shouldValidate: true
+                          })
+                        }}
                       />
 
                       {fieldError ? (
@@ -706,17 +709,75 @@ function getFieldWrapperClassName(field: AdminCrudFieldConfig): string {
 
 function CrudFieldInput({
   field,
+  allFields,
   value,
   formValues,
   onChange,
-  onBlur
+  onBlur,
+  onSetValue
 }: {
   field: AdminCrudFieldConfig
+  allFields: AdminCrudFieldConfig[]
   value: string
   formValues: Record<string, string>
   onChange: (value: string) => void
   onBlur: () => void
+  onSetValue: (fieldKey: string, value: string) => void
 }) {
+  if (field.type === 'toggle') {
+    const isChecked = value === '1' || value === 'true'
+
+    function handleToggle() {
+      const nextValue = isChecked ? '0' : '1'
+
+      onChange(nextValue)
+
+      if (nextValue !== '1' || !field.exclusiveGroup) {
+        return
+      }
+
+      allFields
+        .filter((otherField) => {
+          return otherField.key !== field.key && otherField.exclusiveGroup === field.exclusiveGroup
+        })
+        .forEach((otherField) => {
+          onSetValue(otherField.key, '0')
+        })
+    }
+
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isChecked}
+        disabled={field.disabled}
+        onBlur={onBlur}
+        onClick={handleToggle}
+        className={cn(
+          'flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-left text-sm text-[var(--color-text)] transition-colors',
+          'hover:border-[var(--color-primary)]',
+          'disabled:cursor-not-allowed disabled:opacity-50'
+        )}
+      >
+        <span>{field.placeholder ?? field.label}</span>
+
+        <span
+          className={cn(
+            'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+            isChecked ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-surface-muted)]'
+          )}
+        >
+          <span
+            className={cn(
+              'absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
+              isChecked ? 'translate-x-6' : 'translate-x-1'
+            )}
+          />
+        </span>
+      </button>
+    )
+  }
+
   if (field.type === 'checkbox') {
     return (
       <label className="flex min-h-10 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)]">
