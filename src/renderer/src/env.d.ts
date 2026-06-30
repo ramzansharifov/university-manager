@@ -40,7 +40,11 @@ import type {
   SetRolePermissionsParams,
   UpdateRoleParams
 } from '../../shared/types/roles'
-import type { AppHealthReport, DataQualityReport } from '../../shared/types/system'
+import type {
+  AppHealthReport,
+  DataQualityReport,
+  DatabaseMaintenanceResult
+} from '../../shared/types/system'
 
 declare global {
   interface Window {
@@ -81,6 +85,9 @@ declare global {
       system: {
         getHealthReport(): Promise<AppHealthReport>
         getDataQualityReport(): Promise<DataQualityReport>
+        exportDatabaseToJson(): Promise<DatabaseMaintenanceResult>
+        importDatabaseFromJson(): Promise<DatabaseMaintenanceResult>
+        resetDatabase(): Promise<DatabaseMaintenanceResult>
       }
     }
   }

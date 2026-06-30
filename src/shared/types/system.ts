@@ -44,3 +44,12 @@ export interface DataQualityReport {
   checks: DataQualityCheckResult[]
   issues: DataQualityCheckResult[]
 }
+
+export interface DatabaseMaintenanceResult {
+  success: boolean
+  canceled?: boolean
+  filePath?: string
+  tablesCount?: number
+  rowsCount?: number
+  message: string
+}
