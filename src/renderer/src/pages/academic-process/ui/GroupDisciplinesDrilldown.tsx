@@ -21,55 +21,73 @@ export function GroupDisciplinesDrilldown() {
     const [subjectOptions, setSubjectOptions] = useState<AdminCrudSelectOption[]>([])
     const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
     const [semesterOptions, setSemesterOptions] = useState<AdminCrudSelectOption[]>([])
-    const [curriculumItemOptions, setCurriculumItemOptions] = useState<AdminCrudSelectOption[]>([])
+
+    const [curriculumItems, setCurriculumItems] = useState<AdminCrudRecord[]>([])
+    const [curriculumPlans, setCurriculumPlans] = useState<AdminCrudRecord[]>([])
+    const [subjectDepartmentIdById, setSubjectDepartmentIdById] = useState<Map<number, number>>(
+        new Map()
+    )
+    const [departmentFacultyIdById, setDepartmentFacultyIdById] = useState<Map<number, number>>(
+        new Map()
+    )
 
     const loadOptions = useCallback(async () => {
-        const [subjects, teachers, semesters, curriculumItems] = await Promise.all([
-            window.api.adminCrud.list({
-                entity: 'subjects',
-                page: 1,
-                pageSize: 100,
-                orderBy: 'name',
-                orderDirection: 'asc'
-            }),
-            window.api.adminCrud.list({
-                entity: 'teachers',
-                page: 1,
-                pageSize: 100,
-                orderBy: 'last_name',
-                orderDirection: 'asc'
-            }),
-            window.api.adminCrud.list({
-                entity: 'semesters',
-                page: 1,
-                pageSize: 100,
-                orderBy: 'number',
-                orderDirection: 'asc'
-            }),
-            window.api.adminCrud.list({
-                entity: 'curriculum_items',
-                page: 1,
-                pageSize: 100,
-                orderBy: 'id',
-                orderDirection: 'desc'
-            })
-        ])
+        const [subjects, teachers, semesters, curriculumItemsResult, curriculumPlansResult, departments] =
+            await Promise.all([
+                window.api.adminCrud.list({
+                    entity: 'subjects',
+                    page: 1,
+                    pageSize: 300,
+                    orderBy: 'name',
+                    orderDirection: 'asc'
+                }),
+                window.api.adminCrud.list({
+                    entity: 'teachers',
+                    page: 1,
+                    pageSize: 300,
+                    orderBy: 'last_name',
+                    orderDirection: 'asc'
+                }),
+                window.api.adminCrud.list({
+                    entity: 'semesters',
+                    page: 1,
+                    pageSize: 100,
+                    orderBy: 'number',
+                    orderDirection: 'asc'
+                }),
+                window.api.adminCrud.list({
+                    entity: 'curriculum_items',
+                    page: 1,
+                    pageSize: 1000,
+                    orderBy: 'id',
+                    orderDirection: 'asc'
+                }),
+                window.api.adminCrud.list({
+                    entity: 'curriculum_plans',
+                    page: 1,
+                    pageSize: 500,
+                    orderBy: 'name',
+                    orderDirection: 'asc'
+                }),
+                window.api.adminCrud.list({
+                    entity: 'departments',
+                    page: 1,
+                    pageSize: 300,
+                    orderBy: 'name',
+                    orderDirection: 'asc'
+                })
+            ])
 
-        const nextSubjectOptions = createOptions(subjects.items, getRecordName)
-        const nextSemesterOptions = createOptions(semesters.items, getSemesterName)
+        const nextDepartmentFacultyIdById = createDepartmentFacultyMap(departments.items)
+        const nextSubjectDepartmentIdById = createSubjectDepartmentMap(subjects.items)
 
-        const subjectNameById = createOptionsMap(nextSubjectOptions)
-        const semesterNameById = createOptionsMap(nextSemesterOptions)
-
-        setSubjectOptions(nextSubjectOptions)
-        setTeacherOptions(createOptions(teachers.items, getPersonName))
-        setSemesterOptions(nextSemesterOptions)
-        setCurriculumItemOptions(
-            createCurriculumItemOptions(curriculumItems.items, {
-                subjectNameById,
-                semesterNameById
-            })
-        )
+        setSubjectOptions(createOptions(subjects.items, getRecordName))
+        setTeacherOptions(createTeacherOptions(teachers.items, nextDepartmentFacultyIdById))
+        setSemesterOptions(createOptions(semesters.items, getSemesterName))
+        setCurriculumItems(curriculumItemsResult.items)
+        setCurriculumPlans(curriculumPlansResult.items)
+        setSubjectDepartmentIdById(nextSubjectDepartmentIdById)
+        setDepartmentFacultyIdById(nextDepartmentFacultyIdById)
     }, [])
 
     useEffect(() => {
@@ -79,6 +97,36 @@ export function GroupDisciplinesDrilldown() {
     const subjectNameById = useMemo(() => createOptionsMap(subjectOptions), [subjectOptions])
     const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
     const semesterNameById = useMemo(() => createOptionsMap(semesterOptions), [semesterOptions])
+
+    const curriculumItemOptions = useMemo(() => {
+        const allowedPlanIds = selectedGroup
+            ? new Set(
+                curriculumPlans
+                    .filter((plan) => Number(plan.specialty_id) === Number(selectedGroup.specialty_id))
+                    .map((plan) => Number(plan.id))
+            )
+            : new Set<number>()
+
+        const availableItems = selectedGroup
+            ? curriculumItems.filter((item) => allowedPlanIds.has(Number(item.curriculum_plan_id)))
+            : curriculumItems
+
+        return createCurriculumItemOptions(availableItems, {
+            subjectNameById,
+            semesterNameById,
+            subjectDepartmentIdById,
+            departmentFacultyIdById
+        })
+    }, [
+        curriculumItems,
+        curriculumPlans,
+        departmentFacultyIdById,
+        selectedGroup,
+        semesterNameById,
+        subjectDepartmentIdById,
+        subjectNameById
+    ])
+
     const curriculumItemNameById = useMemo(
         () => createOptionsMap(curriculumItemOptions),
         [curriculumItemOptions]
@@ -159,7 +207,7 @@ export function GroupDisciplinesDrilldown() {
                 <AdminCrudEntityPanel
                     entity="disciplines"
                     title={`Дисциплины: ${getRecordName(selectedGroup)}`}
-                    description="Дисциплины выбранной группы. Они будут использоваться дальше в расписании."
+                    description="Выбери пункт учебного плана — предмет, семестр и название подтянутся автоматически. Преподаватели фильтруются по кафедре предмета."
                     createButtonLabel="Добавить дисциплину"
                     fields={disciplineFields}
                     columns={disciplineColumns}
@@ -183,11 +231,7 @@ function GroupDisciplinesBreadcrumb({
     return (
         <Card>
             <CardContent className="flex flex-wrap items-center gap-2">
-                <Button
-                    size="sm"
-                    variant={selectedGroup ? 'secondary' : 'primary'}
-                    onClick={onGroupsClick}
-                >
+                <Button size="sm" variant={selectedGroup ? 'secondary' : 'primary'} onClick={onGroupsClick}>
                     Группы
                 </Button>
 
@@ -200,4 +244,50 @@ function GroupDisciplinesBreadcrumb({
             </CardContent>
         </Card>
     )
+}
+
+function createSubjectDepartmentMap(subjects: AdminCrudRecord[]): Map<number, number> {
+    return new Map(
+        subjects
+            .map((subject) => [toNumberOrNull(subject.id), toNumberOrNull(subject.department_id)])
+            .filter((entry): entry is [number, number] => entry[0] !== null && entry[1] !== null)
+    )
+}
+
+function createDepartmentFacultyMap(departments: AdminCrudRecord[]): Map<number, number> {
+    return new Map(
+        departments
+            .map((department) => [toNumberOrNull(department.id), toNumberOrNull(department.faculty_id)])
+            .filter((entry): entry is [number, number] => entry[0] !== null && entry[1] !== null)
+    )
+}
+
+function createTeacherOptions(
+    teachers: AdminCrudRecord[],
+    departmentFacultyIdById: Map<number, number>
+): AdminCrudSelectOption[] {
+    return teachers.map((teacher) => {
+        const departmentId = toNumberOrNull(teacher.department_id)
+        const facultyId = departmentId === null ? null : departmentFacultyIdById.get(departmentId) ?? null
+        const label = getPersonName(teacher).trim()
+
+        return {
+            value: String(teacher.id),
+            label: label || `#${String(teacher.id)}`,
+            meta: {
+                subject_department_id: departmentId === null ? null : String(departmentId),
+                subject_faculty_id: facultyId === null ? null : String(facultyId)
+            }
+        }
+    })
+}
+
+function toNumberOrNull(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const numberValue = Number(value)
+
+    return Number.isFinite(numberValue) ? numberValue : null
 }

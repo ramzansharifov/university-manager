@@ -60,6 +60,7 @@ export interface AdminCrudFieldConfig {
     dependsOn?: string
     dependencyPlaceholder?: string
     virtual?: boolean
+    hidden?: boolean
     defaultValue?: string
     persistKey?: string
     persistWhenCheckedKey?: string
@@ -597,7 +598,7 @@ export function AdminCrudEntityPanel({
                         onSubmit={(event) => void form.handleSubmit(handleFormSubmit)(event)}
                     >
                         <div className="grid min-h-0 grid-cols-1 gap-4 overflow-y-auto px-6 py-5 md:grid-cols-2 xl:grid-cols-3">
-                            {fields.map((field) => {
+                            {fields.filter((field) => !field.hidden).map((field) => {
                                 const fieldError = form.formState.errors[field.key]?.message
 
                                 return (

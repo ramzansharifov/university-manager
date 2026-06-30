@@ -377,24 +377,34 @@ export function createCurriculumItemOptions(
   maps: {
     subjectNameById: Map<number, string>
     semesterNameById: Map<number, string>
+    subjectDepartmentIdById?: Map<number, number>
+    departmentFacultyIdById?: Map<number, number>
   }
 ): AdminCrudSelectOption[] {
   return items.map((item) => {
+    const subjectId = toNumberOrNull(item.subject_id)
+    const semesterId = toNumberOrNull(item.semester_id)
+
     const subjectName = renderRelation(item.subject_id, maps.subjectNameById)
     const semesterName = renderRelation(item.semester_id, maps.semesterNameById)
+
+    const subjectDepartmentId =
+      subjectId === null ? null : (maps.subjectDepartmentIdById?.get(subjectId) ?? null)
+
+    const subjectFacultyId =
+      subjectDepartmentId === null
+        ? null
+        : (maps.departmentFacultyIdById?.get(subjectDepartmentId) ?? null)
 
     return {
       value: String(item.id),
       label: `${subjectName} / ${semesterName}`,
       meta: {
-        subject_id:
-          item.subject_id === null || item.subject_id === undefined
-            ? null
-            : String(item.subject_id),
-        semester_id:
-          item.semester_id === null || item.semester_id === undefined
-            ? null
-            : String(item.semester_id)
+        subject_id: subjectId === null ? null : String(subjectId),
+        semester_id: semesterId === null ? null : String(semesterId),
+        subject_name: subjectName === '—' ? null : subjectName,
+        subject_department_id: subjectDepartmentId === null ? null : String(subjectDepartmentId),
+        subject_faculty_id: subjectFacultyId === null ? null : String(subjectFacultyId)
       }
     }
   })
@@ -413,39 +423,78 @@ export function createDisciplineFields(options: {
       placeholder: 'Выбери пункт плана',
       type: 'select',
       valueType: 'number',
-      options: options.curriculumItemOptions
+      options: options.curriculumItemOptions,
+      required: true,
+      autoFillTargets: [
+        {
+          targetKey: 'subject_id',
+          metaKey: 'subject_id'
+        },
+        {
+          targetKey: 'semester_id',
+          metaKey: 'semester_id'
+        },
+        {
+          targetKey: 'name',
+          metaKey: 'subject_name'
+        },
+        {
+          targetKey: 'subject_department_id',
+          metaKey: 'subject_department_id'
+        },
+        {
+          targetKey: 'subject_faculty_id',
+          metaKey: 'subject_faculty_id'
+        }
+      ]
     },
     {
       key: 'subject_id',
       label: 'Предмет',
-      placeholder: 'Выбери предмет',
+      placeholder: 'Предмет заполнится из пункта плана',
       type: 'select',
       valueType: 'number',
       options: options.subjectOptions,
-      required: true
-    },
-    {
-      key: 'teacher_id',
-      label: 'Преподаватель',
-      placeholder: 'Выбери преподавателя',
-      type: 'select',
-      valueType: 'number',
-      options: options.teacherOptions,
+      disabled: true,
       required: true
     },
     {
       key: 'semester_id',
       label: 'Семестр',
-      placeholder: 'Выбери семестр',
+      placeholder: 'Семестр заполнится из пункта плана',
       type: 'select',
       valueType: 'number',
       options: options.semesterOptions,
+      disabled: true,
+      required: true
+    },
+    {
+      key: 'subject_department_id',
+      label: 'Кафедра предмета',
+      virtual: true,
+      hidden: true
+    },
+    {
+      key: 'subject_faculty_id',
+      label: 'Факультет предмета',
+      virtual: true,
+      hidden: true
+    },
+    {
+      key: 'teacher_id',
+      label: 'Преподаватель',
+      placeholder: 'Выбери преподавателя кафедры предмета',
+      type: 'select',
+      valueType: 'number',
+      options: options.teacherOptions,
+      dependsOn: 'subject_department_id',
+      dependencyPlaceholder: 'Сначала выбери пункт учебного плана',
       required: true
     },
     {
       key: 'name',
       label: 'Название дисциплины',
-      placeholder: 'Можно оставить пустым, если совпадает с предметом'
+      placeholder: 'Заполнится названием предмета, но можно изменить'
     }
   ]
 }
@@ -513,4 +562,14 @@ export function formatControlForms(value: unknown): string {
     .map((item) => item.trim())
     .filter(Boolean)
     .join(', ')
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numberValue = Number(value)
+
+  return Number.isFinite(numberValue) ? numberValue : null
 }
