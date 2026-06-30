@@ -615,7 +615,7 @@ export function AdminCrudEntityPanel({
           >
             <div className="grid min-h-0 grid-cols-1 gap-4 overflow-y-auto px-6 py-5 md:grid-cols-2 xl:grid-cols-3">
               {fields
-                .filter((field) => !field.hidden)
+                .filter((field) => isFieldVisible(field, watchedFormValues))
                 .map((field) => {
                   const fieldError = form.formState.errors[field.key]?.message
 
