@@ -15,7 +15,7 @@ export function Sidebar({ className, children, ...props }: SidebarProps) {
     return (
         <aside
             className={cn(
-                'flex h-full w-72 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]',
+                'flex h-screen w-72 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]',
                 className
             )}
             {...props}

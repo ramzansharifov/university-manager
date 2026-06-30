@@ -63,6 +63,10 @@ export interface AdminCrudFieldConfig {
     defaultValue?: string
     persistKey?: string
     persistWhenCheckedKey?: string
+    autoFillTargets?: Array<{
+        targetKey: string
+        metaKey: string
+    }>
     autoFillTimeEnd?: {
         startKey: string
         durationKey: string
@@ -149,6 +153,43 @@ export function AdminCrudEntityPanel({
     useEffect(() => {
         form.reset(emptyFormData)
     }, [emptyFormData, form])
+
+    useEffect(() => {
+        fields.forEach((field) => {
+            if (field.type !== 'select' || !field.autoFillTargets?.length) {
+                return
+            }
+
+            const currentValue = watchedFormValues[field.key]
+
+            if (!currentValue) {
+                return
+            }
+
+            const selectedOption = (field.options ?? []).find((option) => option.value === currentValue)
+
+            if (!selectedOption) {
+                return
+            }
+
+            field.autoFillTargets.forEach((target) => {
+                const nextValue = selectedOption.meta?.[target.metaKey]
+
+                if (nextValue === null || nextValue === undefined) {
+                    return
+                }
+
+                const nextStringValue = String(nextValue)
+
+                if (watchedFormValues[target.targetKey] !== nextStringValue) {
+                    form.setValue(target.targetKey, nextStringValue, {
+                        shouldDirty: true,
+                        shouldValidate: true
+                    })
+                }
+            })
+        })
+    }, [fields, form, watchedFormValues])
 
     useEffect(() => {
         fields.forEach((field) => {

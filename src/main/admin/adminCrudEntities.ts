@@ -185,6 +185,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     'schedule_items',
     [
       'semester_id',
+      'week_id',
       'day_of_week',
       'lesson_period_id',
       'group_id',

@@ -151,6 +151,10 @@ export class AdminCrudService {
       return this.prepareLessonPeriodData(data, before)
     }
 
+    if (entity === 'schedule_items') {
+      return this.prepareScheduleItemData(data, before)
+    }
+
     return data
   }
 
@@ -278,6 +282,72 @@ export class AdminCrudService {
     nextData.floor = deriveAudienceFloor(nextName)
 
     return nextData
+  }
+
+  private prepareScheduleItemData(
+    data: AdminCrudRecord,
+    before?: AdminCrudRecord
+  ): AdminCrudRecord {
+    const nextData = { ...data }
+
+    const disciplineId = normalizeNullableNumber(nextData.discipline_id ?? before?.discipline_id)
+    const weekId = normalizeNullableNumber(nextData.week_id ?? before?.week_id)
+
+    if (disciplineId === null) {
+      throw new Error('Выбери дисциплину группы')
+    }
+
+    if (weekId === null) {
+      throw new Error('Выбери неделю семестра')
+    }
+
+    const disciplineConfig = getAdminCrudEntityConfig('disciplines')
+    const weekConfig = getAdminCrudEntityConfig('weeks')
+
+    const discipline = this.repository.getById(disciplineConfig, disciplineId)
+    const week = this.repository.getById(weekConfig, weekId)
+
+    if (!discipline) {
+      throw new Error('Выбранная дисциплина не найдена')
+    }
+
+    if (!week) {
+      throw new Error('Выбранная неделя не найдена')
+    }
+
+    const disciplineSemesterId = normalizeNullableNumber(discipline.semester_id)
+    const disciplineTeacherId = normalizeNullableNumber(discipline.teacher_id)
+    const weekSemesterId = normalizeNullableNumber(week.semester_id)
+
+    if (disciplineSemesterId === null) {
+      throw new Error('У выбранной дисциплины не указан семестр')
+    }
+
+    if (disciplineTeacherId === null) {
+      throw new Error('У выбранной дисциплины не указан преподаватель')
+    }
+
+    if (weekSemesterId === null) {
+      throw new Error('У выбранной недели не указан семестр')
+    }
+
+    if (disciplineSemesterId !== weekSemesterId) {
+      throw new Error('Выбранная неделя не относится к семестру выбранной дисциплины')
+    }
+
+    if (!week.starts_at || !week.ends_at) {
+      throw new Error('У выбранной недели не указаны даты начала и окончания')
+    }
+
+    return {
+      ...nextData,
+      discipline_id: disciplineId,
+      week_id: weekId,
+      semester_id: disciplineSemesterId,
+      teacher_id: disciplineTeacherId,
+      starts_on: String(week.starts_at),
+      ends_on: String(week.ends_at)
+    }
   }
 
   private validateEmployeePosition(data: AdminCrudRecord, before?: AdminCrudRecord): void {
