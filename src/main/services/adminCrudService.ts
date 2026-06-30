@@ -159,6 +159,10 @@ export class AdminCrudService {
       return this.prepareGradeElementTypeData(data, before)
     }
 
+    if (entity === 'grade_items') {
+      return this.prepareGradeItemData(data, before)
+    }
+
     return data
   }
 
@@ -418,6 +422,43 @@ export class AdminCrudService {
     }
   }
 
+  private prepareGradeItemData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
+    const nextData = { ...data }
+
+    const weekId = normalizeNullableNumber(nextData.week_id ?? before?.week_id)
+    const dayOfWeek = normalizeNullableNumber(nextData.day_of_week ?? before?.day_of_week)
+
+    if (weekId === null && dayOfWeek === null) {
+      return nextData
+    }
+
+    if (weekId === null || dayOfWeek === null) {
+      throw new Error('Для оценочной колонки укажи неделю и день недели')
+    }
+
+    if (dayOfWeek < 1 || dayOfWeek > 7) {
+      throw new Error('День недели должен быть от 1 до 7')
+    }
+
+    const weekConfig = getAdminCrudEntityConfig('weeks')
+    const week = this.repository.getById(weekConfig, weekId)
+
+    if (!week) {
+      throw new Error('Выбранная неделя не найдена')
+    }
+
+    if (!week.starts_at) {
+      throw new Error('У выбранной недели не указана дата начала')
+    }
+
+    return {
+      ...nextData,
+      week_id: weekId,
+      day_of_week: dayOfWeek,
+      grade_date: formatDate(addDays(parseDate(String(week.starts_at)), dayOfWeek - 1))
+    }
+  }
+
   private validateEmployeePosition(data: AdminCrudRecord, before?: AdminCrudRecord): void {
     const nextDivisionId = normalizeNullableNumber(data.division_id ?? before?.division_id)
     const nextPositionId = normalizeNullableNumber(data.position_id ?? before?.position_id)
@@ -497,4 +538,22 @@ function timeToMinutes(value: string): number {
   const [hours, minutes] = value.split(':').map(Number)
 
   return hours * 60 + minutes
+}
+
+function parseDate(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number)
+
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
+}
+
+function formatDate(date: Date): string {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }

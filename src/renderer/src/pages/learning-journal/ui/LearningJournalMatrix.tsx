@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FiArrowRight, FiChevronLeft } from 'react-icons/fi'
+import { FiArrowRight, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import type { AdminCrudRecord } from '../../../features/admin-crud'
 import {
   Badge,
@@ -11,6 +11,16 @@ import {
   CardTitle
 } from '../../../shared/ui'
 
+const weekDayLabels = [
+  { value: 1, shortLabel: 'Пн' },
+  { value: 2, shortLabel: 'Вт' },
+  { value: 3, shortLabel: 'Ср' },
+  { value: 4, shortLabel: 'Чт' },
+  { value: 5, shortLabel: 'Пт' },
+  { value: 6, shortLabel: 'Сб' },
+  { value: 7, shortLabel: 'Вс' }
+]
+
 export function LearningJournalMatrix() {
   const [faculties, setFaculties] = useState<AdminCrudRecord[]>([])
   const [specialties, setSpecialties] = useState<AdminCrudRecord[]>([])
@@ -18,6 +28,7 @@ export function LearningJournalMatrix() {
   const [students, setStudents] = useState<AdminCrudRecord[]>([])
   const [subjects, setSubjects] = useState<AdminCrudRecord[]>([])
   const [disciplines, setDisciplines] = useState<AdminCrudRecord[]>([])
+  const [weeks, setWeeks] = useState<AdminCrudRecord[]>([])
   const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
   const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
   const [grades, setGrades] = useState<AdminCrudRecord[]>([])
@@ -26,6 +37,7 @@ export function LearningJournalMatrix() {
   const [selectedSpecialty, setSelectedSpecialty] = useState<AdminCrudRecord | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<AdminCrudRecord | null>(null)
   const [selectedDisciplineId, setSelectedDisciplineId] = useState('')
+  const [selectedWeekId, setSelectedWeekId] = useState('')
 
   const loadData = useCallback(async () => {
     const [
@@ -35,6 +47,7 @@ export function LearningJournalMatrix() {
       studentsResult,
       subjectsResult,
       disciplinesResult,
+      weeksResult,
       gradeElementTypesResult,
       gradeItemsResult,
       gradesResult
@@ -82,6 +95,13 @@ export function LearningJournalMatrix() {
         orderDirection: 'asc'
       }),
       window.api.adminCrud.list({
+        entity: 'weeks',
+        page: 1,
+        pageSize: 1000,
+        orderBy: 'number',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
         entity: 'grade_element_types',
         page: 1,
         pageSize: 500,
@@ -110,6 +130,7 @@ export function LearningJournalMatrix() {
     setStudents(studentsResult.items)
     setSubjects(subjectsResult.items)
     setDisciplines(disciplinesResult.items)
+    setWeeks(weeksResult.items)
     setGradeElementTypes(gradeElementTypesResult.items)
     setGradeItems(gradeItemsResult.items)
     setGrades(gradesResult.items)
@@ -207,32 +228,114 @@ export function LearningJournalMatrix() {
     )
   }, [groupDisciplines, selectedDisciplineId])
 
-  const selectedDisciplineGradeItems = useMemo(() => {
+  const semesterWeeks = useMemo(() => {
+    const semesterId = toNumberOrNull(selectedDiscipline?.semester_id)
+
+    if (semesterId === null) {
+      return []
+    }
+
+    return weeks.filter((week) => Number(week.semester_id) === semesterId).sort(compareWeeks)
+  }, [selectedDiscipline, weeks])
+
+  useEffect(() => {
     if (!selectedDiscipline) {
+      setSelectedWeekId('')
+      return
+    }
+
+    const weekIds = semesterWeeks.map((week) => String(week.id))
+
+    if (weekIds.length === 0) {
+      setSelectedWeekId('')
+      return
+    }
+
+    if (!weekIds.includes(selectedWeekId)) {
+      setSelectedWeekId(weekIds[0])
+    }
+  }, [selectedDiscipline, selectedWeekId, semesterWeeks])
+
+  const selectedWeek = useMemo(() => {
+    if (!selectedWeekId) {
+      return null
+    }
+
+    return semesterWeeks.find((week) => String(week.id) === selectedWeekId) ?? null
+  }, [selectedWeekId, semesterWeeks])
+
+  const selectedWeekIndex = useMemo(
+    () => semesterWeeks.findIndex((week) => String(week.id) === selectedWeekId),
+    [selectedWeekId, semesterWeeks]
+  )
+
+  const selectedWeekDays = useMemo(() => {
+    if (!selectedWeek?.starts_at) {
+      return []
+    }
+
+    const startDate = parseDate(String(selectedWeek.starts_at))
+
+    return weekDayLabels.map((day) => {
+      const date = addDays(startDate, day.value - 1)
+
+      return {
+        ...day,
+        date,
+        isoDate: formatDate(date),
+        dayNumber: String(date.getUTCDate()).padStart(2, '0')
+      }
+    })
+  }, [selectedWeek])
+
+  const selectedWeekGradeItems = useMemo(() => {
+    if (!selectedDiscipline || !selectedWeek) {
       return []
     }
 
     return gradeItems
       .filter((item) => Number(item.discipline_id) === Number(selectedDiscipline.id))
+      .filter((item) => isGradeItemInWeek(item, selectedWeek))
       .sort(compareGradeItems)
-  }, [gradeItems, selectedDiscipline])
+  }, [gradeItems, selectedDiscipline, selectedWeek])
+
+  const gradeItemsByDay = useMemo(() => {
+    const map = new Map<number, AdminCrudRecord[]>()
+
+    selectedWeekGradeItems.forEach((item) => {
+      const dayOfWeek = getGradeItemDayOfWeek(item, selectedWeek)
+
+      if (dayOfWeek === null) {
+        return
+      }
+
+      const items = map.get(dayOfWeek) ?? []
+      items.push(item)
+      map.set(dayOfWeek, items)
+    })
+
+    return map
+  }, [selectedWeek, selectedWeekGradeItems])
 
   function openFaculty(record: AdminCrudRecord) {
     setSelectedFaculty(record)
     setSelectedSpecialty(null)
     setSelectedGroup(null)
     setSelectedDisciplineId('')
+    setSelectedWeekId('')
   }
 
   function openSpecialty(record: AdminCrudRecord) {
     setSelectedSpecialty(record)
     setSelectedGroup(null)
     setSelectedDisciplineId('')
+    setSelectedWeekId('')
   }
 
   function openGroup(record: AdminCrudRecord) {
     setSelectedGroup(record)
     setSelectedDisciplineId('')
+    setSelectedWeekId('')
   }
 
   function backToFaculties() {
@@ -240,17 +343,36 @@ export function LearningJournalMatrix() {
     setSelectedSpecialty(null)
     setSelectedGroup(null)
     setSelectedDisciplineId('')
+    setSelectedWeekId('')
   }
 
   function backToSpecialties() {
     setSelectedSpecialty(null)
     setSelectedGroup(null)
     setSelectedDisciplineId('')
+    setSelectedWeekId('')
   }
 
   function backToGroups() {
     setSelectedGroup(null)
     setSelectedDisciplineId('')
+    setSelectedWeekId('')
+  }
+
+  function openPreviousWeek() {
+    if (selectedWeekIndex <= 0) {
+      return
+    }
+
+    setSelectedWeekId(String(semesterWeeks[selectedWeekIndex - 1].id))
+  }
+
+  function openNextWeek() {
+    if (selectedWeekIndex < 0 || selectedWeekIndex >= semesterWeeks.length - 1) {
+      return
+    }
+
+    setSelectedWeekId(String(semesterWeeks[selectedWeekIndex + 1].id))
   }
 
   return (
@@ -313,13 +435,16 @@ export function LearningJournalMatrix() {
           <CardHeader>
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
-                <CardTitle>Журнал группы: {getRecordName(selectedGroup)}</CardTitle>
+                <CardTitle>
+                  Журнал группы: {getRecordName(selectedGroup)}
+                  {selectedWeek ? ` · ${getMonthYearLabel(selectedWeek)}` : ''}
+                </CardTitle>
                 <CardDescription>
-                  Таблица студентов группы и оценочных колонок по выбранной дисциплине.
+                  Недельный журнал: студенты слева, дни недели сверху, оценки в клетках.
                 </CardDescription>
               </div>
 
-              <div className="w-full xl:max-w-sm">
+              <div className="grid w-full gap-3 xl:max-w-xl xl:grid-cols-2">
                 <label className="grid gap-2">
                   <span className="text-sm font-medium text-[var(--color-text)]">Дисциплина</span>
                   <select
@@ -334,6 +459,22 @@ export function LearningJournalMatrix() {
                     ))}
                   </select>
                 </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium text-[var(--color-text)]">Неделя</span>
+                  <select
+                    value={selectedWeekId}
+                    disabled={semesterWeeks.length === 0}
+                    onChange={(event) => setSelectedWeekId(event.target.value)}
+                    className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {semesterWeeks.map((week) => (
+                      <option key={String(week.id)} value={String(week.id)}>
+                        {getWeekLabel(week)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
             </div>
           </CardHeader>
@@ -343,38 +484,70 @@ export function LearningJournalMatrix() {
               <EmptyState text="У этой группы пока нет дисциплин. Добавь дисциплины в разделе «Учебный процесс → Дисциплины групп»." />
             ) : null}
 
+            {groupDisciplines.length > 0 && semesterWeeks.length === 0 ? (
+              <EmptyState text="Для семестра выбранной дисциплины пока нет недель." />
+            ) : null}
+
             {groupDisciplines.length > 0 && groupStudents.length === 0 ? (
               <EmptyState text="В этой группе пока нет студентов." />
             ) : null}
 
-            {groupDisciplines.length > 0 && groupStudents.length > 0 ? (
+            {groupDisciplines.length > 0 && groupStudents.length > 0 && selectedWeek ? (
               <div className="grid gap-4">
-                {selectedDisciplineGradeItems.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-text-muted)]">
-                    Для выбранной дисциплины пока нет оценочных колонок. Сейчас отображается список
-                    студентов, а колонки оценок появятся после добавления оценочных работ.
+                <div className="flex flex-col gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 xl:flex-row xl:items-center xl:justify-between">
+                  <div>
+                    <p className="text-lg font-semibold text-[var(--color-text)]">
+                      {getMonthYearLabel(selectedWeek)}
+                    </p>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      {getWeekLabel(selectedWeek)} · {getWeekDateRangeLabel(selectedWeek)}
+                    </p>
                   </div>
-                ) : null}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={selectedWeekIndex <= 0}
+                      onClick={openPreviousWeek}
+                    >
+                      <FiChevronLeft />
+                      Пред. неделя
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={
+                        selectedWeekIndex < 0 || selectedWeekIndex >= semesterWeeks.length - 1
+                      }
+                      onClick={openNextWeek}
+                    >
+                      След. неделя
+                      <FiChevronRight />
+                    </Button>
+                  </div>
+                </div>
 
                 <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
                   <table className="min-w-full border-collapse text-sm">
-                    <thead className="bg-[var(--color-surface-muted)]">
-                      <tr>
-                        <th className="sticky left-0 z-10 min-w-64 border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
+                    <thead>
+                      <tr className="bg-[var(--color-surface-muted)]">
+                        <th className="sticky left-0 z-20 min-w-64 border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
                           Студент
                         </th>
 
-                        {selectedDisciplineGradeItems.map((item) => (
+                        {selectedWeekDays.map((day) => (
                           <th
-                            key={String(item.id)}
-                            className="min-w-40 border-b border-r border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)] last:border-r-0"
+                            key={day.value}
+                            className="min-w-44 border-b border-r border-[var(--color-border)] px-4 py-3 text-left last:border-r-0"
                           >
                             <div className="grid gap-1">
-                              <span className="text-[var(--color-text)]">
-                                {getRecordName(item)}
+                              <span className="font-semibold text-[var(--color-text)]">
+                                {day.shortLabel} {day.dayNumber}
                               </span>
                               <span className="text-xs font-normal text-[var(--color-text-muted)]">
-                                {getGradeItemMeta(item, gradeElementTypeById)}
+                                {formatDateLabel(day.isoDate)}
                               </span>
                             </div>
                           </th>
@@ -392,17 +565,39 @@ export function LearningJournalMatrix() {
                             {getPersonName(student)}
                           </td>
 
-                          {selectedDisciplineGradeItems.map((item) => {
-                            const grade = gradeByStudentAndItem.get(
-                              createGradeKey(Number(student.id), Number(item.id))
-                            )
+                          {selectedWeekDays.map((day) => {
+                            const dayItems = gradeItemsByDay.get(day.value) ?? []
 
                             return (
                               <td
-                                key={String(item.id)}
-                                className="border-r border-[var(--color-border)] px-4 py-3 text-[var(--color-text)] last:border-r-0"
+                                key={day.value}
+                                className="border-r border-[var(--color-border)] px-3 py-3 align-top text-[var(--color-text)] last:border-r-0"
                               >
-                                {formatGradeValue(grade, item, gradeElementTypeById)}
+                                {dayItems.length === 0 ? (
+                                  <span className="text-[var(--color-text-muted)]">—</span>
+                                ) : (
+                                  <div className="grid gap-2">
+                                    {dayItems.map((item) => {
+                                      const grade = gradeByStudentAndItem.get(
+                                        createGradeKey(Number(student.id), Number(item.id))
+                                      )
+
+                                      return (
+                                        <div
+                                          key={String(item.id)}
+                                          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1"
+                                        >
+                                          <div className="text-xs text-[var(--color-text-muted)]">
+                                            {getRecordName(item)}
+                                          </div>
+                                          <div className="font-semibold">
+                                            {formatGradeValue(grade, item, gradeElementTypeById)}
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
                               </td>
                             )
                           })}
@@ -415,9 +610,7 @@ export function LearningJournalMatrix() {
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="muted">Студентов: {groupStudents.length}</Badge>
                   <Badge variant="muted">Дисциплин: {groupDisciplines.length}</Badge>
-                  <Badge variant="muted">
-                    Оценочных колонок: {selectedDisciplineGradeItems.length}
-                  </Badge>
+                  <Badge variant="muted">Колонок недели: {selectedWeekGradeItems.length}</Badge>
                 </div>
               </div>
             ) : null}
@@ -615,19 +808,68 @@ function getDisciplineName(
   return getRecordName(discipline)
 }
 
-function getGradeItemMeta(
-  item: AdminCrudRecord,
-  gradeElementTypeById: Map<number, AdminCrudRecord>
-): string {
-  const elementTypeId = toNumberOrNull(item.grade_element_type_id)
-  const elementType = elementTypeId === null ? null : gradeElementTypeById.get(elementTypeId)
-  const parts = [
-    elementType ? getRecordName(elementType) : null,
-    item.grade_date ? formatDateLabel(String(item.grade_date)) : null,
-    item.max_score ? `макс. ${String(item.max_score)}` : null
-  ].filter(Boolean)
+function getWeekLabel(week: AdminCrudRecord): string {
+  return `${String(week.number ?? '')} неделя`
+}
 
-  return parts.length > 0 ? parts.join(' · ') : 'Оценочная колонка'
+function getMonthYearLabel(week: AdminCrudRecord): string {
+  const date = week.starts_at ? parseDate(String(week.starts_at)) : new Date()
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    month: 'long',
+    year: 'numeric'
+  }).format(date)
+}
+
+function getWeekDateRangeLabel(week: AdminCrudRecord): string {
+  if (!week.starts_at || !week.ends_at) {
+    return 'Без дат'
+  }
+
+  return `${formatDateLabel(String(week.starts_at))}–${formatDateLabel(String(week.ends_at))}`
+}
+
+function getGradeItemDayOfWeek(
+  item: AdminCrudRecord,
+  selectedWeek: AdminCrudRecord | null
+): number | null {
+  const explicitDay = toNumberOrNull(item.day_of_week)
+
+  if (explicitDay !== null && explicitDay >= 1 && explicitDay <= 7) {
+    return explicitDay
+  }
+
+  if (!item.grade_date || !selectedWeek?.starts_at) {
+    return null
+  }
+
+  const gradeDate = parseDate(String(item.grade_date))
+  const weekStartDate = parseDate(String(selectedWeek.starts_at))
+  const diffDays = Math.floor(
+    (gradeDate.getTime() - weekStartDate.getTime()) / (24 * 60 * 60 * 1000)
+  )
+
+  if (diffDays < 0 || diffDays > 6) {
+    return null
+  }
+
+  return diffDays + 1
+}
+
+function isGradeItemInWeek(item: AdminCrudRecord, week: AdminCrudRecord): boolean {
+  const itemWeekId = toNumberOrNull(item.week_id)
+
+  if (itemWeekId !== null) {
+    return itemWeekId === Number(week.id)
+  }
+
+  if (!item.grade_date || !week.starts_at || !week.ends_at) {
+    return false
+  }
+
+  const gradeDate = String(item.grade_date)
+
+  return gradeDate >= String(week.starts_at) && gradeDate <= String(week.ends_at)
 }
 
 function formatGradeValue(
@@ -650,6 +892,13 @@ function formatGradeValue(
 }
 
 function compareGradeItems(firstItem: AdminCrudRecord, secondItem: AdminCrudRecord): number {
+  const firstDay = toNumberOrNull(firstItem.day_of_week)
+  const secondDay = toNumberOrNull(secondItem.day_of_week)
+
+  if (firstDay !== null && secondDay !== null && firstDay !== secondDay) {
+    return firstDay - secondDay
+  }
+
   const firstDate = String(firstItem.grade_date ?? '')
   const secondDate = String(secondItem.grade_date ?? '')
 
@@ -658,6 +907,17 @@ function compareGradeItems(firstItem: AdminCrudRecord, secondItem: AdminCrudReco
   }
 
   return Number(firstItem.id) - Number(secondItem.id)
+}
+
+function compareWeeks(firstWeek: AdminCrudRecord, secondWeek: AdminCrudRecord): number {
+  const firstNumber = toNumberOrNull(firstWeek.number)
+  const secondNumber = toNumberOrNull(secondWeek.number)
+
+  if (firstNumber !== null && secondNumber !== null && firstNumber !== secondNumber) {
+    return firstNumber - secondNumber
+  }
+
+  return Number(firstWeek.id) - Number(secondWeek.id)
 }
 
 function createGradeKey(studentId: number, gradeItemId: number): string {
@@ -698,6 +958,24 @@ function formatDateLabel(value: string): string {
   }
 
   return `${day}.${month}.${year}`
+}
+
+function parseDate(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number)
+
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
+}
+
+function formatDate(date: Date): string {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function toNumberOrNull(value: unknown): number | null {

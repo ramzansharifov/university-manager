@@ -236,6 +236,8 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'discipline_id',
       'grade_element_type_id',
       'grade_category_id',
+      'week_id',
+      'day_of_week',
       'name',
       'max_score',
       'grade_date',
@@ -243,6 +245,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ],
     ['name', 'description']
   ),
+
   score_scales: entity(
     'score_scales',
     ['name', 'min_score', 'max_score', 'result_name'],
