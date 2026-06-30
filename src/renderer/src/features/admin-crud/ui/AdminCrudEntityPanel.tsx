@@ -706,21 +706,6 @@ function CrudFieldInput({
       <label className="flex min-h-10 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)]">
         <input
           type="checkbox"
-          checked={value === 'true'}
-          disabled={field.disabled}
-          onBlur={onBlur}
-          onChange={(event) => onChange(event.target.checked ? 'true' : 'false')}
-        />
-        <span>{field.placeholder ?? field.label}</span>
-      </label>
-    )
-  }
-
-  if (field.type === 'checkbox') {
-    return (
-      <label className="flex min-h-10 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)]">
-        <input
-          type="checkbox"
           checked={value === '1' || value === 'true'}
           disabled={field.disabled}
           onBlur={onBlur}
