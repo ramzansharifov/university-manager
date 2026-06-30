@@ -12,7 +12,14 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input
 } from '../../shared/ui'
 
 export function AdministrationPage() {
@@ -20,6 +27,8 @@ export function AdministrationPage() {
   const [dataQualityReport, setDataQualityReport] = useState<DataQualityReport | null>(null)
   const [operationResult, setOperationResult] = useState<DatabaseMaintenanceResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
+  const [resetConfirmationText, setResetConfirmationText] = useState('')
 
   const loadReports = useCallback(async () => {
     const [health, quality] = await Promise.all([
@@ -70,16 +79,36 @@ export function AdministrationPage() {
     void runOperation(() => window.api.system.importDatabaseFromJson())
   }
 
-  function resetDatabase() {
-    const confirmation = window.prompt(
-      'Это удалит все данные и заново создаст системные роли, права и admin/admin. Для подтверждения введи: УДАЛИТЬ'
-    )
+  function openResetDialog() {
+    setResetConfirmationText('')
+    setIsResetDialogOpen(true)
+  }
 
-    if (confirmation !== 'УДАЛИТЬ') {
+  async function confirmResetDatabase() {
+    if (resetConfirmationText !== 'УДАЛИТЬ') {
       return
     }
 
-    void runOperation(() => window.api.system.resetDatabase())
+    setIsLoading(true)
+    setOperationResult(null)
+
+    try {
+      const result = await window.api.system.resetDatabase()
+
+      window.localStorage.removeItem('university-manager.auth-token')
+      setIsResetDialogOpen(false)
+
+      window.alert(
+        `${result.message}\n\nСейчас приложение перезагрузится. Войди заново через admin/admin.`
+      )
+      window.location.reload()
+    } catch (error) {
+      setOperationResult({
+        success: false,
+        message: getErrorMessage(error)
+      })
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -203,7 +232,7 @@ export function AdministrationPage() {
             Импорт JSON
           </Button>
 
-          <Button variant="danger" disabled={isLoading} onClick={resetDatabase}>
+          <Button variant="danger" disabled={isLoading} onClick={openResetDialog}>
             <FiTrash2 />
             Очистить базу
           </Button>
@@ -230,6 +259,49 @@ export function AdministrationPage() {
           </p>
         </CardContent>
       </Card>
+
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Очистить базу данных?</DialogTitle>
+            <DialogDescription>
+              Это удалит все пользовательские и учебные данные. После очистки заново будут созданы
+              системные роли, права, словари, настройки и пользователь admin/admin.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 grid gap-2">
+            <label className="text-sm font-medium text-[var(--color-text)]">
+              Для подтверждения введи УДАЛИТЬ
+            </label>
+
+            <Input
+              value={resetConfirmationText}
+              placeholder="УДАЛИТЬ"
+              onChange={(event) => setResetConfirmationText(event.target.value)}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              disabled={isLoading}
+              onClick={() => setIsResetDialogOpen(false)}
+            >
+              Отмена
+            </Button>
+
+            <Button
+              variant="danger"
+              disabled={isLoading || resetConfirmationText !== 'УДАЛИТЬ'}
+              onClick={confirmResetDatabase}
+            >
+              <FiTrash2 />
+              Очистить базу
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

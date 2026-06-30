@@ -23,6 +23,54 @@ interface TableInfoRow {
 
 const excludedTables = new Set(['schema_migrations'])
 
+const resetTableOrder = [
+  'user_sessions',
+  'audit_logs',
+  'role_permissions',
+
+  'lesson_completion_records',
+  'attendance_records',
+  'grades',
+  'grade_items',
+  'score_scales',
+  'grade_element_types',
+
+  'lesson_sessions',
+  'schedule_items',
+
+  'disciplines',
+  'curriculum_items',
+  'curriculum_plans',
+  'subjects',
+
+  'students',
+  'student_groups',
+
+  'employees',
+  'teachers',
+  'positions',
+  'divisions',
+
+  'audiences',
+  'audience_types',
+  'buildings',
+
+  'lesson_periods',
+  'weeks',
+  'semesters',
+  'academic_years',
+
+  'specialties',
+  'departments',
+  'faculties',
+
+  'app_users',
+  'permissions',
+  'roles',
+  'dictionary_items',
+  'app_settings'
+]
+
 export class DatabaseTransferService {
   constructor(private readonly database: Database.Database) {}
 
@@ -132,7 +180,7 @@ export class DatabaseTransferService {
   }
 
   resetDatabase(): DatabaseMaintenanceResult {
-    const tableNames = this.getTransferTableNames()
+    const tableNames = this.getResetTableNames()
 
     this.withForeignKeysDisabled(() => {
       const transaction = this.database.transaction(() => {
@@ -166,6 +214,17 @@ export class DatabaseTransferService {
       .all() as Array<{ name: string }>
 
     return rows.map((row) => row.name).filter((tableName) => !excludedTables.has(tableName))
+  }
+
+  private getResetTableNames(): string[] {
+    const existingTableNames = new Set(this.getTransferTableNames())
+    const orderedTables = resetTableOrder.filter((tableName) => existingTableNames.has(tableName))
+    const orderedTableSet = new Set(orderedTables)
+    const remainingTables = [...existingTableNames].filter(
+      (tableName) => !orderedTableSet.has(tableName)
+    )
+
+    return [...remainingTables, ...orderedTables]
   }
 
   private clearTables(tableNames: string[]): void {
