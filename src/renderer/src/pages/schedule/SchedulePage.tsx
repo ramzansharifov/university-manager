@@ -15,7 +15,6 @@ import {
     createOptionsMap,
     createScheduleItemColumns,
     createScheduleItemFields,
-    createStringOptionsMap,
     createWeekTypeMap,
     dayOfWeekOptions,
     getPersonName,
