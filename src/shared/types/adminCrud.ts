@@ -23,6 +23,7 @@ export type AdminEntityKey =
   | 'schedule_items'
   | 'lesson_sessions'
   | 'attendance_records'
+  | 'grade_element_types'
   | 'grade_items'
   | 'score_scales'
   | 'grades'

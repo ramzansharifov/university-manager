@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import {
   FiActivity,
+  FiBarChart2,
   FiBookOpen,
   FiCalendar,
   FiClipboard,
@@ -62,6 +63,13 @@ export const mainNavigationItems: AppNavigationItem[] = [
     path: '/learning-journal',
     icon: <FiClipboard />,
     permissions: ['learning_journal.view']
+  },
+  {
+    title: 'Отчёты',
+    description: 'Посещаемость, успеваемость и аналитика',
+    path: '/reports',
+    icon: <FiBarChart2 />,
+    permissions: ['reports.view']
   }
 ]
 

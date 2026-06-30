@@ -215,9 +215,23 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     }
   ),
 
+  grade_element_types: entity(
+    'grade_element_types',
+    ['name', 'description'],
+    ['name', 'description']
+  ),
+
   grade_items: entity(
     'grade_items',
-    ['discipline_id', 'grade_category_id', 'name', 'max_score', 'grade_date', 'description'],
+    [
+      'discipline_id',
+      'grade_element_type_id',
+      'grade_category_id',
+      'name',
+      'max_score',
+      'grade_date',
+      'description'
+    ],
     ['name', 'description']
   ),
   score_scales: entity(

@@ -12,6 +12,7 @@ import { SettingsPage } from '../../pages/settings/SettingsPage'
 import { UniversityPage } from '../../pages/university/UniversityPage'
 import { RequireAuth } from './RequireAuth'
 import { StudentDetailsPage } from '../../pages/people/StudentDetailsPage'
+import { ReportsPage } from '../../pages/reports/ReportsPage'
 
 export function AppRouter() {
   return (
@@ -27,6 +28,7 @@ export function AppRouter() {
           <Route path="/academic-process" element={<AcademicProcessPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/learning-journal" element={<LearningJournalPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/administration" element={<AdministrationPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/settings" element={<SettingsPage />} />
