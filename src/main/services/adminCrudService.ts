@@ -215,11 +215,17 @@ export class AdminCrudService {
 
     const normalizedPeriods = periods.items
       .map((period) => {
+        const periodId = normalizeNullableNumber(period.id)
+
+        if (periodId === null) {
+          throw new Error('У пары отсутствует идентификатор')
+        }
+
         const startsAt = normalizeLessonPeriodTime(String(period.starts_at ?? ''), 'начала')
         const endsAt = normalizeLessonPeriodTime(String(period.ends_at ?? ''), 'окончания')
 
         return {
-          ...period,
+          id: periodId,
           starts_at: startsAt,
           ends_at: endsAt,
           startMinutes: timeToMinutes(startsAt)
@@ -232,20 +238,20 @@ export class AdminCrudService {
           return timeDiff
         }
 
-        return Number(firstPeriod.id) - Number(secondPeriod.id)
+        return firstPeriod.id - secondPeriod.id
       })
 
     normalizedPeriods.forEach((period, index) => {
-      this.repository.update(config, Number(period.id), {
+      this.repository.update(config, period.id, {
         number: 100000 + index,
-        name: `Временная пара ${Number(period.id)}`
+        name: `Временная пара ${period.id}`
       })
     })
 
     normalizedPeriods.forEach((period, index) => {
       const periodNumber = index + 1
 
-      this.repository.update(config, Number(period.id), {
+      this.repository.update(config, period.id, {
         number: periodNumber,
         name: `${periodNumber} пара`,
         starts_at: period.starts_at,
