@@ -234,6 +234,258 @@ export function getRecordName(record: AdminCrudRecord): string {
   return `#${String(record.id)}`
 }
 
+export const dayOfWeekOptions: AdminCrudSelectOption[] = [
+  { value: '1', label: 'Понедельник' },
+  { value: '2', label: 'Вторник' },
+  { value: '3', label: 'Среда' },
+  { value: '4', label: 'Четверг' },
+  { value: '5', label: 'Пятница' },
+  { value: '6', label: 'Суббота' },
+  { value: '7', label: 'Воскресенье' }
+]
+
+export const weekTypeOptions: AdminCrudSelectOption[] = [
+  { value: 'all', label: 'Каждую неделю' },
+  { value: 'odd', label: 'Нечётная неделя' },
+  { value: 'even', label: 'Чётная неделя' }
+]
+
+export interface ScheduleItemColumnMaps {
+  semesterNameById: Map<number, string>
+  lessonPeriodNameById: Map<number, string>
+  groupNameById: Map<number, string>
+  disciplineNameById: Map<number, string>
+  teacherNameById: Map<number, string>
+  audienceNameById: Map<number, string>
+  lessonTypeNameById: Map<number, string>
+  dayOfWeekNameById: Map<number, string>
+  weekTypeNameByValue: Map<string, string>
+}
+
+export function createScheduleItemFields(options: {
+  semesterOptions: AdminCrudSelectOption[]
+  lessonPeriodOptions: AdminCrudSelectOption[]
+  groupOptions: AdminCrudSelectOption[]
+  disciplineOptions: AdminCrudSelectOption[]
+  teacherOptions: AdminCrudSelectOption[]
+  audienceOptions: AdminCrudSelectOption[]
+  lessonTypeOptions: AdminCrudSelectOption[]
+}): AdminCrudFieldConfig[] {
+  return [
+    {
+      key: 'semester_id',
+      label: 'Семестр',
+      placeholder: 'Выбери семестр',
+      type: 'select',
+      valueType: 'number',
+      options: options.semesterOptions,
+      required: true
+    },
+    {
+      key: 'day_of_week',
+      label: 'День недели',
+      placeholder: 'Выбери день недели',
+      type: 'select',
+      valueType: 'number',
+      options: dayOfWeekOptions,
+      required: true
+    },
+    {
+      key: 'lesson_period_id',
+      label: 'Пара',
+      placeholder: 'Выбери пару',
+      type: 'select',
+      valueType: 'number',
+      options: options.lessonPeriodOptions,
+      required: true
+    },
+    {
+      key: 'group_id',
+      label: 'Группа',
+      placeholder: 'Выбери группу',
+      type: 'select',
+      valueType: 'number',
+      options: options.groupOptions,
+      required: true
+    },
+    {
+      key: 'discipline_id',
+      label: 'Дисциплина',
+      placeholder: 'Выбери дисциплину группы',
+      type: 'select',
+      valueType: 'number',
+      options: options.disciplineOptions,
+      dependsOn: 'group_id',
+      dependencyPlaceholder: 'Сначала выбери группу',
+      required: true
+    },
+    {
+      key: 'teacher_id',
+      label: 'Преподаватель',
+      placeholder: 'Выбери преподавателя',
+      type: 'select',
+      valueType: 'number',
+      options: options.teacherOptions,
+      required: true
+    },
+    {
+      key: 'audience_id',
+      label: 'Аудитория',
+      placeholder: 'Выбери аудиторию',
+      type: 'select',
+      valueType: 'number',
+      options: options.audienceOptions
+    },
+    {
+      key: 'lesson_type_id',
+      label: 'Тип занятия',
+      placeholder: 'Выбери тип занятия',
+      type: 'select',
+      valueType: 'number',
+      options: options.lessonTypeOptions
+    },
+    {
+      key: 'week_type',
+      label: 'Тип недели',
+      placeholder: 'Выбери тип недели',
+      type: 'select',
+      options: weekTypeOptions
+    },
+    {
+      key: 'starts_on',
+      label: 'Дата начала',
+      type: 'date'
+    },
+    {
+      key: 'ends_on',
+      label: 'Дата окончания',
+      type: 'date'
+    }
+  ]
+}
+
+export function createScheduleItemColumns(maps: ScheduleItemColumnMaps): AdminCrudColumnConfig[] {
+  return [
+    {
+      key: 'day_of_week',
+      label: 'День',
+      render: (record) => renderRelation(record.day_of_week, maps.dayOfWeekNameById)
+    },
+    {
+      key: 'lesson_period_id',
+      label: 'Пара',
+      render: (record) => renderRelation(record.lesson_period_id, maps.lessonPeriodNameById)
+    },
+    {
+      key: 'group_id',
+      label: 'Группа',
+      render: (record) => renderRelation(record.group_id, maps.groupNameById)
+    },
+    {
+      key: 'discipline_id',
+      label: 'Дисциплина',
+      render: (record) => renderRelation(record.discipline_id, maps.disciplineNameById)
+    },
+    {
+      key: 'teacher_id',
+      label: 'Преподаватель',
+      render: (record) => renderRelation(record.teacher_id, maps.teacherNameById)
+    },
+    {
+      key: 'audience_id',
+      label: 'Аудитория',
+      render: (record) => renderRelation(record.audience_id, maps.audienceNameById)
+    },
+    {
+      key: 'lesson_type_id',
+      label: 'Тип',
+      render: (record) => renderRelation(record.lesson_type_id, maps.lessonTypeNameById)
+    },
+    {
+      key: 'week_type',
+      label: 'Неделя',
+      render: (record) => renderWeekType(record.week_type, maps.weekTypeNameByValue)
+    }
+  ]
+}
+
+export function createDisciplineOptions(
+  items: AdminCrudRecord[],
+  maps: {
+    subjectNameById: Map<number, string>
+    groupNameById: Map<number, string>
+  }
+): AdminCrudSelectOption[] {
+  return items.map((item) => {
+    const subjectName = renderRelation(item.subject_id, maps.subjectNameById)
+    const groupName = renderRelation(item.group_id, maps.groupNameById)
+    const disciplineName = item.name ? String(item.name) : subjectName
+
+    return {
+      value: String(item.id),
+      label: `${disciplineName} / ${groupName}`,
+      meta: {
+        group_id:
+          item.group_id === null || item.group_id === undefined ? null : String(item.group_id),
+        teacher_id:
+          item.teacher_id === null || item.teacher_id === undefined
+            ? null
+            : String(item.teacher_id),
+        semester_id:
+          item.semester_id === null || item.semester_id === undefined
+            ? null
+            : String(item.semester_id)
+      }
+    }
+  })
+}
+
+export function createLessonPeriodOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
+  return items.map((item) => ({
+    value: String(item.id),
+    label:
+      `${String(item.number ?? '')} пара: ${String(item.starts_at ?? '')}–${String(item.ends_at ?? '')}`.trim()
+  }))
+}
+
+export function createWeekTypeMap(): Map<string, string> {
+  return new Map(weekTypeOptions.map((option) => [option.value, option.label]))
+}
+
+export function createStringOptionsMap(options: AdminCrudSelectOption[]): Map<string, string> {
+  return new Map(options.map((option) => [option.value, option.label]))
+}
+
+export function getPersonName(record: AdminCrudRecord): string {
+  const name = [record.last_name, record.first_name, record.middle_name]
+    .filter(Boolean)
+    .map(String)
+    .join(' ')
+    .trim()
+
+  return name || getRecordName(record)
+}
+
+export function getSemesterName(record: AdminCrudRecord): string {
+  if (record.name) {
+    return String(record.name)
+  }
+
+  if (record.number) {
+    return `${String(record.number)} семестр`
+  }
+
+  return getRecordName(record)
+}
+
+function renderWeekType(value: unknown, labelsByValue: Map<string, string>): string {
+  if (value === null || value === undefined || value === '') {
+    return '—'
+  }
+
+  return labelsByValue.get(String(value)) ?? String(value)
+}
+
 function renderRelation(value: unknown, labelsById: Map<number, string>): string {
   if (value === null || value === undefined || value === '') {
     return '—'

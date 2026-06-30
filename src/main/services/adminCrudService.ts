@@ -88,6 +88,10 @@ export class AdminCrudService {
     }
 
     const archived = this.repository.archive(config, params.id)
+    const finalItem =
+      params.entity === 'lesson_periods'
+        ? this.renumberLessonPeriods(Number(archived.id))
+        : archived
 
     this.auditService.write({
       action: 'archive',
@@ -95,12 +99,12 @@ export class AdminCrudService {
       entityName: params.entity,
       entityId: params.id,
       before,
-      after: archived
+      after: finalItem
     })
 
     return {
       success: true,
-      item: archived
+      item: finalItem
     }
   }
 
@@ -213,24 +217,37 @@ export class AdminCrudService {
       orderDirection: 'asc'
     })
 
-    const normalizedPeriods = periods.items
-      .map((period) => {
-        const periodId = normalizeNullableNumber(period.id)
+    const normalizedPeriods = periods.items.map((period) => {
+      const periodId = normalizeNullableNumber(period.id)
 
-        if (periodId === null) {
-          throw new Error('У пары отсутствует идентификатор')
-        }
+      if (periodId === null) {
+        throw new Error('У пары отсутствует идентификатор')
+      }
 
-        const startsAt = normalizeLessonPeriodTime(String(period.starts_at ?? ''), 'начала')
-        const endsAt = normalizeLessonPeriodTime(String(period.ends_at ?? ''), 'окончания')
+      const startsAt = normalizeLessonPeriodTime(String(period.starts_at ?? ''), 'начала')
+      const endsAt = normalizeLessonPeriodTime(String(period.ends_at ?? ''), 'окончания')
+      const isArchived = Number(period.is_archived) === 1
 
-        return {
-          id: periodId,
-          starts_at: startsAt,
-          ends_at: endsAt,
-          startMinutes: timeToMinutes(startsAt)
-        }
+      return {
+        id: periodId,
+        starts_at: startsAt,
+        ends_at: endsAt,
+        is_archived: isArchived,
+        startMinutes: timeToMinutes(startsAt)
+      }
+    })
+
+    normalizedPeriods.forEach((period) => {
+      this.repository.update(config, period.id, {
+        number: 100000 + period.id,
+        name: `Временная пара ${period.id}`,
+        starts_at: period.starts_at,
+        ends_at: period.ends_at
       })
+    })
+
+    const activePeriods = normalizedPeriods
+      .filter((period) => !period.is_archived)
       .sort((firstPeriod, secondPeriod) => {
         const timeDiff = firstPeriod.startMinutes - secondPeriod.startMinutes
 
@@ -241,14 +258,7 @@ export class AdminCrudService {
         return firstPeriod.id - secondPeriod.id
       })
 
-    normalizedPeriods.forEach((period, index) => {
-      this.repository.update(config, period.id, {
-        number: 100000 + index,
-        name: `Временная пара ${period.id}`
-      })
-    })
-
-    normalizedPeriods.forEach((period, index) => {
+    activePeriods.forEach((period, index) => {
       const periodNumber = index + 1
 
       this.repository.update(config, period.id, {
@@ -259,7 +269,7 @@ export class AdminCrudService {
       })
     })
 
-    return this.repository.getById(config, savedRecordId) ?? normalizedPeriods[0]
+    return this.repository.getById(config, savedRecordId) ?? activePeriods[0]
   }
   private prepareAudienceData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
     const nextData = { ...data }
