@@ -486,6 +486,60 @@ function renderWeekType(value: unknown, labelsByValue: Map<string, string>): str
   return labelsByValue.get(String(value)) ?? String(value)
 }
 
+export const facultySelectorColumns: AdminCrudColumnConfig[] = [
+  {
+    key: 'id',
+    label: 'ID'
+  },
+  {
+    key: 'name',
+    label: 'Факультет'
+  },
+  {
+    key: 'short_name',
+    label: 'Краткое название'
+  }
+]
+
+export const scheduleGroupColumns: AdminCrudColumnConfig[] = [
+  {
+    key: 'name',
+    label: 'Группа'
+  },
+  {
+    key: 'course',
+    label: 'Курс'
+  },
+  {
+    key: 'description',
+    label: 'Описание'
+  }
+]
+
+export function createNestedScheduleItemFields(
+  options: Parameters<typeof createScheduleItemFields>[0]
+): AdminCrudFieldConfig[] {
+  return createScheduleItemFields(options).filter(
+    (field) =>
+      field.key !== 'semester_id' &&
+      field.key !== 'group_id' &&
+      field.key !== 'discipline_id' &&
+      field.key !== 'teacher_id'
+  )
+}
+
+export function createNestedScheduleItemColumns(
+  maps: ScheduleItemColumnMaps
+): AdminCrudColumnConfig[] {
+  return createScheduleItemColumns(maps).filter(
+    (column) =>
+      column.key !== 'semester_id' &&
+      column.key !== 'group_id' &&
+      column.key !== 'discipline_id' &&
+      column.key !== 'teacher_id'
+  )
+}
+
 function renderRelation(value: unknown, labelsById: Map<number, string>): string {
   if (value === null || value === undefined || value === '') {
     return '—'
