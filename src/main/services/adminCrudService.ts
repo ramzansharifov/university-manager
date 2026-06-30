@@ -155,6 +155,10 @@ export class AdminCrudService {
       return this.prepareScheduleItemData(data, before)
     }
 
+    if (entity === 'grade_element_types') {
+      return this.prepareGradeElementTypeData(data, before)
+    }
+
     return data
   }
 
@@ -350,6 +354,66 @@ export class AdminCrudService {
     }
   }
 
+  private prepareGradeElementTypeData(
+    data: AdminCrudRecord,
+    before?: AdminCrudRecord
+  ): AdminCrudRecord {
+    const nextData = { ...data }
+
+    const gradingMode = String(nextData.grading_mode ?? before?.grading_mode ?? 'score')
+    const minScore = normalizeNullableNumber(nextData.min_score ?? before?.min_score)
+    const maxScore = normalizeNullableNumber(nextData.max_score ?? before?.max_score)
+    const passingScore = normalizeNullableNumber(nextData.passing_score ?? before?.passing_score)
+    const isIntermediate = normalizeBooleanNumber(
+      nextData.is_intermediate ?? before?.is_intermediate
+    )
+    const isFinal = normalizeBooleanNumber(nextData.is_final ?? before?.is_final)
+
+    if (!['score', 'pass_fail'].includes(gradingMode)) {
+      throw new Error('Некорректный тип оценивания')
+    }
+
+    if (!isIntermediate && !isFinal) {
+      throw new Error('Укажи тип элемента: промежуточный или итоговый')
+    }
+
+    if (gradingMode === 'score') {
+      if (minScore === null || maxScore === null) {
+        throw new Error('Для балльного элемента укажи минимальный и максимальный балл')
+      }
+
+      if (maxScore < minScore) {
+        throw new Error('Максимальный балл не может быть меньше минимального')
+      }
+
+      if (passingScore !== null && (passingScore < minScore || passingScore > maxScore)) {
+        throw new Error(
+          'Проходной балл должен быть внутри диапазона минимального и максимального балла'
+        )
+      }
+
+      return {
+        ...nextData,
+        grading_mode: gradingMode,
+        min_score: minScore,
+        max_score: maxScore,
+        passing_score: passingScore,
+        is_intermediate: isIntermediate,
+        is_final: isFinal
+      }
+    }
+
+    return {
+      ...nextData,
+      grading_mode: gradingMode,
+      min_score: null,
+      max_score: null,
+      passing_score: null,
+      is_intermediate: isIntermediate,
+      is_final: isFinal
+    }
+  }
+
   private validateEmployeePosition(data: AdminCrudRecord, before?: AdminCrudRecord): void {
     const nextDivisionId = normalizeNullableNumber(data.division_id ?? before?.division_id)
     const nextPositionId = normalizeNullableNumber(data.position_id ?? before?.position_id)
@@ -419,6 +483,10 @@ function normalizeLessonPeriodTime(value: string, label: string): string {
   }
 
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
+function normalizeBooleanNumber(value: unknown): number {
+  return value === true || value === 'true' || value === '1' || value === 1 ? 1 : 0
 }
 
 function timeToMinutes(value: string): number {

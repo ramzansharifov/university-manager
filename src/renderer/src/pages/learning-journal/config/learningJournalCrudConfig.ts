@@ -22,6 +22,108 @@ export const topicCompletedOptions: AdminCrudSelectOption[] = [
   { value: '1', label: 'Да' }
 ]
 
+export const gradingModeOptions: AdminCrudSelectOption[] = [
+  { value: 'score', label: 'Баллы' },
+  { value: 'pass_fail', label: 'Сдал / не сдал' }
+]
+
+export const gradeElementTypeFields: AdminCrudFieldConfig[] = [
+  {
+    key: 'name',
+    label: 'Название элемента',
+    placeholder: 'Например: Экзамен, Зачёт, Контрольная работа',
+    required: true
+  },
+  {
+    key: 'grading_mode',
+    label: 'Тип оценивания',
+    placeholder: 'Выбери тип оценивания',
+    type: 'select',
+    options: gradingModeOptions,
+    required: true,
+    defaultValue: 'score'
+  },
+  {
+    key: 'min_score',
+    label: 'Минимальный балл',
+    placeholder: 'Например: 0',
+    type: 'number'
+  },
+  {
+    key: 'max_score',
+    label: 'Максимальный балл',
+    placeholder: 'Например: 100',
+    type: 'number'
+  },
+  {
+    key: 'passing_score',
+    label: 'Проходной балл',
+    placeholder: 'Например: 60',
+    type: 'number'
+  },
+  {
+    key: 'is_intermediate',
+    label: 'Промежуточный элемент',
+    placeholder: 'Промежуточный элемент, например контрольная',
+    type: 'checkbox',
+    valueType: 'number',
+    defaultValue: '0'
+  },
+  {
+    key: 'is_final',
+    label: 'Итоговый элемент',
+    placeholder: 'Итоговый элемент, например экзамен или зачёт',
+    type: 'checkbox',
+    valueType: 'number',
+    defaultValue: '0'
+  },
+  {
+    key: 'description',
+    label: 'Описание',
+    placeholder: 'Дополнительная информация',
+    type: 'textarea',
+    fullWidth: true
+  }
+]
+
+export const gradeElementTypeColumns: AdminCrudColumnConfig[] = [
+  {
+    key: 'name',
+    label: 'Элемент'
+  },
+  {
+    key: 'grading_mode',
+    label: 'Тип оценивания',
+    render: (record) => renderGradingMode(record.grading_mode)
+  },
+  {
+    key: 'min_score',
+    label: 'Мин. балл'
+  },
+  {
+    key: 'max_score',
+    label: 'Макс. балл'
+  },
+  {
+    key: 'passing_score',
+    label: 'Проходной'
+  },
+  {
+    key: 'is_intermediate',
+    label: 'Промежуточный',
+    render: (record) => renderBoolean(record.is_intermediate)
+  },
+  {
+    key: 'is_final',
+    label: 'Итоговый',
+    render: (record) => renderBoolean(record.is_final)
+  },
+  {
+    key: 'description',
+    label: 'Описание'
+  }
+]
+
 export interface LearningJournalMaps {
   scheduleItemNameById: Map<number, string>
   lessonSessionNameById: Map<number, string>
@@ -727,4 +829,16 @@ function formatDate(date: Date): string {
   const day = String(date.getUTCDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
+}
+
+function renderGradingMode(value: unknown): string {
+  if (value === 'pass_fail') {
+    return 'Сдал / не сдал'
+  }
+
+  return 'Баллы'
+}
+
+function renderBoolean(value: unknown): string {
+  return value === true || value === 'true' || value === '1' || value === 1 ? 'Да' : 'Нет'
 }

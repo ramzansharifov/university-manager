@@ -716,6 +716,21 @@ function CrudFieldInput({
     )
   }
 
+  if (field.type === 'checkbox') {
+    return (
+      <label className="flex min-h-10 items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)]">
+        <input
+          type="checkbox"
+          checked={value === '1' || value === 'true'}
+          disabled={field.disabled}
+          onBlur={onBlur}
+          onChange={(event) => onChange(event.target.checked ? '1' : '0')}
+        />
+        <span>{field.placeholder ?? field.label}</span>
+      </label>
+    )
+  }
+
   if (field.type === 'textarea') {
     return (
       <Textarea
