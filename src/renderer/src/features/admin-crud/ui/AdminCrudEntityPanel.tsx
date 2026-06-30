@@ -71,6 +71,10 @@ export interface AdminCrudFieldConfig {
   dependencyPlaceholder?: string
   virtual?: boolean
   hidden?: boolean
+  visibleWhen?: {
+    fieldKey: string
+    value: string
+  }
   defaultValue?: string
   persistKey?: string
   persistWhenCheckedKey?: string
@@ -679,6 +683,18 @@ export function AdminCrudEntityPanel({
       />
     </Card>
   )
+}
+
+function isFieldVisible(field: AdminCrudFieldConfig, formValues: Record<string, string>): boolean {
+  if (field.hidden) {
+    return false
+  }
+
+  if (!field.visibleWhen) {
+    return true
+  }
+
+  return String(formValues[field.visibleWhen.fieldKey] ?? '') === String(field.visibleWhen.value)
 }
 
 function getFieldWrapperClassName(field: AdminCrudFieldConfig): string {

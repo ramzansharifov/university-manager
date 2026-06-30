@@ -47,19 +47,31 @@ export const gradeElementTypeFields: AdminCrudFieldConfig[] = [
     key: 'min_score',
     label: 'Минимальный балл',
     placeholder: 'Например: 0',
-    type: 'number'
+    type: 'number',
+    visibleWhen: {
+      fieldKey: 'grading_mode',
+      value: 'score'
+    }
   },
   {
     key: 'max_score',
     label: 'Максимальный балл',
     placeholder: 'Например: 100',
-    type: 'number'
+    type: 'number',
+    visibleWhen: {
+      fieldKey: 'grading_mode',
+      value: 'score'
+    }
   },
   {
     key: 'passing_score',
     label: 'Проходной балл',
     placeholder: 'Например: 60',
-    type: 'number'
+    type: 'number',
+    visibleWhen: {
+      fieldKey: 'grading_mode',
+      value: 'score'
+    }
   },
   {
     key: 'is_intermediate',
