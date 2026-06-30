@@ -6,22 +6,22 @@ import { defaultThemeSettings } from '../../shared/theme/theme.constants'
 import { AuthProvider } from './AuthProvider'
 
 interface AppProvidersProps {
-    children: ReactNode
+  children: ReactNode
 }
 
 export function AppProviders({ children }: AppProvidersProps) {
-    const queryClient = useMemo(() => new QueryClient(), [])
+  const queryClient = useMemo(() => new QueryClient(), [])
 
-    useEffect(() => {
-        document.documentElement.dataset.theme = defaultThemeSettings.themeMode
-        document.documentElement.dataset.accent = defaultThemeSettings.accentColor
-    }, [])
+  useEffect(() => {
+    document.documentElement.dataset.theme = defaultThemeSettings.themeMode
+    document.documentElement.dataset.accent = defaultThemeSettings.accentColor
+  }, [])
 
-    return (
-        <QueryClientProvider client={queryClient}>
-            <BrowserRouter>
-                <AuthProvider>{children}</AuthProvider>
-            </BrowserRouter>
-        </QueryClientProvider>
-    )
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>{children}</AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
 }

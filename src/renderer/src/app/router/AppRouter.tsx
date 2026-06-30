@@ -14,26 +14,26 @@ import { RequireAuth } from './RequireAuth'
 import { StudentDetailsPage } from '../../pages/people/StudentDetailsPage'
 
 export function AppRouter() {
-    return (
-        <Routes>
-            <Route path="/login" element={<LoginPage />} />
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
 
-            <Route element={<RequireAuth />}>
-                <Route element={<MainLayout />}>
-                    <Route path="/" element={<AdminDashboardPage />} />
-                    <Route path="/university" element={<UniversityPage />} />
-                    <Route path="/people" element={<PeoplePage />} />
-                    <Route path="/people/students/:studentId" element={<StudentDetailsPage />} />
-                    <Route path="/academic-process" element={<AcademicProcessPage />} />
-                    <Route path="/schedule" element={<SchedulePage />} />
-                    <Route path="/learning-journal" element={<LearningJournalPage />} />
-                    <Route path="/administration" element={<AdministrationPage />} />
-                    <Route path="/audit-log" element={<AuditLogPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                </Route>
-            </Route>
+      <Route element={<RequireAuth />}>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<AdminDashboardPage />} />
+          <Route path="/university" element={<UniversityPage />} />
+          <Route path="/people" element={<PeoplePage />} />
+          <Route path="/people/students/:studentId" element={<StudentDetailsPage />} />
+          <Route path="/academic-process" element={<AcademicProcessPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/learning-journal" element={<LearningJournalPage />} />
+          <Route path="/administration" element={<AdministrationPage />} />
+          <Route path="/audit-log" element={<AuditLogPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+      </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-    )
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }

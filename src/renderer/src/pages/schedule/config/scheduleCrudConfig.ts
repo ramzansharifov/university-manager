@@ -488,14 +488,6 @@ export function getSemesterName(record: AdminCrudRecord): string {
   return getRecordName(record)
 }
 
-function renderWeekType(value: unknown, labelsByValue: Map<string, string>): string {
-  if (value === null || value === undefined || value === '') {
-    return '—'
-  }
-
-  return labelsByValue.get(String(value)) ?? String(value)
-}
-
 export function createNestedScheduleItemFields(
   options: Parameters<typeof createScheduleItemFields>[0]
 ): AdminCrudFieldConfig[] {

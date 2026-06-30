@@ -4,5 +4,9 @@ import { AppHeader } from '../widgets/app-header/AppHeader'
 import { AppSidebar } from '../widgets/app-sidebar/AppSidebar'
 
 export function MainLayout() {
-    return <AppLayout sidebar={<AppSidebar />} header={<AppHeader />}>{<Outlet />}</AppLayout>
+  return (
+    <AppLayout sidebar={<AppSidebar />} header={<AppHeader />}>
+      {<Outlet />}
+    </AppLayout>
+  )
 }
