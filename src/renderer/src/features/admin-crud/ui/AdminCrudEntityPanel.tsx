@@ -630,19 +630,25 @@ export function AdminCrudEntityPanel({
                         ) : null}
                       </span>
 
-                      <CrudFieldInput
-                        field={field}
-                        allFields={fields}
-                        value={controllerField.value ?? ''}
-                        formValues={watchedFormValues}
-                        onChange={controllerField.onChange}
-                        onBlur={controllerField.onBlur}
-                        onSetValue={(fieldKey, nextValue) => {
-                          form.setValue(fieldKey, nextValue, {
-                            shouldDirty: true,
-                            shouldValidate: true
-                          })
-                        }}
+                      <Controller
+                        name={field.key}
+                        control={form.control}
+                        render={({ field: controllerField }) => (
+                          <CrudFieldInput
+                            field={field}
+                            allFields={fields}
+                            value={controllerField.value ?? ''}
+                            formValues={watchedFormValues}
+                            onChange={controllerField.onChange}
+                            onBlur={controllerField.onBlur}
+                            onSetValue={(fieldKey, nextValue) => {
+                              form.setValue(fieldKey, nextValue, {
+                                shouldDirty: true,
+                                shouldValidate: true
+                              })
+                            }}
+                          />
+                        )}
                       />
 
                       {fieldError ? (
