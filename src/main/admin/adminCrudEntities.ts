@@ -33,7 +33,15 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
   ),
   specialties: entity(
     'specialties',
-    ['faculty_id', 'department_id', 'code', 'name', 'degree', 'description'],
+    [
+      'faculty_id',
+      'department_id',
+      'code',
+      'name',
+      'degree',
+      'study_duration_years',
+      'description'
+    ],
     ['code', 'name', 'degree']
   ),
   student_groups: entity(
@@ -143,7 +151,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
   subjects: entity('subjects', ['department_id', 'name', 'description'], ['name']),
   curriculum_plans: entity(
     'curriculum_plans',
-    ['specialty_id', 'academic_year_id', 'education_form_id', 'name', 'status', 'note'],
+    ['specialty_id', 'course', 'academic_year_id', 'education_form_id', 'name', 'status', 'note'],
     ['name', 'status']
   ),
   curriculum_items: entity(

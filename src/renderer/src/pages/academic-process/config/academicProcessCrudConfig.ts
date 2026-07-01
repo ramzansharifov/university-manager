@@ -118,6 +118,10 @@ export const specialtySelectorColumns: AdminCrudColumnConfig[] = [
   {
     key: 'degree',
     label: 'Уровень'
+  },
+  {
+    key: 'study_duration_years',
+    label: 'Срок обучения'
   }
 ]
 
@@ -126,6 +130,14 @@ export function createCurriculumPlanFields(options: {
   educationFormOptions: AdminCrudSelectOption[]
 }): AdminCrudFieldConfig[] {
   return [
+    {
+      key: 'course',
+      label: 'Курс обучения',
+      placeholder: 'Например: 1',
+      type: 'number',
+      required: true,
+      defaultValue: '1'
+    },
     {
       key: 'academic_year_id',
       label: 'Учебный год',
@@ -146,7 +158,7 @@ export function createCurriculumPlanFields(options: {
     {
       key: 'name',
       label: 'Название учебного плана',
-      placeholder: 'Например: Учебный план 2025 / очная форма',
+      placeholder: 'Например: 1 курс / 2025-2026 / очная форма',
       required: true
     },
     {
@@ -166,6 +178,10 @@ export function createCurriculumPlanColumns(maps: {
     {
       key: 'id',
       label: 'ID'
+    },
+    {
+      key: 'course',
+      label: 'Курс'
     },
     {
       key: 'name',

@@ -108,7 +108,12 @@ export function GroupDisciplinesDrilldown() {
     const allowedPlanIds = selectedGroup
       ? new Set(
           curriculumPlans
-            .filter((plan) => Number(plan.specialty_id) === Number(selectedGroup.specialty_id))
+            .filter((plan) => {
+              return (
+                Number(plan.specialty_id) === Number(selectedGroup.specialty_id) &&
+                Number(plan.course) === Number(selectedGroup.course)
+              )
+            })
             .map((plan) => Number(plan.id))
         )
       : new Set<number>()
@@ -213,7 +218,7 @@ export function GroupDisciplinesDrilldown() {
         <AdminCrudEntityPanel
           entity="disciplines"
           title={`Дисциплины: ${getRecordName(selectedGroup)}`}
-          description="Выбери пункт учебного плана — предмет, семестр и название подтянутся автоматически. Преподаватели фильтруются по кафедре предмета."
+          description="Выбери пункт учебного плана для курса этой группы — предмет, семестр и название подтянутся автоматически. Преподаватели фильтруются по кафедре предмета."
           createButtonLabel="Добавить дисциплину"
           fields={disciplineFields}
           columns={disciplineColumns}

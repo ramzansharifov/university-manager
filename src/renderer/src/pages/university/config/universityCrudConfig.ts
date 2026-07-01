@@ -200,6 +200,14 @@ export const specialtyFields: AdminCrudFieldConfig[] = [
     placeholder: 'Например: Бакалавриат'
   },
   {
+    key: 'study_duration_years',
+    label: 'Длительность обучения в годах',
+    placeholder: 'Например: 4',
+    type: 'number',
+    required: true,
+    defaultValue: '4'
+  },
+  {
     key: 'description',
     label: 'Описание',
     placeholder: 'Дополнительная информация',
@@ -223,6 +231,10 @@ export const specialtyColumns: AdminCrudColumnConfig[] = [
   {
     key: 'degree',
     label: 'Уровень'
+  },
+  {
+    key: 'study_duration_years',
+    label: 'Срок'
   },
   {
     key: 'description',

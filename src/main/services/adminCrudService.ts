@@ -137,6 +137,14 @@ export class AdminCrudService {
     data: AdminCrudRecord,
     before?: AdminCrudRecord
   ): AdminCrudRecord {
+    if (entity === 'specialties') {
+      return this.prepareSpecialtyData(data, before)
+    }
+
+    if (entity === 'curriculum_plans') {
+      return this.prepareCurriculumPlanData(data, before)
+    }
+
     if (entity === 'employees') {
       this.validateEmployeePosition(data, before)
 
@@ -486,6 +494,62 @@ export class AdminCrudService {
 
     if (positionDivisionId !== nextDivisionId) {
       throw new Error('Выбранная должность не относится к выбранному подразделению')
+    }
+  }
+
+  private prepareSpecialtyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
+    const nextData = { ...data }
+    const duration = normalizeNullableNumber(
+      nextData.study_duration_years ?? before?.study_duration_years
+    )
+
+    if (duration === null || duration < 1 || duration > 10) {
+      throw new Error('Длительность обучения должна быть числом от 1 до 10 лет')
+    }
+
+    return {
+      ...nextData,
+      study_duration_years: Math.floor(duration)
+    }
+  }
+
+  private prepareCurriculumPlanData(
+    data: AdminCrudRecord,
+    before?: AdminCrudRecord
+  ): AdminCrudRecord {
+    const nextData = { ...data }
+
+    const specialtyId = normalizeNullableNumber(nextData.specialty_id ?? before?.specialty_id)
+    const course = normalizeNullableNumber(nextData.course ?? before?.course)
+
+    if (specialtyId === null) {
+      throw new Error('Для учебного плана выбери специальность')
+    }
+
+    if (course === null || course < 1) {
+      throw new Error('Курс учебного плана должен быть положительным числом')
+    }
+
+    const specialtyConfig = getAdminCrudEntityConfig('specialties')
+    const specialty = this.repository.getById(specialtyConfig, specialtyId)
+
+    if (!specialty) {
+      throw new Error('Выбранная специальность не найдена')
+    }
+
+    const studyDurationYears = normalizeNullableNumber(specialty.study_duration_years) ?? 4
+    const normalizedCourse = Math.floor(course)
+
+    if (normalizedCourse > studyDurationYears) {
+      throw new Error(
+        `Для этой специальности можно создать учебный план только с 1 по ${studyDurationYears} курс`
+      )
+    }
+
+    return {
+      ...nextData,
+      specialty_id: specialtyId,
+      course: normalizedCourse
     }
   }
 }
