@@ -164,7 +164,7 @@ export function PeoplePage() {
           <AdminCrudEntityPanel
             entity="employees"
             title="Сотрудники"
-            description="Общий список сотрудников университета. Для структурного просмотра открой «Университет → Административная структура»."
+            description="Общий список сотрудников университета с привязкой к подразделению и должности."
             createButtonLabel="Добавить сотрудника"
             fields={employeeFields}
             columns={employeeColumns}
