@@ -27,7 +27,7 @@ export function Sidebar({ className, children, ...props }: SidebarProps) {
 
 export function SidebarHeader({ className, children, ...props }: SidebarProps) {
   return (
-    <div className={cn('border-b border-[var(--color-border)] p-5', className)} {...props}>
+    <div className={cn('border-b border-(--color-border) p-3', className)} {...props}>
       {children}
     </div>
   )

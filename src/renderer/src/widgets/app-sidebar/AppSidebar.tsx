@@ -31,10 +31,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <p className="text-sm font-semibold text-[var(--color-primary)]">University Manager</p>
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-          Система управления университетом
-        </p>
+        <p className="text-xl text-center font-bold text-(--color-primary)">UGER</p>
       </SidebarHeader>
 
       <SidebarContent>
