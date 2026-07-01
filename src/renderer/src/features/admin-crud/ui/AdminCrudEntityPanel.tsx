@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { Resolver } from 'react-hook-form'
 import { Controller, useForm } from 'react-hook-form'
@@ -113,6 +113,8 @@ interface AdminCrudEntityPanelProps {
   canArchive?: boolean
   orderBy?: string
   orderDirection?: AdminCrudOrderDirection
+  rowGroupBy?: (record: AdminCrudRecord) => string | number | null | undefined
+  renderRowGroupHeader?: (groupKey: string, records: AdminCrudRecord[]) => ReactNode
   onRowClick?: (record: AdminCrudRecord) => void
   extraRowActions?: (record: AdminCrudRecord) => ReactNode
   onAfterMutation?: () => void | Promise<void>
@@ -136,6 +138,8 @@ export function AdminCrudEntityPanel({
   canArchive = true,
   orderBy = 'id',
   orderDirection = 'asc',
+  rowGroupBy,
+  renderRowGroupHeader,
   onRowClick,
   extraRowActions,
   onAfterMutation
@@ -477,54 +481,73 @@ export function AdminCrudEntityPanel({
               </thead>
 
               <tbody>
-                {items.map((record) => (
-                  <tr
-                    key={String(record.id)}
-                    className={cn(
-                      'border-b border-[var(--color-border)] last:border-b-0',
-                      onRowClick ? 'cursor-pointer hover:bg-[var(--color-surface-muted)]' : ''
-                    )}
-                    onClick={() => onRowClick?.(record)}
-                  >
-                    {columns.map((column) => (
-                      <td key={column.key} className="px-4 py-3 text-[var(--color-text)]">
-                        {column.render
-                          ? column.render(record)
-                          : formatValue(record[column.key], column)}
+                {createTableRows(items, rowGroupBy).map((tableRow) => {
+                  if (tableRow.type === 'group') {
+                    return (
+                      <tr key={`group-${tableRow.groupKey}`}>
+                        <td
+                          colSpan={columns.length + 1}
+                          className="border-y border-[var(--color-primary)]/25 bg-[var(--color-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-primary)]"
+                        >
+                          {renderRowGroupHeader
+                            ? renderRowGroupHeader(tableRow.groupKey, tableRow.records)
+                            : tableRow.groupKey}
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  const record = tableRow.record
+
+                  return (
+                    <tr
+                      key={String(record.id)}
+                      className={cn(
+                        'border-b border-[var(--color-border)] last:border-b-0',
+                        onRowClick ? 'cursor-pointer hover:bg-[var(--color-surface-muted)]' : ''
+                      )}
+                      onClick={() => onRowClick?.(record)}
+                    >
+                      {columns.map((column) => (
+                        <td key={column.key} className="px-4 py-3 text-[var(--color-text)]">
+                          {column.render
+                            ? column.render(record)
+                            : formatValue(record[column.key], column)}
+                        </td>
+                      ))}
+
+                      <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex justify-end gap-2">
+                          {extraRowActions?.(record)}
+
+                          {canEdit ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              title="Редактировать"
+                              aria-label="Редактировать запись"
+                              onClick={() => openEditDialog(record)}
+                            >
+                              <FiEdit2 />
+                            </Button>
+                          ) : null}
+
+                          {canArchive ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Архивировать"
+                              aria-label="Архивировать запись"
+                              onClick={() => requestArchive(record)}
+                            >
+                              <FiArchive />
+                            </Button>
+                          ) : null}
+                        </div>
                       </td>
-                    ))}
-
-                    <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
-                      <div className="flex justify-end gap-2">
-                        {extraRowActions?.(record)}
-
-                        {canEdit ? (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            title="Редактировать"
-                            aria-label="Редактировать запись"
-                            onClick={() => openEditDialog(record)}
-                          >
-                            <FiEdit2 />
-                          </Button>
-                        ) : null}
-
-                        {canArchive ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Архивировать"
-                            aria-label="Архивировать запись"
-                            onClick={() => requestArchive(record)}
-                          >
-                            <FiArchive />
-                          </Button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                    </tr>
+                  )
+                })}
 
                 {!isLoading && items.length === 0 ? (
                   <tr>
@@ -692,6 +715,59 @@ export function AdminCrudEntityPanel({
       />
     </Card>
   )
+}
+
+type AdminCrudTableRow =
+  | {
+      type: 'group'
+      groupKey: string
+      records: AdminCrudRecord[]
+    }
+  | {
+      type: 'record'
+      record: AdminCrudRecord
+    }
+
+function createTableRows(
+  items: AdminCrudRecord[],
+  rowGroupBy?: (record: AdminCrudRecord) => string | number | null | undefined
+): AdminCrudTableRow[] {
+  if (!rowGroupBy) {
+    return items.map((record) => ({
+      type: 'record',
+      record
+    }))
+  }
+
+  const groups = new Map<string, AdminCrudRecord[]>()
+
+  items.forEach((record) => {
+    const groupKey = normalizeGroupKey(rowGroupBy(record))
+    const groupRecords = groups.get(groupKey) ?? []
+
+    groupRecords.push(record)
+    groups.set(groupKey, groupRecords)
+  })
+
+  return Array.from(groups.entries()).flatMap(([groupKey, records]) => [
+    {
+      type: 'group' as const,
+      groupKey,
+      records
+    },
+    ...records.map((record) => ({
+      type: 'record' as const,
+      record
+    }))
+  ])
+}
+
+function normalizeGroupKey(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') {
+    return 'Без группы'
+  }
+
+  return String(value)
 }
 
 function isFieldVisible(field: AdminCrudFieldConfig, formValues: Record<string, string>): boolean {

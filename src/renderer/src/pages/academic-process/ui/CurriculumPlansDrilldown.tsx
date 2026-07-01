@@ -269,6 +269,17 @@ export function CurriculumPlansDrilldown() {
           columns={curriculumItemColumns}
           filters={itemFilters}
           fixedData={itemFixedData}
+          orderBy="semester_id"
+          orderDirection="asc"
+          rowGroupBy={(record) => record.semester_id ?? 'without_semester'}
+          renderRowGroupHeader={(semesterId, records) => (
+            <div className="flex items-center justify-between gap-3">
+              <span>{getSemesterGroupTitle(semesterId, semesterNameById)}</span>
+              <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">
+                {records.length} {getCurriculumItemsCountText(records.length)}
+              </span>
+            </div>
+          )}
           emptyMessage="В этом учебном плане пока нет пунктов."
           onAfterMutation={loadOptions}
         />
@@ -318,4 +329,33 @@ function CurriculumBreadcrumb({
       </CardContent>
     </Card>
   )
+}
+
+function getSemesterGroupTitle(groupKey: string, semesterNameById: Map<number, string>): string {
+  if (groupKey === 'without_semester') {
+    return 'Без семестра'
+  }
+
+  const semesterId = Number(groupKey)
+
+  if (!Number.isFinite(semesterId)) {
+    return groupKey
+  }
+
+  return semesterNameById.get(semesterId) ?? `${semesterId} семестр`
+}
+
+function getCurriculumItemsCountText(count: number): string {
+  const lastDigit = count % 10
+  const lastTwoDigits = count % 100
+
+  if (lastDigit === 1 && lastTwoDigits !== 11) {
+    return 'пункт'
+  }
+
+  if ([2, 3, 4].includes(lastDigit) && ![12, 13, 14].includes(lastTwoDigits)) {
+    return 'пункта'
+  }
+
+  return 'пунктов'
 }
