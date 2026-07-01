@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from 'react'
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { Resolver } from 'react-hook-form'
 import { Controller, useForm } from 'react-hook-form'
@@ -126,6 +126,8 @@ interface AdminCrudEntityPanelProps {
   canArchive?: boolean
   orderBy?: string
   orderDirection?: AdminCrudOrderDirection
+  rowGroupBy?: (record: AdminCrudRecord) => string | number | null | undefined
+  renderRowGroupHeader?: (groupKey: string, records: AdminCrudRecord[]) => ReactNode
   hideSearch?: boolean
   renderItems?: (params: AdminCrudRenderItemsParams) => ReactNode
   onRowClick?: (record: AdminCrudRecord) => void
@@ -439,36 +441,38 @@ export function AdminCrudEntityPanel({
 
       <CardContent>
         <div className="grid gap-4">
-          <form className="flex flex-col gap-3 md:flex-row" onSubmit={handleSearchSubmit}>
-            <div className="relative flex-1">
-              <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-              <Input
-                className="pl-9"
-                value={searchInput}
-                placeholder="Поиск..."
-                onChange={(event) => setSearchInput(event.target.value)}
-              />
-            </div>
+          {!hideSearch ? (
+            <form className="flex flex-col gap-3 md:flex-row" onSubmit={handleSearchSubmit}>
+              <div className="relative flex-1">
+                <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                <Input
+                  className="pl-9"
+                  value={searchInput}
+                  placeholder="Поиск..."
+                  onChange={(event) => setSearchInput(event.target.value)}
+                />
+              </div>
 
-            <div className="flex gap-2">
-              <Button type="submit" variant="secondary">
-                Найти
-              </Button>
+              <div className="flex gap-2">
+                <Button type="submit" variant="secondary">
+                  Найти
+                </Button>
 
-              <Button type="button" variant="ghost" onClick={handleResetSearch}>
-                Сбросить
-              </Button>
+                <Button type="button" variant="ghost" onClick={handleResetSearch}>
+                  Сбросить
+                </Button>
 
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => void loadItems()}
-                disabled={isLoading}
-              >
-                <FiRefreshCcw />
-              </Button>
-            </div>
-          </form>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => void loadItems()}
+                  disabled={isLoading}
+                >
+                  <FiRefreshCcw />
+                </Button>
+              </div>
+            </form>
+          ) : null}
 
           {error ? (
             <div className="rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)]">
@@ -476,118 +480,133 @@ export function AdminCrudEntityPanel({
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
-            <table className="w-full border-collapse text-sm">
-              <thead className="bg-[var(--color-surface-muted)]">
-                <tr>
-                  {columns.map((column) => (
-                    <th
-                      key={column.key}
-                      className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]"
-                    >
-                      {column.label}
+          {renderItems ? (
+            renderItems({
+              items,
+              columns,
+              isLoading,
+              emptyMessage,
+              canEdit,
+              canArchive,
+              extraRowActions,
+              openEditDialog,
+              requestArchive,
+              formatValue
+            })
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
+              <table className="w-full border-collapse text-sm">
+                <thead className="bg-[var(--color-surface-muted)]">
+                  <tr>
+                    {columns.map((column) => (
+                      <th
+                        key={column.key}
+                        className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]"
+                      >
+                        {column.label}
+                      </th>
+                    ))}
+
+                    <th className="w-56 border-b border-[var(--color-border)] px-4 py-3 text-right font-semibold text-[var(--color-text-muted)]">
+                      Действия
                     </th>
-                  ))}
+                  </tr>
+                </thead>
 
-                  <th className="w-56 border-b border-[var(--color-border)] px-4 py-3 text-right font-semibold text-[var(--color-text-muted)]">
-                    Действия
-                  </th>
-                </tr>
-              </thead>
+                <tbody>
+                  {createTableRows(items, rowGroupBy).map((tableRow) => {
+                    if (tableRow.type === 'group') {
+                      return (
+                        <tr key={`group-${tableRow.groupKey}`}>
+                          <td
+                            colSpan={columns.length + 1}
+                            className="border-y border-[var(--color-primary)]/25 bg-[var(--color-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-primary)]"
+                          >
+                            {renderRowGroupHeader
+                              ? renderRowGroupHeader(tableRow.groupKey, tableRow.records)
+                              : tableRow.groupKey}
+                          </td>
+                        </tr>
+                      )
+                    }
 
-              <tbody>
-                {createTableRows(items, rowGroupBy).map((tableRow) => {
-                  if (tableRow.type === 'group') {
+                    const record = tableRow.record
+
                     return (
-                      <tr key={`group-${tableRow.groupKey}`}>
-                        <td
-                          colSpan={columns.length + 1}
-                          className="border-y border-[var(--color-primary)]/25 bg-[var(--color-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-primary)]"
-                        >
-                          {renderRowGroupHeader
-                            ? renderRowGroupHeader(tableRow.groupKey, tableRow.records)
-                            : tableRow.groupKey}
+                      <tr
+                        key={String(record.id)}
+                        className={cn(
+                          'border-b border-[var(--color-border)] last:border-b-0',
+                          onRowClick ? 'cursor-pointer hover:bg-[var(--color-surface-muted)]' : ''
+                        )}
+                        onClick={() => onRowClick?.(record)}
+                      >
+                        {columns.map((column) => (
+                          <td key={column.key} className="px-4 py-3 text-[var(--color-text)]">
+                            {column.render
+                              ? column.render(record)
+                              : formatValue(record[column.key], column)}
+                          </td>
+                        ))}
+
+                        <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                          <div className="flex justify-end gap-2">
+                            {extraRowActions?.(record)}
+
+                            {canEdit ? (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                title="Редактировать"
+                                aria-label="Редактировать запись"
+                                onClick={() => openEditDialog(record)}
+                              >
+                                <FiEdit2 />
+                              </Button>
+                            ) : null}
+
+                            {canArchive ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Архивировать"
+                                aria-label="Архивировать запись"
+                                onClick={() => requestArchive(record)}
+                              >
+                                <FiArchive />
+                              </Button>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     )
-                  }
+                  })}
 
-                  const record = tableRow.record
-
-                  return (
-                    <tr
-                      key={String(record.id)}
-                      className={cn(
-                        'border-b border-[var(--color-border)] last:border-b-0',
-                        onRowClick ? 'cursor-pointer hover:bg-[var(--color-surface-muted)]' : ''
-                      )}
-                      onClick={() => onRowClick?.(record)}
-                    >
-                      {columns.map((column) => (
-                        <td key={column.key} className="px-4 py-3 text-[var(--color-text)]">
-                          {column.render
-                            ? column.render(record)
-                            : formatValue(record[column.key], column)}
-                        </td>
-                      ))}
-
-                      <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
-                        <div className="flex justify-end gap-2">
-                          {extraRowActions?.(record)}
-
-                          {canEdit ? (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              title="Редактировать"
-                              aria-label="Редактировать запись"
-                              onClick={() => openEditDialog(record)}
-                            >
-                              <FiEdit2 />
-                            </Button>
-                          ) : null}
-
-                          {canArchive ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              title="Архивировать"
-                              aria-label="Архивировать запись"
-                              onClick={() => requestArchive(record)}
-                            >
-                              <FiArchive />
-                            </Button>
-                          ) : null}
-                        </div>
+                  {!isLoading && items.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={columns.length + 1}
+                        className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
+                      >
+                        {emptyMessage}
                       </td>
                     </tr>
-                  )
-                })}
+                  ) : null}
 
-                {!isLoading && items.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={columns.length + 1}
-                      className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
-                    >
-                      {emptyMessage}
-                    </td>
-                  </tr>
-                ) : null}
-
-                {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={columns.length + 1}
-                      className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
-                    >
-                      Загрузка данных...
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={columns.length + 1}
+                        className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
+                      >
+                        Загрузка данных...
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
