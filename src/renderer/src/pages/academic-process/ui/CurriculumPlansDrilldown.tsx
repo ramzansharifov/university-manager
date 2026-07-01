@@ -271,7 +271,7 @@ export function CurriculumPlansDrilldown() {
           fixedData={itemFixedData}
           orderBy="semester_id"
           orderDirection="asc"
-          rowGroupBy={(record) => record.semester_id ?? 'without_semester'}
+          rowGroupBy={(record) => String(record.semester_id ?? 'without_semester')}
           renderRowGroupHeader={(semesterId, records) => (
             <div className="flex items-center justify-between gap-3">
               <span>{getSemesterGroupTitle(semesterId, semesterNameById)}</span>
