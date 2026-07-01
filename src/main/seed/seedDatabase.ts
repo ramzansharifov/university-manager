@@ -122,6 +122,7 @@ function seedDictionaries(database: Database.Database): void {
     ['attendance_statuses', 'late', 'Опоздал', 30],
     ['attendance_statuses', 'excused', 'Уважительная причина', 40],
     ['attendance_statuses', 'online', 'Дистанционно', 50],
+    ['attendance_statuses', 'not_held', 'Не было', 60],
 
     ['grade_categories', 'current', 'Текущий контроль', 10],
     ['grade_categories', 'midterm', 'Промежуточный контроль', 20],
