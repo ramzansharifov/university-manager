@@ -98,6 +98,19 @@ export interface AdminCrudColumnConfig {
   render?: (record: AdminCrudRecord) => ReactNode
 }
 
+interface AdminCrudRenderItemsParams {
+  items: AdminCrudRecord[]
+  columns: AdminCrudColumnConfig[]
+  isLoading: boolean
+  emptyMessage: string
+  canEdit: boolean
+  canArchive: boolean
+  extraRowActions?: (record: AdminCrudRecord) => ReactNode
+  openEditDialog: (record: AdminCrudRecord) => void
+  requestArchive: (record: AdminCrudRecord) => void
+  formatValue: (value: unknown, column?: AdminCrudColumnConfig) => string
+}
+
 interface AdminCrudEntityPanelProps {
   entity: AdminEntityKey
   title: string
@@ -113,8 +126,8 @@ interface AdminCrudEntityPanelProps {
   canArchive?: boolean
   orderBy?: string
   orderDirection?: AdminCrudOrderDirection
-  rowGroupBy?: (record: AdminCrudRecord) => string | number | null | undefined
-  renderRowGroupHeader?: (groupKey: string, records: AdminCrudRecord[]) => ReactNode
+  hideSearch?: boolean
+  renderItems?: (params: AdminCrudRenderItemsParams) => ReactNode
   onRowClick?: (record: AdminCrudRecord) => void
   extraRowActions?: (record: AdminCrudRecord) => ReactNode
   onAfterMutation?: () => void | Promise<void>
@@ -138,6 +151,8 @@ export function AdminCrudEntityPanel({
   canArchive = true,
   orderBy = 'id',
   orderDirection = 'asc',
+  hideSearch = false,
+  renderItems,
   rowGroupBy,
   renderRowGroupHeader,
   onRowClick,
