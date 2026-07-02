@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ReactElement } from 'react'
 import type { AdminCrudSelectOption } from '../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../features/admin-crud'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
@@ -13,11 +14,13 @@ import {
   createOptionsMap,
   getRecordName,
   lessonPeriodColumns,
-  lessonPeriodFields
+  lessonPeriodFields,
+  lessonTypeColumns,
+  lessonTypeFields
 } from './config/scheduleCrudConfig'
 import { ScheduleItemsDrilldown } from './ui/ScheduleItemsDrilldown'
 
-export function SchedulePage() {
+export function SchedulePage(): ReactElement {
   const [audienceTypeOptions, setAudienceTypeOptions] = useState<AdminCrudSelectOption[]>([])
   const [buildingOptions, setBuildingOptions] = useState<AdminCrudSelectOption[]>([])
 
@@ -44,7 +47,11 @@ export function SchedulePage() {
   }, [])
 
   useEffect(() => {
-    void loadOptions()
+    const timeoutId = window.setTimeout(() => {
+      void loadOptions()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [loadOptions])
 
   const audienceTypeNameById = useMemo(
@@ -87,6 +94,7 @@ export function SchedulePage() {
           <TabsTrigger value="buildings">Корпуса</TabsTrigger>
           <TabsTrigger value="audiences">Аудитории</TabsTrigger>
           <TabsTrigger value="periods">Пары</TabsTrigger>
+          <TabsTrigger value="lesson-types">Типы занятий</TabsTrigger>
           <TabsTrigger value="schedule">Расписание занятий</TabsTrigger>
         </TabsList>
 
@@ -139,6 +147,22 @@ export function SchedulePage() {
             columns={lessonPeriodColumns}
             emptyMessage="Учебные пары пока не созданы."
             orderBy="number"
+            orderDirection="asc"
+          />
+        </TabsContent>
+
+        <TabsContent value="lesson-types">
+          <AdminCrudEntityPanel
+            entity="dictionary_items"
+            title="Типы занятий"
+            description="Справочник типов занятий: лекция, практика, лабораторная, консультация, экзамен и другие."
+            createButtonLabel="Добавить тип занятия"
+            fields={lessonTypeFields}
+            columns={lessonTypeColumns}
+            filters={{ dictionary_key: 'lesson_types' }}
+            fixedData={{ dictionary_key: 'lesson_types' }}
+            emptyMessage="Типы занятий пока не созданы."
+            orderBy="sort_order"
             orderDirection="asc"
           />
         </TabsContent>

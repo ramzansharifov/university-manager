@@ -40,6 +40,41 @@ export const audienceTypeColumns: AdminCrudColumnConfig[] = [
   }
 ]
 
+export const lessonTypeFields: AdminCrudFieldConfig[] = [
+  {
+    key: 'name',
+    label: 'Название типа занятия',
+    placeholder: 'Например: Лекция, Практика, Контрольная работа',
+    required: true
+  },
+  {
+    key: 'sort_order',
+    label: 'Порядок сортировки',
+    placeholder: 'Например: 10',
+    type: 'number',
+    defaultValue: '100'
+  }
+]
+
+export const lessonTypeColumns: AdminCrudColumnConfig[] = [
+  {
+    key: 'id',
+    label: 'ID'
+  },
+  {
+    key: 'name',
+    label: 'Тип занятия'
+  },
+  {
+    key: 'item_key',
+    label: 'Ключ'
+  },
+  {
+    key: 'sort_order',
+    label: 'Порядок'
+  }
+]
+
 export const buildingFields: AdminCrudFieldConfig[] = [
   {
     key: 'name',

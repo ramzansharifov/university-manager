@@ -144,10 +144,12 @@ export interface LearningJournalMaps {
   studentNameById: Map<number, string>
   attendanceStatusNameById: Map<number, string>
   disciplineNameById: Map<number, string>
+  gradeElementTypeNameById: Map<number, string>
   gradeCategoryNameById: Map<number, string>
   gradeItemNameById: Map<number, string>
   teacherNameById: Map<number, string>
   weekNameById: Map<number, string>
+  dayOfWeekNameById: Map<number, string>
   completionStatusNameByValue: Map<string, string>
   lessonSessionStatusNameByValue: Map<string, string>
   topicCompletedNameByValue: Map<string, string>
@@ -342,7 +344,10 @@ export function createAttendanceColumns(maps: LearningJournalMaps): AdminCrudCol
 
 export function createGradeItemFields(options: {
   disciplineOptions: AdminCrudSelectOption[]
+  gradeElementTypeOptions: AdminCrudSelectOption[]
   gradeCategoryOptions: AdminCrudSelectOption[]
+  weekOptions: AdminCrudSelectOption[]
+  dayOfWeekOptions: AdminCrudSelectOption[]
 }): AdminCrudFieldConfig[] {
   return [
     {
@@ -355,12 +360,39 @@ export function createGradeItemFields(options: {
       required: true
     },
     {
+      key: 'grade_element_type_id',
+      label: 'Тип оценочного элемента',
+      placeholder: 'Выбери тип элемента',
+      type: 'select',
+      valueType: 'number',
+      options: options.gradeElementTypeOptions,
+      required: true
+    },
+    {
       key: 'grade_category_id',
       label: 'Категория',
       placeholder: 'Выбери категорию',
       type: 'select',
       valueType: 'number',
       options: options.gradeCategoryOptions
+    },
+    {
+      key: 'week_id',
+      label: 'Неделя',
+      placeholder: 'Выбери неделю',
+      type: 'select',
+      valueType: 'number',
+      options: options.weekOptions,
+      required: true
+    },
+    {
+      key: 'day_of_week',
+      label: 'День недели',
+      placeholder: 'Выбери день недели',
+      type: 'select',
+      valueType: 'number',
+      options: options.dayOfWeekOptions,
+      required: true
     },
     {
       key: 'name',
@@ -374,11 +406,6 @@ export function createGradeItemFields(options: {
       placeholder: 'Например: 100',
       type: 'number',
       required: true
-    },
-    {
-      key: 'grade_date',
-      label: 'Дата',
-      type: 'date'
     },
     {
       key: 'description',
@@ -398,9 +425,25 @@ export function createGradeItemColumns(maps: LearningJournalMaps): AdminCrudColu
       render: (record) => renderRelation(record.discipline_id, maps.disciplineNameById)
     },
     {
+      key: 'grade_element_type_id',
+      label: 'Тип',
+      render: (record) =>
+        renderRelation(record.grade_element_type_id, maps.gradeElementTypeNameById)
+    },
+    {
       key: 'grade_category_id',
       label: 'Категория',
       render: (record) => renderRelation(record.grade_category_id, maps.gradeCategoryNameById)
+    },
+    {
+      key: 'week_id',
+      label: 'Неделя',
+      render: (record) => renderRelation(record.week_id, maps.weekNameById)
+    },
+    {
+      key: 'day_of_week',
+      label: 'День',
+      render: (record) => renderRelation(record.day_of_week, maps.dayOfWeekNameById)
     },
     {
       key: 'name',

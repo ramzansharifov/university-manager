@@ -145,6 +145,10 @@ export class AdminCrudService {
       return this.prepareCurriculumPlanData(data, before)
     }
 
+    if (entity === 'dictionary_items') {
+      return this.prepareDictionaryItemData(data, before)
+    }
+
     if (entity === 'employees') {
       this.validateEmployeePosition(data, before)
 
@@ -172,6 +176,32 @@ export class AdminCrudService {
     }
 
     return data
+  }
+
+  private prepareDictionaryItemData(
+    data: AdminCrudRecord,
+    before?: AdminCrudRecord
+  ): AdminCrudRecord {
+    const nextData = { ...data }
+    const dictionaryKey = String(nextData.dictionary_key ?? before?.dictionary_key ?? '').trim()
+    const name = String(nextData.name ?? before?.name ?? '').trim()
+    const itemKey = String(nextData.item_key ?? before?.item_key ?? '').trim()
+
+    if (!dictionaryKey) {
+      throw new Error('Не указан ключ справочника')
+    }
+
+    if (!name) {
+      throw new Error('Укажи название элемента справочника')
+    }
+
+    return {
+      ...nextData,
+      dictionary_key: dictionaryKey,
+      name,
+      item_key: itemKey || createDictionaryItemKey(name),
+      sort_order: normalizeNullableNumber(nextData.sort_order ?? before?.sort_order) ?? 100
+    }
   }
 
   private afterDataSaved(entity: string, savedRecord: AdminCrudRecord): AdminCrudRecord {
@@ -562,6 +592,68 @@ function normalizeNullableNumber(value: unknown): number | null {
   const numberValue = Number(value)
 
   return Number.isFinite(numberValue) ? numberValue : null
+}
+
+function createDictionaryItemKey(value: string): string {
+  const transliterated = transliterateCyrillic(value)
+  const key = transliterated
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+
+  return key || `item_${Date.now()}`
+}
+
+function transliterateCyrillic(value: string): string {
+  const map: Record<string, string> = {
+    а: 'a',
+    б: 'b',
+    в: 'v',
+    г: 'g',
+    д: 'd',
+    е: 'e',
+    ё: 'e',
+    ж: 'zh',
+    з: 'z',
+    и: 'i',
+    й: 'y',
+    к: 'k',
+    л: 'l',
+    м: 'm',
+    н: 'n',
+    о: 'o',
+    п: 'p',
+    р: 'r',
+    с: 's',
+    т: 't',
+    у: 'u',
+    ф: 'f',
+    х: 'h',
+    ц: 'c',
+    ч: 'ch',
+    ш: 'sh',
+    щ: 'sch',
+    ъ: '',
+    ы: 'y',
+    ь: '',
+    э: 'e',
+    ю: 'yu',
+    я: 'ya'
+  }
+
+  return value
+    .split('')
+    .map((char) => {
+      const lowerChar = char.toLowerCase()
+      const replacement = map[lowerChar]
+
+      if (replacement === undefined) {
+        return char
+      }
+
+      return char === lowerChar ? replacement : replacement.toUpperCase()
+    })
+    .join('')
 }
 
 function deriveAudienceFloor(name: string): number | null {
