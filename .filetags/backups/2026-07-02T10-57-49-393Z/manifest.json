@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-07-02T10:57:49.421Z",
+  "backupPath": ".filetags/backups/2026-07-02T10-57-49-393Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/migrations/001_initial_schema.sql",
+      "backupRelativePath": "files/src/main/migrations/001_initial_schema.sql"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Insert after: src/main/migrations/001_initial_schema.sql\n   found: yes\n   old: 609 line(s)\n   new: 620 line(s)",
+    "Insert after: src/main/migrations/001_initial_schema.sql\n   found: yes\n   old: 620 line(s)\n   new: 625 line(s)"
+  ]
+}

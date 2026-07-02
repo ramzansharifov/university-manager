@@ -515,17 +515,6 @@ CREATE TABLE IF NOT EXISTS app_users (
 
   FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE RESTRICT
 );
-CREATE TABLE IF NOT EXISTS user_sessions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  token TEXT NOT NULL UNIQUE,
-  expires_at TEXT,
-  revoked_at TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
-);
 
 CREATE TABLE IF NOT EXISTS audit_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -612,11 +601,6 @@ WHERE is_archived = 0;
 
 CREATE INDEX IF NOT EXISTS idx_grades_student
 ON grades (student_id);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_user
-ON user_sessions (user_id);
-
-CREATE INDEX IF NOT EXISTS idx_user_sessions_token
-ON user_sessions (token);
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity
 ON audit_logs (entity_name, entity_id);
