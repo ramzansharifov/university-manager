@@ -1,0 +1,21 @@
+{
+  "createdAt": "2026-07-02T10:49:18.409Z",
+  "backupPath": ".filetags/backups/2026-07-02T10-49-18-378Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/migrations/001_initial_schema.sql",
+      "backupRelativePath": "files/src/main/migrations/001_initial_schema.sql"
+    },
+    {
+      "originalPath": "src/main/seed/seedDatabase.ts",
+      "backupRelativePath": "files/src/main/seed/seedDatabase.ts"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Write file: src/main/migrations/001_initial_schema.sql\n   old: 497 line(s)\n   new: 609 line(s)",
+    "Insert after: src/main/seed/seedDatabase.ts\n   found: yes\n   old: 205 line(s)\n   new: 206 line(s)",
+    "Insert before: src/main/seed/seedDatabase.ts\n   found: yes\n   old: 206 line(s)\n   new: 287 line(s)",
+    "Insert after: README.md\n   found: no\n   old: 1213 line(s)\n   new: 1213 line(s)"
+  ]
+}

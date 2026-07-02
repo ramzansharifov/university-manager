@@ -42,7 +42,6 @@ export function seedDatabase(database: Database.Database): void {
     seedSuperAdminPermissions(database)
     seedDefaultAdminUser(database)
     seedDictionaries(database)
-    seedGradeElementTypes(database)
     seedSettings(database)
   })
 
@@ -145,87 +144,6 @@ function seedDictionaries(database: Database.Database): void {
   }
 }
 
-function seedGradeElementTypes(database: Database.Database): void {
-  const insertGradeElementType = database.prepare(`
-    INSERT OR IGNORE INTO grade_element_types (
-      name,
-      grading_mode,
-      min_score,
-      max_score,
-      passing_score,
-      is_intermediate,
-      is_final,
-      description
-    )
-    VALUES (
-      @name,
-      @gradingMode,
-      @minScore,
-      @maxScore,
-      @passingScore,
-      @isIntermediate,
-      @isFinal,
-      @description
-    )
-  `)
-
-  const gradeElementTypes = [
-    {
-      name: 'Контрольная работа',
-      gradingMode: 'score',
-      minScore: 0,
-      maxScore: 100,
-      passingScore: 50,
-      isIntermediate: 1,
-      isFinal: 0,
-      description: 'Промежуточная контрольная работа'
-    },
-    {
-      name: 'Лабораторная работа',
-      gradingMode: 'score',
-      minScore: 0,
-      maxScore: 100,
-      passingScore: 50,
-      isIntermediate: 1,
-      isFinal: 0,
-      description: 'Оценивание лабораторной работы'
-    },
-    {
-      name: 'Практическая работа',
-      gradingMode: 'score',
-      minScore: 0,
-      maxScore: 100,
-      passingScore: 50,
-      isIntermediate: 1,
-      isFinal: 0,
-      description: 'Оценивание практической работы'
-    },
-    {
-      name: 'Зачёт',
-      gradingMode: 'pass_fail',
-      minScore: 0,
-      maxScore: 100,
-      passingScore: 50,
-      isIntermediate: 0,
-      isFinal: 1,
-      description: 'Итоговый зачёт'
-    },
-    {
-      name: 'Экзамен',
-      gradingMode: 'score',
-      minScore: 0,
-      maxScore: 100,
-      passingScore: 50,
-      isIntermediate: 0,
-      isFinal: 1,
-      description: 'Итоговый экзамен'
-    }
-  ]
-
-  for (const gradeElementType of gradeElementTypes) {
-    insertGradeElementType.run(gradeElementType)
-  }
-}
 function seedSettings(database: Database.Database): void {
   const insertSetting = database.prepare(`
     INSERT OR IGNORE INTO app_settings (setting_key, setting_value)

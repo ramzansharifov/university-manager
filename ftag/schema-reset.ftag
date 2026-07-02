@@ -1,3 +1,4 @@
+@write src/main/migrations/001_initial_schema.sql
 CREATE TABLE IF NOT EXISTS faculties (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
@@ -607,3 +608,111 @@ ON audit_logs (entity_name, entity_id);
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
 ON audit_logs (created_at);
+@end
+
+@insert-after-once src/main/seed/seedDatabase.ts
+@find
+    seedDictionaries(database)
+@endfind
+@content
+    seedGradeElementTypes(database)
+@endcontent
+@end
+
+@insert-before-once src/main/seed/seedDatabase.ts
+@find
+function seedSettings(database: Database.Database): void {
+@endfind
+@content
+function seedGradeElementTypes(database: Database.Database): void {
+  const insertGradeElementType = database.prepare(`
+    INSERT OR IGNORE INTO grade_element_types (
+      name,
+      grading_mode,
+      min_score,
+      max_score,
+      passing_score,
+      is_intermediate,
+      is_final,
+      description
+    )
+    VALUES (
+      @name,
+      @gradingMode,
+      @minScore,
+      @maxScore,
+      @passingScore,
+      @isIntermediate,
+      @isFinal,
+      @description
+    )
+  `)
+
+  const gradeElementTypes = [
+    {
+      name: 'Контрольная работа',
+      gradingMode: 'score',
+      minScore: 0,
+      maxScore: 100,
+      passingScore: 50,
+      isIntermediate: 1,
+      isFinal: 0,
+      description: 'Промежуточная контрольная работа'
+    },
+    {
+      name: 'Лабораторная работа',
+      gradingMode: 'score',
+      minScore: 0,
+      maxScore: 100,
+      passingScore: 50,
+      isIntermediate: 1,
+      isFinal: 0,
+      description: 'Оценивание лабораторной работы'
+    },
+    {
+      name: 'Практическая работа',
+      gradingMode: 'score',
+      minScore: 0,
+      maxScore: 100,
+      passingScore: 50,
+      isIntermediate: 1,
+      isFinal: 0,
+      description: 'Оценивание практической работы'
+    },
+    {
+      name: 'Зачёт',
+      gradingMode: 'pass_fail',
+      minScore: 0,
+      maxScore: 100,
+      passingScore: 50,
+      isIntermediate: 0,
+      isFinal: 1,
+      description: 'Итоговый зачёт'
+    },
+    {
+      name: 'Экзамен',
+      gradingMode: 'score',
+      minScore: 0,
+      maxScore: 100,
+      passingScore: 50,
+      isIntermediate: 0,
+      isFinal: 1,
+      description: 'Итоговый экзамен'
+    }
+  ]
+
+  for (const gradeElementType of gradeElementTypes) {
+    insertGradeElementType.run(gradeElementType)
+  }
+}
+
+@endcontent
+@end
+
+@insert-after-once README.md
+@find
+Миграции применяются только один раз. Если миграция уже есть в `schema_migrations`, она не выполняется повторно.
+@endfind
+@content
+@endcontent
+@end

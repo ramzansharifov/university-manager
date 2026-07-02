@@ -3,41 +3,14 @@ CREATE TABLE IF NOT EXISTS faculties (
   name TEXT NOT NULL UNIQUE,
   short_name TEXT,
   description TEXT,
-  dean_employee_id INTEGER,
-  deputy_dean_employee_id INTEGER,
   is_archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS divisions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  short_name TEXT,
-  description TEXT,
-  is_archived INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS positions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  division_id INTEGER,
-  name TEXT NOT NULL,
-  description TEXT,
-  is_archived INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (division_id) REFERENCES divisions(id) ON DELETE SET NULL,
-  UNIQUE (division_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS departments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   faculty_id INTEGER NOT NULL,
-  head_teacher_id INTEGER,
-  deputy_head_teacher_id INTEGER,
   name TEXT NOT NULL,
   short_name TEXT,
   description TEXT,
@@ -56,7 +29,6 @@ CREATE TABLE IF NOT EXISTS specialties (
   code TEXT,
   name TEXT NOT NULL,
   degree TEXT,
-  study_duration_years INTEGER NOT NULL DEFAULT 4,
   description TEXT,
   is_archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -65,6 +37,25 @@ CREATE TABLE IF NOT EXISTS specialties (
   FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE RESTRICT,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT,
   UNIQUE (department_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS divisions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  short_name TEXT,
+  description TEXT,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS positions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS dictionary_items (
@@ -137,23 +128,20 @@ CREATE TABLE IF NOT EXISTS lesson_periods (
 CREATE TABLE IF NOT EXISTS teachers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   department_id INTEGER,
+  position_id INTEGER,
   status_id INTEGER,
-  teaching_subjects TEXT,
   last_name TEXT NOT NULL,
   first_name TEXT NOT NULL,
   middle_name TEXT,
-  birth_date TEXT,
   email TEXT,
   phone TEXT,
-  address TEXT,
-  hire_date TEXT,
-  dismissal_date TEXT,
   note TEXT,
   is_archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+  FOREIGN KEY (position_id) REFERENCES positions(id) ON DELETE SET NULL,
   FOREIGN KEY (status_id) REFERENCES dictionary_items(id) ON DELETE SET NULL
 );
 
@@ -165,12 +153,8 @@ CREATE TABLE IF NOT EXISTS employees (
   last_name TEXT NOT NULL,
   first_name TEXT NOT NULL,
   middle_name TEXT,
-  birth_date TEXT,
   email TEXT,
   phone TEXT,
-  address TEXT,
-  hire_date TEXT,
-  dismissal_date TEXT,
   note TEXT,
   is_archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -210,13 +194,8 @@ CREATE TABLE IF NOT EXISTS students (
   birth_date TEXT,
   email TEXT,
   phone TEXT,
-  address TEXT,
   admission_date TEXT,
   student_card_number TEXT UNIQUE,
-  social_status TEXT,
-  public_activity TEXT,
-  transfer_info TEXT,
-  status_changed_at TEXT,
   note TEXT,
   is_archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -242,7 +221,6 @@ CREATE TABLE IF NOT EXISTS subjects (
 CREATE TABLE IF NOT EXISTS curriculum_plans (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   specialty_id INTEGER NOT NULL,
-  course INTEGER NOT NULL DEFAULT 1,
   academic_year_id INTEGER NOT NULL,
   education_form_id INTEGER,
   name TEXT NOT NULL,
@@ -297,30 +275,11 @@ CREATE TABLE IF NOT EXISTS disciplines (
   FOREIGN KEY (semester_id) REFERENCES semesters(id) ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS audience_types (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  description TEXT,
-  is_archived INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS buildings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  address TEXT,
-  description TEXT,
-  is_archived INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS audiences (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   audience_type_id INTEGER,
-  building_id INTEGER,
   name TEXT NOT NULL UNIQUE,
+  building TEXT,
   floor INTEGER,
   capacity INTEGER,
   note TEXT,
@@ -328,14 +287,12 @@ CREATE TABLE IF NOT EXISTS audiences (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-  FOREIGN KEY (audience_type_id) REFERENCES audience_types(id) ON DELETE SET NULL,
-  FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE SET NULL
+  FOREIGN KEY (audience_type_id) REFERENCES dictionary_items(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS schedule_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   semester_id INTEGER NOT NULL,
-  week_id INTEGER,
   day_of_week INTEGER NOT NULL,
   lesson_period_id INTEGER NOT NULL,
   group_id INTEGER NOT NULL,
@@ -352,7 +309,6 @@ CREATE TABLE IF NOT EXISTS schedule_items (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (semester_id) REFERENCES semesters(id) ON DELETE RESTRICT,
-  FOREIGN KEY (week_id) REFERENCES weeks(id) ON DELETE SET NULL,
   FOREIGN KEY (lesson_period_id) REFERENCES lesson_periods(id) ON DELETE RESTRICT,
   FOREIGN KEY (group_id) REFERENCES student_groups(id) ON DELETE RESTRICT,
   FOREIGN KEY (discipline_id) REFERENCES disciplines(id) ON DELETE RESTRICT,
@@ -360,6 +316,18 @@ CREATE TABLE IF NOT EXISTS schedule_items (
   FOREIGN KEY (audience_id) REFERENCES audiences(id) ON DELETE SET NULL,
   FOREIGN KEY (lesson_type_id) REFERENCES dictionary_items(id) ON DELETE SET NULL
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_schedule_group_conflict
+ON schedule_items (semester_id, day_of_week, lesson_period_id, group_id)
+WHERE is_archived = 0;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_schedule_teacher_conflict
+ON schedule_items (semester_id, day_of_week, lesson_period_id, teacher_id)
+WHERE is_archived = 0;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_schedule_audience_conflict
+ON schedule_items (semester_id, day_of_week, lesson_period_id, audience_id)
+WHERE is_archived = 0 AND audience_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS lesson_sessions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -396,28 +364,10 @@ CREATE TABLE IF NOT EXISTS attendance_records (
   UNIQUE (lesson_session_id, student_id)
 );
 
-CREATE TABLE IF NOT EXISTS grade_element_types (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  grading_mode TEXT NOT NULL DEFAULT 'score',
-  min_score REAL NOT NULL DEFAULT 0,
-  max_score REAL NOT NULL DEFAULT 100,
-  passing_score REAL,
-  is_intermediate INTEGER NOT NULL DEFAULT 1,
-  is_final INTEGER NOT NULL DEFAULT 0,
-  description TEXT,
-  is_archived INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS grade_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   discipline_id INTEGER NOT NULL,
-  grade_element_type_id INTEGER,
   grade_category_id INTEGER,
-  week_id INTEGER,
-  day_of_week INTEGER,
   name TEXT NOT NULL,
   max_score REAL NOT NULL DEFAULT 100,
   grade_date TEXT,
@@ -427,9 +377,7 @@ CREATE TABLE IF NOT EXISTS grade_items (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (discipline_id) REFERENCES disciplines(id) ON DELETE RESTRICT,
-  FOREIGN KEY (grade_element_type_id) REFERENCES grade_element_types(id) ON DELETE SET NULL,
-  FOREIGN KEY (grade_category_id) REFERENCES dictionary_items(id) ON DELETE SET NULL,
-  FOREIGN KEY (week_id) REFERENCES weeks(id) ON DELETE SET NULL
+  FOREIGN KEY (grade_category_id) REFERENCES dictionary_items(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS score_scales (
@@ -506,8 +454,8 @@ CREATE TABLE IF NOT EXISTS app_users (
   role_id INTEGER NOT NULL,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  profile_type TEXT NOT NULL DEFAULT 'system',
-  profile_id INTEGER NOT NULL DEFAULT 0,
+  profile_type TEXT NOT NULL,
+  profile_id INTEGER NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1,
   last_login_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -516,12 +464,23 @@ CREATE TABLE IF NOT EXISTS app_users (
   FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE RESTRICT
 );
 
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at TEXT,
+  revoked_at TEXT,
+
+  FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER,
   action TEXT NOT NULL,
   module TEXT NOT NULL,
-  entity_name TEXT,
+  entity_name TEXT NOT NULL,
   entity_id INTEGER,
   before_json TEXT,
   after_json TEXT,
@@ -534,76 +493,5 @@ CREATE TABLE IF NOT EXISTS app_settings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   setting_key TEXT NOT NULL UNIQUE,
   setting_value TEXT,
-  is_archived INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE INDEX IF NOT EXISTS idx_departments_faculty ON departments (faculty_id);
-CREATE INDEX IF NOT EXISTS idx_specialties_faculty ON specialties (faculty_id);
-CREATE INDEX IF NOT EXISTS idx_specialties_department ON specialties (department_id);
-CREATE INDEX IF NOT EXISTS idx_positions_division ON positions (division_id);
-
-CREATE INDEX IF NOT EXISTS idx_students_group ON students (group_id);
-CREATE INDEX IF NOT EXISTS idx_teachers_department ON teachers (department_id);
-CREATE INDEX IF NOT EXISTS idx_employees_division ON employees (division_id);
-CREATE INDEX IF NOT EXISTS idx_employees_position ON employees (position_id);
-
-CREATE INDEX IF NOT EXISTS idx_curriculum_plans_specialty_course
-ON curriculum_plans (specialty_id, course)
-WHERE is_archived = 0;
-
-CREATE INDEX IF NOT EXISTS idx_curriculum_items_plan_semester
-ON curriculum_items (curriculum_plan_id, semester_id)
-WHERE is_archived = 0;
-
-CREATE INDEX IF NOT EXISTS idx_disciplines_group_semester
-ON disciplines (group_id, semester_id)
-WHERE is_archived = 0;
-
-CREATE INDEX IF NOT EXISTS idx_audiences_type ON audiences (audience_type_id);
-CREATE INDEX IF NOT EXISTS idx_audiences_building ON audiences (building_id);
-
-CREATE INDEX IF NOT EXISTS idx_schedule_items_group_week
-ON schedule_items (group_id, week_id)
-WHERE is_archived = 0;
-
-CREATE INDEX IF NOT EXISTS idx_schedule_items_week_day
-ON schedule_items (week_id, day_of_week)
-WHERE is_archived = 0;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_schedule_group_conflict
-ON schedule_items (week_id, day_of_week, lesson_period_id, group_id)
-WHERE is_archived = 0 AND week_id IS NOT NULL;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_schedule_teacher_conflict
-ON schedule_items (week_id, day_of_week, lesson_period_id, teacher_id)
-WHERE is_archived = 0 AND week_id IS NOT NULL;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_schedule_audience_conflict
-ON schedule_items (week_id, day_of_week, lesson_period_id, audience_id)
-WHERE is_archived = 0 AND week_id IS NOT NULL AND audience_id IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_lesson_sessions_schedule_week
-ON lesson_sessions (schedule_item_id, week_id)
-WHERE is_archived = 0;
-
-CREATE INDEX IF NOT EXISTS idx_attendance_records_student
-ON attendance_records (student_id);
-
-CREATE INDEX IF NOT EXISTS idx_grade_items_week_day
-ON grade_items (week_id, day_of_week)
-WHERE is_archived = 0;
-
-CREATE INDEX IF NOT EXISTS idx_grade_items_discipline_week
-ON grade_items (discipline_id, week_id)
-WHERE is_archived = 0;
-
-CREATE INDEX IF NOT EXISTS idx_grades_student
-ON grades (student_id);
-
-CREATE INDEX IF NOT EXISTS idx_audit_logs_entity
-ON audit_logs (entity_name, entity_id);
-
-CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
-ON audit_logs (created_at);
