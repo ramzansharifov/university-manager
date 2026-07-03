@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-07-03T10:30:01.420Z",
+  "backupPath": ".filetags/backups/2026-07-03T10-30-01-380Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/services/adminCrudService.ts",
+      "backupRelativePath": "files/src/main/services/adminCrudService.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/academic-process/config/academicProcessCrudConfig.ts",
+      "backupRelativePath": "files/src/renderer/src/pages/academic-process/config/academicProcessCrudConfig.ts"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/main/services/adminCrudService.ts\n   found: yes\n   old: 1662 line(s)\n   new: 1668 line(s)",
+    "Replace file: src/renderer/src/pages/academic-process/config/academicProcessCrudConfig.ts\n   found: yes\n   old: 667 line(s)\n   new: 670 line(s)"
+  ]
+}

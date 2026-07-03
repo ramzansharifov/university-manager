@@ -392,10 +392,7 @@ export function createAcademicVacationFields(
       label: 'Дата окончания',
       placeholder: 'дд.мм.гггг',
       type: 'date',
-      visibleWhen: {
-        fieldKey: 'vacation_type',
-        value: 'intermediate'
-      }
+      required: true
     },
     {
       key: 'description',

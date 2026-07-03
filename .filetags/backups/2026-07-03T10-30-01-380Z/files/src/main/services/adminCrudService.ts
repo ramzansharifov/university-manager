@@ -1127,7 +1127,7 @@ export class AdminCrudService {
     )
     const vacationType = normalizeVacationType(pickNextValue(nextData, before, 'vacation_type'))
     const startsAt = normalizeIsoDate(pickNextValue(nextData, before, 'starts_at'))
-    const rawEndsAt = normalizeIsoDate(pickNextValue(nextData, before, 'ends_at'))
+    const endsAt = normalizeIsoDate(pickNextValue(nextData, before, 'ends_at'))
 
     if (academicYearId === null) {
       throw new Error('Выбери учебный год для каникул')
@@ -1137,8 +1137,8 @@ export class AdminCrudService {
       throw new Error('Выбери тип каникул')
     }
 
-    if (!startsAt) {
-      throw new Error('Укажи дату начала каникул')
+    if (!startsAt || !endsAt) {
+      throw new Error('Укажи дату начала и дату окончания каникул')
     }
 
     const academicYear = this.ensureActiveRelatedRecord(
@@ -1151,12 +1151,6 @@ export class AdminCrudService {
 
     if (!academicYearStartsAt || !academicYearEndsAt) {
       throw new Error('У выбранного учебного года не указаны даты начала и окончания')
-    }
-
-    const endsAt = vacationType === 'after_course' ? academicYearEndsAt : rawEndsAt
-
-    if (!endsAt) {
-      throw new Error('Укажи дату окончания промежуточных каникул')
     }
 
     if (parseIsoDate(endsAt).getTime() < parseIsoDate(startsAt).getTime()) {

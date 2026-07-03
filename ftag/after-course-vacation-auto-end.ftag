@@ -1,0 +1,115 @@
+@replace-block src/main/services/adminCrudService.ts
+@from
+  private prepareAcademicVacationData(
+@endfrom
+@to
+  private syncAcademicYearStructure(academicYearId: number): AdminCrudRecord {
+@endto
+@with
+  private prepareAcademicVacationData(
+    data: AdminCrudRecord,
+    before?: AdminCrudRecord
+  ): AdminCrudRecord {
+    const nextData = { ...data }
+    const academicYearId = normalizeNullableNumber(
+      pickNextValue(nextData, before, 'academic_year_id')
+    )
+    const vacationType = normalizeVacationType(pickNextValue(nextData, before, 'vacation_type'))
+    const startsAt = normalizeIsoDate(pickNextValue(nextData, before, 'starts_at'))
+    const rawEndsAt = normalizeIsoDate(pickNextValue(nextData, before, 'ends_at'))
+
+    if (academicYearId === null) {
+      throw new Error('Выбери учебный год для каникул')
+    }
+
+    if (!vacationType) {
+      throw new Error('Выбери тип каникул')
+    }
+
+    if (!startsAt) {
+      throw new Error('Укажи дату начала каникул')
+    }
+
+    const academicYear = this.ensureActiveRelatedRecord(
+      'academic_years',
+      academicYearId,
+      'Учебный год для каникул не найден или архивирован'
+    )
+    const academicYearStartsAt = normalizeIsoDate(academicYear.starts_at)
+    const academicYearEndsAt = normalizeIsoDate(academicYear.ends_at)
+
+    if (!academicYearStartsAt || !academicYearEndsAt) {
+      throw new Error('У выбранного учебного года не указаны даты начала и окончания')
+    }
+
+    const endsAt = vacationType === 'after_course' ? academicYearEndsAt : rawEndsAt
+
+    if (!endsAt) {
+      throw new Error('Укажи дату окончания промежуточных каникул')
+    }
+
+    if (parseIsoDate(endsAt).getTime() < parseIsoDate(startsAt).getTime()) {
+      throw new Error('Дата окончания каникул должна быть позже даты начала')
+    }
+
+    if (
+      parseIsoDate(startsAt).getTime() < parseIsoDate(academicYearStartsAt).getTime() ||
+      parseIsoDate(endsAt).getTime() > parseIsoDate(academicYearEndsAt).getTime()
+    ) {
+      throw new Error('Каникулы должны находиться внутри выбранного учебного года')
+    }
+
+    const currentId = normalizeNullableNumber(before?.id)
+    const duplicateVacation = this.listAllActiveRecords('academic_vacations').find((vacation) => {
+      const vacationId = normalizeNullableNumber(vacation.id)
+
+      return (
+        normalizeNullableNumber(vacation.academic_year_id) === academicYearId &&
+        String(vacation.vacation_type) === vacationType &&
+        vacationId !== currentId
+      )
+    })
+
+    if (duplicateVacation) {
+      throw new Error(
+        `Для выбранного учебного года уже есть каникулы типа «${getVacationTypeLabel(vacationType)}»`
+      )
+    }
+
+    return {
+      ...nextData,
+      academic_year_id: academicYearId,
+      vacation_type: vacationType,
+      name: getVacationTypeLabel(vacationType),
+      starts_at: startsAt,
+      ends_at: endsAt
+    }
+  }
+
+  private syncAcademicYearStructure(academicYearId: number): AdminCrudRecord {
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/academic-process/config/academicProcessCrudConfig.ts
+@find
+    {
+      key: 'ends_at',
+      label: 'Дата окончания',
+      placeholder: 'дд.мм.гггг',
+      type: 'date',
+      required: true
+    },
+@endfind
+@with
+    {
+      key: 'ends_at',
+      label: 'Дата окончания',
+      placeholder: 'дд.мм.гггг',
+      type: 'date',
+      visibleWhen: {
+        fieldKey: 'vacation_type',
+        value: 'intermediate'
+      }
+    },
+@endwith
+@end
