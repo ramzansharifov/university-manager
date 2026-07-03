@@ -50,10 +50,6 @@ interface PendingAssignment {
   roles: RequiredStaffRoleConfig[]
   record: AdminCrudRecord
 }
-interface PendingRemoval {
-  roles: RequiredStaffRoleConfig[]
-  record: AdminCrudRecord
-}
 
 interface TeacherSearchState {
   name: string
@@ -119,14 +115,11 @@ export function RequiredStaffPanel() {
   const [departmentOptions, setDepartmentOptions] = useState<AdminCrudSelectOption[]>([])
   const [teacherStatusOptions, setTeacherStatusOptions] = useState<AdminCrudSelectOption[]>([])
   const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null)
-  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
   const [selectedRoleKey, setSelectedRoleKey] = useState('')
-  const [selectedRemovalRoleKey, setSelectedRemovalRoleKey] = useState('')
   const [teacherSearch, setTeacherSearch] = useState<TeacherSearchState>(initialTeacherSearchState)
   const [teacherCandidatePool, setTeacherCandidatePool] = useState<AdminCrudRecord[]>([])
   const [isLoadingTeachers, setIsLoadingTeachers] = useState(false)
   const [isAssigning, setIsAssigning] = useState(false)
-  const [isRemoving, setIsRemoving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [pageError, setPageError] = useState<string | null>(null)
   const [refreshVersion, setRefreshVersion] = useState(0)
@@ -200,9 +193,6 @@ export function RequiredStaffPanel() {
   const selectedRole = pendingAssignment
     ? getSelectedRole(pendingAssignment.roles, selectedRoleKey)
     : null
-  const selectedRemovalRole = pendingRemoval
-    ? getSelectedRole(pendingRemoval.roles, selectedRemovalRoleKey)
-    : null
 
   const teacherCandidates = useMemo(
     () => filterTeacherCandidates(teacherCandidatePool, teacherSearch),
@@ -265,23 +255,6 @@ export function RequiredStaffPanel() {
     setTeacherSearch(initialTeacherSearchState)
     setTeacherCandidatePool([])
   }
-  function openRemovalDialog(record: AdminCrudRecord, roles: RequiredStaffRoleConfig[]) {
-    const assignedRoles = getAssignedRoles(record, roles)
-
-    setPageError(null)
-    setFormError(null)
-
-    if (assignedRoles.length === 0) {
-      setPageError('В этой строке пока нет назначенных обязательных сотрудников')
-      return
-    }
-
-    setPendingRemoval({
-      roles: assignedRoles,
-      record
-    })
-    setSelectedRemovalRoleKey(assignedRoles[0]?.key ?? '')
-  }
 
   function closeAssignmentDialog() {
     if (isAssigning) {
@@ -292,15 +265,6 @@ export function RequiredStaffPanel() {
     setSelectedRoleKey('')
     setTeacherSearch(initialTeacherSearchState)
     setTeacherCandidatePool([])
-    setFormError(null)
-  }
-  function closeRemovalDialog() {
-    if (isRemoving) {
-      return
-    }
-
-    setPendingRemoval(null)
-    setSelectedRemovalRoleKey('')
     setFormError(null)
   }
 
@@ -347,40 +311,6 @@ export function RequiredStaffPanel() {
     }
   }
 
-  async function handleRemoveRequiredStaff() {
-    if (!pendingRemoval) {
-      return
-    }
-
-    const role = getSelectedRole(pendingRemoval.roles, selectedRemovalRoleKey)
-
-    if (!role) {
-      setFormError('Выбери должность, с которой нужно снять преподавателя')
-      return
-    }
-
-    setIsRemoving(true)
-    setFormError(null)
-
-    try {
-      await window.api.adminCrud.update({
-        entity: role.targetEntity,
-        id: normalizeRequiredNumber(pendingRemoval.record.id, 'У выбранной записи нет ID'),
-        data: {
-          [role.targetField]: null
-        }
-      })
-
-      setPendingRemoval(null)
-      setSelectedRemovalRoleKey('')
-      await loadRelationOptions()
-      setRefreshVersion((current) => current + 1)
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Не удалось снять преподавателя с должности')
-    } finally {
-      setIsRemoving(false)
-    }
-  }
   function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
   }
@@ -388,8 +318,9 @@ export function RequiredStaffPanel() {
   return (
     <div className="grid gap-4">
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
-        Здесь назначаются обязательные сотрудники учебной структуры. Нажми «Добавить», чтобы
-        назначить преподавателя на должность, или «Снять», чтобы освободить уже занятое назначение.
+        Здесь назначаются обязательные сотрудники учебной структуры. Нажми «Добавить» в строке
+        нужного факультета, кафедры или группы, выбери назначение и найди преподавателя по ФИО,
+        кафедре, статусу, контактам или преподаваемым дисциплинам.
       </div>
 
       {pageError ? (
@@ -428,7 +359,6 @@ export function RequiredStaffPanel() {
                   requiredStaffRoles.faculty_deputy_dean
                 ]}
                 onOpenAssignment={openAssignmentDialog}
-                onOpenRemoval={openRemovalDialog}
               />
             )}
           />
@@ -457,7 +387,6 @@ export function RequiredStaffPanel() {
                   requiredStaffRoles.department_deputy_head
                 ]}
                 onOpenAssignment={openAssignmentDialog}
-                onOpenRemoval={openRemovalDialog}
               />
             )}
           />
@@ -483,7 +412,6 @@ export function RequiredStaffPanel() {
                 record={record}
                 roles={[requiredStaffRoles.group_curator]}
                 onOpenAssignment={openAssignmentDialog}
-                onOpenRemoval={openRemovalDialog}
               />
             )}
           />
@@ -785,74 +713,6 @@ export function RequiredStaffPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog
-        open={Boolean(pendingRemoval)}
-        onOpenChange={(open) => !open && closeRemovalDialog()}
-      >
-        <DialogContent className="w-[calc(100%-2rem)] !max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Снять обязательного сотрудника</DialogTitle>
-            <DialogDescription>
-              {pendingRemoval
-                ? `Выбранная запись: ${getRecordName(pendingRemoval.record)}. Выбери должность, с которой нужно снять преподавателя.`
-                : 'Выбери должность, с которой нужно снять преподавателя.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-[var(--color-text)]">Должность</span>
-              <Select
-                value={selectedRemovalRoleKey || undefined}
-                disabled={!pendingRemoval || pendingRemoval.roles.length <= 1}
-                onValueChange={setSelectedRemovalRoleKey}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выбери должность" />
-                </SelectTrigger>
-
-                <SelectContent>
-                  {(pendingRemoval?.roles ?? []).map((role) => (
-                    <SelectItem key={role.key} value={role.key}>
-                      {role.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
-              Сейчас назначен:{' '}
-              <span className="font-medium text-[var(--color-text)]">
-                {pendingRemoval && selectedRemovalRole
-                  ? renderRelation(
-                      pendingRemoval.record[selectedRemovalRole.targetField],
-                      teacherNameById
-                    )
-                  : '—'}
-              </span>
-            </div>
-
-            {formError ? (
-              <div className="rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)]">
-                {formError}
-              </div>
-            ) : null}
-          </div>
-
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="secondary" disabled={isRemoving}>
-                Отмена
-              </Button>
-            </DialogClose>
-
-            <Button type="button" variant="primary" disabled={isRemoving} onClick={() => void handleRemoveRequiredStaff()}>
-              {isRemoving ? 'Снимаем...' : 'Снять с должности'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
@@ -860,43 +720,17 @@ export function RequiredStaffPanel() {
 function RequiredStaffRowActions({
   record,
   roles,
-  onOpenAssignment,
-  onOpenRemoval
+  onOpenAssignment
 }: {
   record: AdminCrudRecord
   roles: RequiredStaffRoleConfig[]
   onOpenAssignment: (record: AdminCrudRecord, roles: RequiredStaffRoleConfig[]) => void
-  onOpenRemoval: (record: AdminCrudRecord, roles: RequiredStaffRoleConfig[]) => void
 }) {
-  const hasAssignedRole = getAssignedRoles(record, roles).length > 0
-
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      <Button size="sm" variant="primary" onClick={() => onOpenAssignment(record, roles)}>
-        Добавить
-      </Button>
-
-      <Button
-        size="sm"
-        variant="secondary"
-        disabled={!hasAssignedRole}
-        onClick={() => onOpenRemoval(record, roles)}
-      >
-        Снять
-      </Button>
-    </div>
+    <Button size="sm" variant="primary" onClick={() => onOpenAssignment(record, roles)}>
+      Добавить
+    </Button>
   )
-}
-
-function getAssignedRoles(
-  record: AdminCrudRecord,
-  roles: RequiredStaffRoleConfig[]
-): RequiredStaffRoleConfig[] {
-  return roles.filter((role) => {
-    const value = record[role.targetField]
-
-    return value !== null && value !== undefined && value !== ''
-  })
 }
 
 function createFacultyRequiredStaffFields(
