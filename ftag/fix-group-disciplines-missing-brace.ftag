@@ -1,0 +1,16 @@
+@replace-first src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx
+@find
+    }
+  })
+
+
+function createSubjectIdByDepartmentAndName(subjects: AdminCrudRecord[]): Map<string, number> {
+@endfind
+@with
+    }
+  })
+}
+
+function createSubjectIdByDepartmentAndName(subjects: AdminCrudRecord[]): Map<string, number> {
+@endwith
+@end

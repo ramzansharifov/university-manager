@@ -302,7 +302,7 @@ function createTeacherOptions(
       }
     }
   })
-}
+
 
 function createSubjectIdByDepartmentAndName(subjects: AdminCrudRecord[]): Map<string, number> {
   const result = new Map<string, number>()

@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-07-03T09:30:12.660Z",
+  "backupPath": ".filetags/backups/2026-07-03T09-30-12-616Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx\n   found: yes\n   old: 340 line(s)\n   new: 340 line(s)"
+  ]
+}
