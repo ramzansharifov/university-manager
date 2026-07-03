@@ -16,15 +16,7 @@ const commonSystemColumns = ['id', 'created_at', 'updated_at', 'is_archived']
 export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = {
   faculties: entity(
     'faculties',
-    [
-      'name',
-      'short_name',
-      'description',
-      'dean_teacher_id',
-      'deputy_dean_teacher_id',
-      'dean_employee_id',
-      'deputy_dean_employee_id'
-    ],
+    ['name', 'short_name', 'description', 'dean_teacher_id', 'deputy_dean_teacher_id'],
     ['name', 'short_name']
   ),
   departments: entity(

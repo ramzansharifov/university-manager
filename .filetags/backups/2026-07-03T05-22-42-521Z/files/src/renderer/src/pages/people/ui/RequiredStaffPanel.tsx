@@ -211,16 +211,14 @@ export function RequiredStaffPanel() {
       return
     }
 
-    const currentAssignment = pendingAssignment
-    const currentRole = selectedRole
     let isCancelled = false
 
-    async function loadCandidates(): Promise<void> {
+    async function loadCandidates() {
       setIsLoadingTeachers(true)
       setFormError(null)
 
       try {
-        const candidates = await loadTeacherCandidates(currentRole, currentAssignment.record)
+        const candidates = await loadTeacherCandidates(selectedRole, pendingAssignment.record)
 
         if (!isCancelled) {
           setTeacherCandidatePool(candidates)
