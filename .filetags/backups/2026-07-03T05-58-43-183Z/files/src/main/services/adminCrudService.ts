@@ -162,20 +162,7 @@ export class AdminCrudService {
       return this.prepareDictionaryItemData(data, before)
     }
 
-    if (entity === 'students') {
-      this.validateUniquePeopleContacts(entity, data, before)
-
-      return data
-    }
-
-    if (entity === 'teachers') {
-      this.validateUniquePeopleContacts(entity, data, before)
-
-      return data
-    }
-
     if (entity === 'employees') {
-      this.validateUniquePeopleContacts(entity, data, before)
       this.validateEmployeePosition(data, before)
 
       return data
@@ -539,65 +526,6 @@ export class AdminCrudService {
       assignment.recordId === currentAssignment.recordId &&
       assignment.field === currentAssignment.field
     )
-  }
-  private validateUniquePeopleContacts(
-    entity: AdminEntityKey,
-    data: AdminCrudRecord,
-    before?: AdminCrudRecord
-  ): void {
-    const currentRecordId = normalizeNullableNumber(before?.id)
-    const nextEmail = normalizeEmailForUniqueness(pickNextValue(data, before, 'email'))
-    const nextPhone = normalizePhoneForUniqueness(pickNextValue(data, before, 'phone'))
-
-    if (!nextEmail && !nextPhone) {
-      return
-    }
-
-    const peopleEntities: AdminEntityKey[] = ['students', 'teachers', 'employees']
-
-    for (const peopleEntity of peopleEntities) {
-      const records = this.listAllActiveRecords(peopleEntity)
-
-      for (const record of records) {
-        const recordId = normalizeNullableNumber(record.id)
-
-        if (
-          peopleEntity === entity &&
-          currentRecordId !== null &&
-          recordId !== null &&
-          recordId === currentRecordId
-        ) {
-          continue
-        }
-
-        const recordEmail = normalizeEmailForUniqueness(record.email)
-        const recordPhone = normalizePhoneForUniqueness(record.phone)
-        const personLabel = this.getPersonContactLabel(peopleEntity, record)
-
-        if (nextEmail && recordEmail && nextEmail === recordEmail) {
-          throw new Error(
-            `Email "${String(pickNextValue(data, before, 'email')).trim()}" уже используется в карточке ${personLabel}. Email должен быть уникальным для студентов, преподавателей и сотрудников.`
-          )
-        }
-
-        if (nextPhone && recordPhone && nextPhone === recordPhone) {
-          throw new Error(
-            `Телефон "${String(pickNextValue(data, before, 'phone')).trim()}" уже используется в карточке ${personLabel}. Телефон должен быть уникальным для студентов, преподавателей и сотрудников.`
-          )
-        }
-      }
-    }
-  }
-
-  private getPersonContactLabel(entity: AdminEntityKey, record: AdminCrudRecord): string {
-    const personName = [record.last_name, record.first_name, record.middle_name]
-      .filter(Boolean)
-      .map(String)
-      .join(' ')
-    const entityLabel = getPeopleEntityLabel(entity)
-    const recordId = record.id === null || record.id === undefined ? '' : ` #${String(record.id)}`
-
-    return `${entityLabel}${recordId}${personName ? ` (${personName})` : ''}`
   }
   private ensureActiveRelatedRecord(
     entity: AdminEntityKey,
@@ -1070,29 +998,6 @@ function pickNextValue(
   key: string
 ): unknown {
   return Object.prototype.hasOwnProperty.call(data, key) ? data[key] : before?.[key]
-}
-function normalizeEmailForUniqueness(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase()
-}
-
-function normalizePhoneForUniqueness(value: unknown): string {
-  return String(value ?? '').replace(/\D/g, '')
-}
-
-function getPeopleEntityLabel(entity: AdminEntityKey): string {
-  if (entity === 'students') {
-    return 'студента'
-  }
-
-  if (entity === 'teachers') {
-    return 'преподавателя'
-  }
-
-  if (entity === 'employees') {
-    return 'сотрудника'
-  }
-
-  return 'человека'
 }
 
 function createDictionaryItemKey(value: string): string {

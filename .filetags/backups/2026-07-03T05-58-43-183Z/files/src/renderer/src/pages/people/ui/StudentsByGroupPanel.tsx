@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FiArrowRight, FiEye } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
-import { createOptionsMap, createStudentColumns, createStudentFields } from '../config/peopleCrudConfig'
-import { createGroupColumns } from '../../university/config/universityCrudConfig'
+import {
+  createOptionsMap,
+  createStudentColumns,
+  createStudentFields,
+  groupColumns
+} from '../config/peopleCrudConfig'
 import { getRecordName } from '../lib/getRecordName'
 
 interface StudentsByGroupPanelProps {
@@ -15,30 +19,6 @@ interface StudentsByGroupPanelProps {
 export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPanelProps) {
   const [selectedGroup, setSelectedGroup] = useState<AdminCrudRecord | null>(null)
   const navigate = useNavigate()
-  const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
-
-  const loadTeacherOptions = useCallback(async () => {
-    const teachers = await window.api.adminCrud.list({
-      entity: 'teachers',
-      page: 1,
-      pageSize: 500,
-      orderBy: 'last_name',
-      orderDirection: 'asc'
-    })
-
-    setTeacherOptions(createPersonOptions(teachers.items))
-  }, [])
-
-  useEffect(() => {
-    void loadTeacherOptions()
-  }, [loadTeacherOptions])
-
-  const teacherNameByIdForGroups = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
-
-  const groupColumns = useMemo(
-    () => createGroupColumns(teacherNameByIdForGroups),
-    [teacherNameByIdForGroups]
-  )
 
   const studentFilters = useMemo(
     () => (selectedGroup ? { group_id: Number(selectedGroup.id) } : undefined),
@@ -113,7 +93,6 @@ export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPa
           canEdit={false}
           canArchive={false}
           emptyMessage="Учебные группы пока не созданы. Создай их в разделе «Университет → Учебная структура»."
-          onAfterMutation={loadTeacherOptions}
           onRowClick={openGroup}
           extraRowActions={(record) => (
             <Button size="sm" variant="primary" onClick={() => openGroup(record)}>
@@ -152,15 +131,6 @@ export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPa
   )
 }
 
-function createPersonOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
-  return items.map((item) => ({
-    value: String(item.id),
-    label: [item.last_name, item.first_name, item.middle_name]
-      .filter(Boolean)
-      .map(String)
-      .join(' ')
-  }))
-}
 function StudentsBreadcrumb({
   selectedGroup,
   onGroupsClick

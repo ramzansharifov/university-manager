@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FiArrowRight } from 'react-icons/fi'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
-import { createDepartmentColumns } from '../../university/config/universityCrudConfig'
 import {
   createOptionsMap,
   createTeacherColumns,
@@ -15,47 +14,29 @@ interface TeachersByDepartmentPanelProps {
   teacherStatusOptions: AdminCrudSelectOption[]
 }
 
-function createPersonOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
-  return items.map((item) => ({
-    value: String(item.id),
-    label: [item.last_name, item.first_name, item.middle_name]
-      .filter(Boolean)
-      .map(String)
-      .join(' ')
-  }))
-}
+const departmentColumns = [
+  {
+    key: 'id',
+    label: 'ID'
+  },
+  {
+    key: 'name',
+    label: 'Кафедра'
+  },
+  {
+    key: 'short_name',
+    label: 'Краткое название'
+  },
+  {
+    key: 'description',
+    label: 'Описание'
+  }
+]
 
 export function TeachersByDepartmentPanel({
   teacherStatusOptions
 }: TeachersByDepartmentPanelProps) {
   const [selectedDepartment, setSelectedDepartment] = useState<AdminCrudRecord | null>(null)
-  const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
-
-  const loadTeacherOptions = useCallback(async () => {
-    const teachers = await window.api.adminCrud.list({
-      entity: 'teachers',
-      page: 1,
-      pageSize: 500,
-      orderBy: 'last_name',
-      orderDirection: 'asc'
-    })
-
-    setTeacherOptions(createPersonOptions(teachers.items))
-  }, [])
-
-  useEffect(() => {
-    void loadTeacherOptions()
-  }, [loadTeacherOptions])
-
-  const teacherNameByIdForDepartments = useMemo(
-    () => createOptionsMap(teacherOptions),
-    [teacherOptions]
-  )
-
-  const departmentColumns = useMemo(
-    () => createDepartmentColumns(teacherNameByIdForDepartments),
-    [teacherNameByIdForDepartments]
-  )
 
   const teacherFilters = useMemo(
     () => (selectedDepartment ? { department_id: Number(selectedDepartment.id) } : undefined),
@@ -125,7 +106,6 @@ export function TeachersByDepartmentPanel({
           canEdit={false}
           canArchive={false}
           emptyMessage="Кафедры пока не созданы. Создай их в разделе «Университет → Учебная структура»."
-          onAfterMutation={loadTeacherOptions}
           onRowClick={openDepartment}
           extraRowActions={(record) => (
             <Button size="sm" variant="primary" onClick={() => openDepartment(record)}>
