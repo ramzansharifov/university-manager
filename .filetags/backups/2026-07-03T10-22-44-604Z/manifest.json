@@ -1,0 +1,26 @@
+{
+  "createdAt": "2026-07-03T10:22:44.681Z",
+  "backupPath": ".filetags/backups/2026-07-03T10-22-44-604Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/services/adminCrudService.ts",
+      "backupRelativePath": "files/src/main/services/adminCrudService.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/main/services/adminCrudService.ts\n   found: no\n   old: 1678 line(s)\n   new: 1678 line(s)",
+    "Replace file: src/main/services/adminCrudService.ts\n   found: yes\n   old: 1678 line(s)\n   new: 1662 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: no\n   old: 1326 line(s)\n   new: 1326 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: no\n   old: 1326 line(s)\n   new: 1326 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: no\n   old: 1326 line(s)\n   new: 1326 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1326 line(s)\n   new: 1336 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1336 line(s)\n   new: 1328 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: no\n   old: 1328 line(s)\n   new: 1328 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: no\n   old: 1328 line(s)\n   new: 1328 line(s)"
+  ]
+}

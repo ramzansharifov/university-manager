@@ -1,0 +1,169 @@
+@replace-first src/main/services/adminCrudService.ts
+@find
+      grade_date: formatDate(addDays(parseDate(String(week.starts_at)), dayOfWeek - 1))
+@endfind
+@with
+      grade_date: formatIsoDate(addDays(parseIsoDate(String(week.starts_at)), dayOfWeek - 1))
+@endwith
+@end
+
+@replace-first src/main/services/adminCrudService.ts
+@find
+function parseDate(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number)
+
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
+}
+
+function formatDate(date: Date): string {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+@endfind
+@with
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+      weeksResult,
+      academicYearsResult,
+      lessonPeriodsResult,
+@endfind
+@with
+      weeksResult,
+      lessonPeriodsResult,
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+      window.api.adminCrud.list({
+        entity: 'weeks',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'number',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
+        page: 1,
+        pageSize: 100,
+        orderBy: 'name',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'lesson_periods',
+@endfind
+@with
+      window.api.adminCrud.list({
+        entity: 'weeks',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'number',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'lesson_periods',
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+    const availableWeeks = await ensureWeeksForSemesters({
+      semesters: semestersResult.items,
+      existingWeeks: weeksResult.items,
+      academicYears: academicYearsResult.items
+    })
+
+    setWeeks(availableWeeks)
+    setWeekOptions(createWeekOptions(availableWeeks))
+@endfind
+@with
+    setWeeks(weeksResult.items)
+    setWeekOptions(createWeekOptions(weeksResult.items))
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+  const selectedWeekDisciplines = selectedSemesterDisciplines
+@endfind
+@with
+  const selectedSemesterDisciplines = useMemo(() => {
+    if (!selectedSemesterId) {
+      return []
+    }
+
+    return selectedGroupDisciplines.filter(
+      (discipline) => Number(discipline.semester_id) === Number(selectedSemesterId)
+    )
+  }, [selectedGroupDisciplines, selectedSemesterId])
+
+  const selectedWeekDisciplines = selectedSemesterDisciplines
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+  const selectedSemesterDisciplines = useMemo(() => {
+    if (!selectedSemesterId) {
+      return []
+    }
+
+    return selectedGroupDisciplines.filter(
+      (discipline) => Number(discipline.semester_id) === Number(selectedSemesterId)
+    )
+  }, [selectedGroupDisciplines, selectedSemesterId])
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+  const scheduleFilters = useMemo(() => {
+    if (!selectedGroupId || !selectedWeekId) {
+      return undefined
+    }
+
+    return {
+      group_id: Number(selectedGroupId),
+      week_id: Number(selectedWeekId)
+    }
+  }, [selectedGroupId, selectedWeekId])
+@endfind
+@with
+  const scheduleFilters = useMemo(() => {
+    if (!selectedGroupId || !selectedSemesterId || !selectedWeekId) {
+      return undefined
+    }
+
+    return {
+      group_id: Number(selectedGroupId),
+      semester_id: Number(selectedSemesterId),
+      week_id: Number(selectedWeekId)
+    }
+  }, [selectedGroupId, selectedSemesterId, selectedWeekId])
+@endwith
+@end
+
+@replace-block src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@from
+async function ensureWeeksForSemesters({
+@endfrom
+@to
+function toNumberOrNull(value: unknown): number | null {
+@endto
+@with
+function toNumberOrNull(value: unknown): number | null {
+@endwith
+@end

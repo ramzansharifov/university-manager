@@ -365,7 +365,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const subjectNameById = useMemo(() => createOptionsMap(subjectOptions), [subjectOptions])
   const groupNameById = useMemo(() => createOptionsMap(allGroupOptions), [allGroupOptions])
 
-
   const selectedSemesterDisciplines = useMemo(() => {
     if (!selectedSemesterId) {
       return []
@@ -375,7 +374,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
       (discipline) => Number(discipline.semester_id) === Number(selectedSemesterId)
     )
   }, [selectedGroupDisciplines, selectedSemesterId])
-
   const selectedWeekDisciplines = selectedSemesterDisciplines
 
   const disciplineOptions = useMemo(
