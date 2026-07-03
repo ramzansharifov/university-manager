@@ -25,17 +25,28 @@ export function UniversityStructureDrilldown() {
   const [selectedSpecialty, setSelectedSpecialty] = useState<AdminCrudRecord | null>(null)
 
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
+  const [academicYearOptions, setAcademicYearOptions] = useState<AdminCrudSelectOption[]>([])
 
   const loadRelationOptions = useCallback(async () => {
-    const teachers = await window.api.adminCrud.list({
-      entity: 'teachers',
-      page: 1,
-      pageSize: 100,
-      orderBy: 'last_name',
-      orderDirection: 'asc'
-    })
+    const [teachers, academicYears] = await Promise.all([
+      window.api.adminCrud.list({
+        entity: 'teachers',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'last_name',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'starts_at',
+        orderDirection: 'desc'
+      })
+    ])
 
     setTeacherOptions(createOptions(teachers.items, getPersonName))
+    setAcademicYearOptions(createOptions(academicYears.items, getRecordName))
   }, [])
 
   useEffect(() => {
@@ -43,6 +54,10 @@ export function UniversityStructureDrilldown() {
   }, [loadRelationOptions])
 
   const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
+  const academicYearNameById = useMemo(
+    () => createOptionsMap(academicYearOptions),
+    [academicYearOptions]
+  )
 
   const facultyFields = useMemo(() => createFacultyFields(), [])
   const facultyColumns = useMemo(() => createFacultyColumns(teacherNameById), [teacherNameById])
@@ -53,8 +68,14 @@ export function UniversityStructureDrilldown() {
     [teacherNameById]
   )
 
-  const groupFields = useMemo(() => createGroupFields(), [])
-  const groupColumns = useMemo(() => createGroupColumns(teacherNameById), [teacherNameById])
+  const groupFields = useMemo(
+    () => createGroupFields(academicYearOptions),
+    [academicYearOptions]
+  )
+  const groupColumns = useMemo(
+    () => createGroupColumns(teacherNameById, academicYearNameById),
+    [academicYearNameById, teacherNameById]
+  )
 
   const departmentFilters = useMemo(
     () => (selectedFaculty ? { faculty_id: Number(selectedFaculty.id) } : undefined),

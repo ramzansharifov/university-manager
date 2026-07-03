@@ -2,17 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FiArrowRight } from 'react-icons/fi'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
+import { resolveGroupAcademicYearId } from '../../../shared/lib/academicYear'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
 import {
   createCurriculumItemOptions,
   createDisciplineColumns,
   createDisciplineFields,
+  createGroupSelectorColumns,
   createOptions,
   createOptionsMap,
   getPersonName,
   getRecordName,
-  getSemesterName,
-  groupSelectorColumns
+  getSemesterName
 } from '../config/academicProcessCrudConfig'
 
 export function GroupDisciplinesDrilldown() {
@@ -24,6 +25,7 @@ export function GroupDisciplinesDrilldown() {
 
   const [curriculumItems, setCurriculumItems] = useState<AdminCrudRecord[]>([])
   const [curriculumPlans, setCurriculumPlans] = useState<AdminCrudRecord[]>([])
+  const [academicYears, setAcademicYears] = useState<AdminCrudRecord[]>([])
   const [subjectDepartmentIdById, setSubjectDepartmentIdById] = useState<Map<number, number>>(
     new Map()
   )
@@ -38,7 +40,8 @@ export function GroupDisciplinesDrilldown() {
       semesters,
       curriculumItemsResult,
       curriculumPlansResult,
-      departments
+      departments,
+      academicYearsResult
     ] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'subjects',
@@ -81,6 +84,13 @@ export function GroupDisciplinesDrilldown() {
         pageSize: 300,
         orderBy: 'name',
         orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'starts_at',
+        orderDirection: 'asc'
       })
     ])
 
@@ -92,6 +102,7 @@ export function GroupDisciplinesDrilldown() {
     setSemesterOptions(createOptions(semesters.items, getSemesterName))
     setCurriculumItems(curriculumItemsResult.items)
     setCurriculumPlans(curriculumPlansResult.items)
+    setAcademicYears(academicYearsResult.items)
     setSubjectDepartmentIdById(nextSubjectDepartmentIdById)
     setDepartmentFacultyIdById(nextDepartmentFacultyIdById)
   }, [])
@@ -103,6 +114,21 @@ export function GroupDisciplinesDrilldown() {
   const subjectNameById = useMemo(() => createOptionsMap(subjectOptions), [subjectOptions])
   const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
   const semesterNameById = useMemo(() => createOptionsMap(semesterOptions), [semesterOptions])
+  const academicYearNameById = useMemo(
+    () =>
+      createOptionsMap(
+        createOptions(academicYears, (academicYear) => String(academicYear.name ?? academicYear.id))
+      ),
+    [academicYears]
+  )
+  const groupSelectorColumns = useMemo(
+    () => createGroupSelectorColumns(academicYearNameById),
+    [academicYearNameById]
+  )
+  const selectedGroupAcademicYearId = useMemo(
+    () => resolveGroupAcademicYearId(selectedGroup, academicYears),
+    [academicYears, selectedGroup]
+  )
 
   const curriculumItemOptions = useMemo(() => {
     const allowedPlanIds = selectedGroup
@@ -111,7 +137,8 @@ export function GroupDisciplinesDrilldown() {
             .filter((plan) => {
               return (
                 Number(plan.specialty_id) === Number(selectedGroup.specialty_id) &&
-                Number(plan.course) === Number(selectedGroup.course)
+                Number(plan.course) === Number(selectedGroup.course) &&
+                Number(plan.academic_year_id) === selectedGroupAcademicYearId
               )
             })
             .map((plan) => Number(plan.id))
@@ -133,6 +160,7 @@ export function GroupDisciplinesDrilldown() {
     curriculumPlans,
     departmentFacultyIdById,
     selectedGroup,
+    selectedGroupAcademicYearId,
     semesterNameById,
     subjectDepartmentIdById,
     subjectNameById

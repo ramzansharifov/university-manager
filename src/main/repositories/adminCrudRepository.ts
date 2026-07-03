@@ -253,5 +253,5 @@ function normalizePageSize(pageSize?: number): number {
     return 20
   }
 
-  return Math.min(Math.floor(pageSize), 100)
+  return Math.min(Math.floor(pageSize), 10000)
 }

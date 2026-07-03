@@ -21,9 +21,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'short_name',
       'description',
       'dean_teacher_id',
-      'deputy_dean_teacher_id',
-      'dean_employee_id',
-      'deputy_dean_employee_id'
+      'deputy_dean_teacher_id'
     ],
     ['name', 'short_name']
   ),

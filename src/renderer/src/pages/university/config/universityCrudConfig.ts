@@ -206,7 +206,9 @@ export const specialtyColumns: AdminCrudColumnConfig[] = [
   }
 ]
 
-export function createGroupFields(): AdminCrudFieldConfig[] {
+export function createGroupFields(
+  academicYearOptions: AdminCrudSelectOption[]
+): AdminCrudFieldConfig[] {
   return [
     {
       key: 'name',
@@ -218,7 +220,18 @@ export function createGroupFields(): AdminCrudFieldConfig[] {
       key: 'course',
       label: 'Курс',
       placeholder: 'Например: 2',
-      type: 'number'
+      type: 'number',
+      defaultValue: '1',
+      required: true
+    },
+    {
+      key: 'academic_year_id',
+      label: 'Учебный год поступления',
+      placeholder: 'Выбери год поступления группы',
+      type: 'select',
+      valueType: 'number',
+      options: academicYearOptions,
+      required: true
     },
     {
       key: 'description',
@@ -229,7 +242,10 @@ export function createGroupFields(): AdminCrudFieldConfig[] {
   ]
 }
 
-export function createGroupColumns(teacherNameById: Map<number, string>): AdminCrudColumnConfig[] {
+export function createGroupColumns(
+  teacherNameById: Map<number, string>,
+  academicYearNameById: Map<number, string>
+): AdminCrudColumnConfig[] {
   return [
     {
       key: 'id',
@@ -242,6 +258,11 @@ export function createGroupColumns(teacherNameById: Map<number, string>): AdminC
     {
       key: 'course',
       label: 'Курс'
+    },
+    {
+      key: 'academic_year_id',
+      label: 'Учебный год поступления',
+      render: (record) => renderRelation(record.academic_year_id, academicYearNameById)
     },
     {
       key: 'curator_teacher_id',

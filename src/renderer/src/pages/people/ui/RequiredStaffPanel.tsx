@@ -118,6 +118,7 @@ export function RequiredStaffPanel() {
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
   const [departmentOptions, setDepartmentOptions] = useState<AdminCrudSelectOption[]>([])
   const [teacherStatusOptions, setTeacherStatusOptions] = useState<AdminCrudSelectOption[]>([])
+  const [academicYearOptions, setAcademicYearOptions] = useState<AdminCrudSelectOption[]>([])
   const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null)
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
   const [selectedRoleKey, setSelectedRoleKey] = useState('')
@@ -132,7 +133,7 @@ export function RequiredStaffPanel() {
   const [refreshVersion, setRefreshVersion] = useState(0)
 
   const loadRelationOptions = useCallback(async () => {
-    const [teachers, departments, teacherStatuses] = await Promise.all([
+    const [teachers, departments, teacherStatuses, academicYears] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'teachers',
         page: 1,
@@ -154,12 +155,20 @@ export function RequiredStaffPanel() {
         filters: { dictionary_key: 'teacher_statuses' },
         orderBy: 'sort_order',
         orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'starts_at',
+        orderDirection: 'desc'
       })
     ])
 
     setTeacherOptions(createPersonOptions(teachers.items))
     setDepartmentOptions(createNamedOptions(departments.items))
     setTeacherStatusOptions(createDictionaryOptions(teacherStatuses.items))
+    setAcademicYearOptions(createNamedOptions(academicYears.items))
   }, [])
 
   useEffect(() => {
@@ -171,6 +180,10 @@ export function RequiredStaffPanel() {
   const teacherStatusNameById = useMemo(
     () => createOptionsMap(teacherStatusOptions),
     [teacherStatusOptions]
+  )
+  const academicYearNameById = useMemo(
+    () => createOptionsMap(academicYearOptions),
+    [academicYearOptions]
   )
 
   const facultyFields = useMemo(
@@ -196,8 +209,8 @@ export function RequiredStaffPanel() {
     [teacherOptions]
   )
   const groupColumns = useMemo(
-    () => createGroupRequiredStaffColumns(teacherNameById),
-    [teacherNameById]
+    () => createGroupRequiredStaffColumns(teacherNameById, academicYearNameById),
+    [academicYearNameById, teacherNameById]
   )
 
   const selectedRole = pendingAssignment
@@ -1027,7 +1040,8 @@ function createDepartmentRequiredStaffColumns(
 }
 
 function createGroupRequiredStaffColumns(
-  teacherNameById: Map<number, string>
+  teacherNameById: Map<number, string>,
+  academicYearNameById: Map<number, string>
 ): AdminCrudColumnConfig[] {
   return [
     {
@@ -1041,6 +1055,11 @@ function createGroupRequiredStaffColumns(
     {
       key: 'course',
       label: 'Курс'
+    },
+    {
+      key: 'academic_year_id',
+      label: 'Учебный год поступления',
+      render: (record) => renderRelation(record.academic_year_id, academicYearNameById)
     },
     {
       key: 'curator_teacher_id',

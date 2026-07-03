@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { FiArchive, FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiUser } from 'react-icons/fi'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
+import { resolveGroupAcademicYearId } from '../../../shared/lib/academicYear'
 import {
   Badge,
   Button,
@@ -92,6 +93,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const [lessonPeriods, setLessonPeriods] = useState<AdminCrudRecord[]>([])
   const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
   const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
+  const [academicYears, setAcademicYears] = useState<AdminCrudRecord[]>([])
 
   const [semesterOptions, setSemesterOptions] = useState<AdminCrudSelectOption[]>([])
   const [weekOptions, setWeekOptions] = useState<AdminCrudSelectOption[]>([])
@@ -117,7 +119,8 @@ export function ScheduleItemsDrilldown(): ReactElement {
       audiencesResult,
       lessonTypesResult,
       gradeElementTypesResult,
-      gradeItemsResult
+      gradeItemsResult,
+      academicYearsResult
     ] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'faculties',
@@ -210,6 +213,13 @@ export function ScheduleItemsDrilldown(): ReactElement {
         pageSize: 2000,
         orderBy: 'grade_date',
         orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'starts_at',
+        orderDirection: 'asc'
       })
     ])
 
@@ -221,6 +231,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
     setLessonPeriods(lessonPeriodsResult.items)
     setGradeElementTypes(gradeElementTypesResult.items)
     setGradeItems(gradeItemsResult.items)
+    setAcademicYears(academicYearsResult.items)
 
     setSemesterOptions(createOptions(semestersResult.items, getSemesterName))
     setSemesters(semestersResult.items)
@@ -315,9 +326,14 @@ export function ScheduleItemsDrilldown(): ReactElement {
       return []
     }
 
-    const selectedGroupAcademicYearId = toNumberOrNull(selectedGroup.academic_year_id)
+    const admissionAcademicYearId = toNumberOrNull(selectedGroup.academic_year_id)
+    const selectedGroupAcademicYearId = resolveGroupAcademicYearId(selectedGroup, academicYears)
 
-    if (selectedGroupAcademicYearId !== null) {
+    if (admissionAcademicYearId !== null) {
+      if (selectedGroupAcademicYearId === null) {
+        return []
+      }
+
       return semesterOptions.filter((semesterOption) => {
         const semester = semesters.find((item) => String(item.id) === semesterOption.value)
 
@@ -335,7 +351,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
     return semesterOptions.filter((semesterOption) => {
       return selectedGroupSemesterIds.has(Number(semesterOption.value))
     })
-  }, [selectedGroup, selectedGroupSemesterIds, semesterOptions, semesters])
+  }, [academicYears, selectedGroup, selectedGroupSemesterIds, semesterOptions, semesters])
 
   const availableWeekOptions = useMemo(() => {
     if (!selectedSemesterId) {

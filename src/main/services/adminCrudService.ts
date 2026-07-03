@@ -369,10 +369,30 @@ export class AdminCrudService {
       pickNextValue(nextData, before, 'curator_teacher_id')
     )
     const specialtyId = normalizeNullableNumber(pickNextValue(nextData, before, 'specialty_id'))
+    const academicYearId = normalizeNullableNumber(
+      pickNextValue(nextData, before, 'academic_year_id')
+    )
+    const course = normalizeNullableNumber(pickNextValue(nextData, before, 'course')) ?? 1
+
+    if (academicYearId === null) {
+      throw new Error('Выбери учебный год поступления группы')
+    }
+
+    if (!Number.isInteger(course) || course < 1) {
+      throw new Error('Курс группы должен быть целым числом больше нуля')
+    }
+
+    this.ensureActiveRelatedRecord(
+      'academic_years',
+      academicYearId,
+      'Учебный год поступления группы не найден или архивирован'
+    )
 
     if (curatorTeacherId === null) {
       return {
         ...nextData,
+        academic_year_id: academicYearId,
+        course,
         curator_teacher_id: null
       }
     }
@@ -402,6 +422,8 @@ export class AdminCrudService {
 
     return {
       ...nextData,
+      academic_year_id: academicYearId,
+      course,
       curator_teacher_id: curatorTeacherId
     }
   }
@@ -846,6 +868,7 @@ export class AdminCrudService {
       pickNextValue(nextData, before, 'curriculum_item_id')
     )
     const teacherId = normalizeNullableNumber(pickNextValue(nextData, before, 'teacher_id'))
+    const groupId = normalizeNullableNumber(pickNextValue(nextData, before, 'group_id'))
 
     if (curriculumItemId === null) {
       throw new Error('Выбери пункт учебного плана')
@@ -855,11 +878,53 @@ export class AdminCrudService {
       throw new Error('Выбери преподавателя')
     }
 
+    if (groupId === null) {
+      throw new Error('Выбери учебную группу')
+    }
+
     const curriculumItem = this.ensureActiveRelatedRecord(
       'curriculum_items',
       curriculumItemId,
       'Выбранный пункт учебного плана не найден или архивирован'
     )
+    const group = this.ensureActiveRelatedRecord(
+      'student_groups',
+      groupId,
+      'Выбранная учебная группа не найдена или архивирована'
+    )
+    const curriculumPlanId = normalizeNullableNumber(curriculumItem.curriculum_plan_id)
+
+    if (curriculumPlanId === null) {
+      throw new Error('У выбранного пункта не указан учебный план')
+    }
+
+    const curriculumPlan = this.ensureActiveRelatedRecord(
+      'curriculum_plans',
+      curriculumPlanId,
+      'Учебный план выбранного пункта не найден или архивирован'
+    )
+    const currentAcademicYearId = this.resolveGroupAcademicYearId(group)
+
+    if (currentAcademicYearId === null) {
+      throw new Error(
+        'Не удалось определить учебный год текущего курса группы. Проверь год поступления и курс группы'
+      )
+    }
+
+    if (
+      normalizeNullableNumber(curriculumPlan.specialty_id) !==
+      normalizeNullableNumber(group.specialty_id)
+    ) {
+      throw new Error('Учебный план должен относиться к специальности выбранной группы')
+    }
+
+    if (normalizeNullableNumber(curriculumPlan.course) !== normalizeNullableNumber(group.course)) {
+      throw new Error('Учебный план должен соответствовать текущему курсу группы')
+    }
+
+    if (normalizeNullableNumber(curriculumPlan.academic_year_id) !== currentAcademicYearId) {
+      throw new Error('Учебный план должен соответствовать учебному году текущего курса группы')
+    }
 
     const subjectId = normalizeNullableNumber(curriculumItem.subject_id)
     const semesterId = normalizeNullableNumber(curriculumItem.semester_id)
@@ -882,6 +947,15 @@ export class AdminCrudService {
       teacherId,
       'Выбранный преподаватель не найден или архивирован'
     )
+    const semester = this.ensureActiveRelatedRecord(
+      'semesters',
+      semesterId,
+      'Семестр выбранного пункта учебного плана не найден или архивирован'
+    )
+
+    if (normalizeNullableNumber(semester.academic_year_id) !== currentAcademicYearId) {
+      throw new Error('Семестр должен относиться к учебному году текущего курса группы')
+    }
 
     const subjectDepartmentId = normalizeNullableNumber(subject.department_id)
     const teacherDepartmentId = normalizeNullableNumber(teacher.department_id)
@@ -908,6 +982,7 @@ export class AdminCrudService {
       ...nextData,
       curriculum_item_id: curriculumItemId,
       subject_id: subjectId,
+      group_id: groupId,
       semester_id: semesterId,
       teacher_id: teacherId,
       name: String(nextData.name ?? before?.name ?? subjectName).trim() || subjectName
@@ -921,6 +996,8 @@ export class AdminCrudService {
 
     const disciplineId = normalizeNullableNumber(nextData.discipline_id ?? before?.discipline_id)
     const weekId = normalizeNullableNumber(nextData.week_id ?? before?.week_id)
+    const lessonTypeValue = pickNextValue(nextData, before, 'lesson_type_id')
+    const lessonTypeId = normalizeNullableNumber(lessonTypeValue)
 
     if (disciplineId === null) {
       throw new Error('Выбери дисциплину группы')
@@ -928,6 +1005,27 @@ export class AdminCrudService {
 
     if (weekId === null) {
       throw new Error('Выбери неделю семестра')
+    }
+
+    if (
+      lessonTypeValue !== null &&
+      lessonTypeValue !== undefined &&
+      lessonTypeValue !== '' &&
+      lessonTypeId === null
+    ) {
+      throw new Error('Указан некорректный тип занятия')
+    }
+
+    if (lessonTypeId !== null) {
+      const lessonType = this.ensureActiveRelatedRecord(
+        'dictionary_items',
+        lessonTypeId,
+        'Выбранный тип занятия не найден или архивирован'
+      )
+
+      if (String(lessonType.dictionary_key ?? '') !== 'lesson_types') {
+        throw new Error('Тип занятия должен быть выбран из справочника типов занятий')
+      }
     }
 
     const disciplineConfig = getAdminCrudEntityConfig('disciplines')
@@ -946,6 +1044,7 @@ export class AdminCrudService {
 
     const disciplineSemesterId = normalizeNullableNumber(discipline.semester_id)
     const disciplineTeacherId = normalizeNullableNumber(discipline.teacher_id)
+    const disciplineGroupId = normalizeNullableNumber(discipline.group_id)
     const weekSemesterId = normalizeNullableNumber(week.semester_id)
 
     if (disciplineSemesterId === null) {
@@ -956,12 +1055,38 @@ export class AdminCrudService {
       throw new Error('У выбранной дисциплины не указан преподаватель')
     }
 
+    if (disciplineGroupId === null) {
+      throw new Error('У выбранной дисциплины не указана учебная группа')
+    }
+
     if (weekSemesterId === null) {
       throw new Error('У выбранной недели не указан семестр')
     }
 
     if (disciplineSemesterId !== weekSemesterId) {
       throw new Error('Выбранная неделя не относится к семестру выбранной дисциплины')
+    }
+
+    const disciplineGroup = this.ensureActiveRelatedRecord(
+      'student_groups',
+      disciplineGroupId,
+      'Учебная группа выбранной дисциплины не найдена или архивирована'
+    )
+    const disciplineSemester = this.ensureActiveRelatedRecord(
+      'semesters',
+      disciplineSemesterId,
+      'Семестр выбранной дисциплины не найден или архивирован'
+    )
+    const currentAcademicYearId = this.resolveGroupAcademicYearId(disciplineGroup)
+
+    if (currentAcademicYearId === null) {
+      throw new Error(
+        'Не удалось определить учебный год текущего курса группы. Проверь год поступления и курс группы'
+      )
+    }
+
+    if (normalizeNullableNumber(disciplineSemester.academic_year_id) !== currentAcademicYearId) {
+      throw new Error('Расписание должно относиться к учебному году текущего курса группы')
     }
 
     if (!week.starts_at || !week.ends_at) {
@@ -972,11 +1097,24 @@ export class AdminCrudService {
       ...nextData,
       discipline_id: disciplineId,
       week_id: weekId,
+      lesson_type_id: lessonTypeId,
       semester_id: disciplineSemesterId,
       teacher_id: disciplineTeacherId,
       starts_on: String(week.starts_at),
       ends_on: String(week.ends_at)
     }
+  }
+
+  private resolveGroupAcademicYearId(group: AdminCrudRecord): number | null {
+    const academicYears = this.repository.list(getAdminCrudEntityConfig('academic_years'), {
+      entity: 'academic_years',
+      page: 1,
+      pageSize: 10000,
+      orderBy: 'starts_at',
+      orderDirection: 'asc'
+    }).items
+
+    return resolveGroupAcademicYearId(group, academicYears)
   }
 
   private prepareGradeElementTypeData(
@@ -1598,6 +1736,38 @@ function pickNextValue(
 ): unknown {
   return Object.prototype.hasOwnProperty.call(data, key) ? data[key] : before?.[key]
 }
+
+function resolveGroupAcademicYearId(
+  group: AdminCrudRecord,
+  academicYears: AdminCrudRecord[]
+): number | null {
+  const admissionAcademicYearId = normalizeNullableNumber(group.academic_year_id)
+
+  if (admissionAcademicYearId === null) {
+    return null
+  }
+
+  const course = Math.max(1, Math.floor(normalizeNullableNumber(group.course) ?? 1))
+  const orderedAcademicYears = [...academicYears].sort((first, second) => {
+    const startsAtDiff = String(first.starts_at ?? '').localeCompare(String(second.starts_at ?? ''))
+
+    if (startsAtDiff !== 0) {
+      return startsAtDiff
+    }
+
+    return (normalizeNullableNumber(first.id) ?? 0) - (normalizeNullableNumber(second.id) ?? 0)
+  })
+  const admissionIndex = orderedAcademicYears.findIndex(
+    (academicYear) => normalizeNullableNumber(academicYear.id) === admissionAcademicYearId
+  )
+
+  if (admissionIndex < 0) {
+    return course === 1 ? admissionAcademicYearId : null
+  }
+
+  return normalizeNullableNumber(orderedAcademicYears[admissionIndex + course - 1]?.id)
+}
+
 function normalizeEmailForUniqueness(value: unknown): string {
   return String(value ?? '')
     .trim()

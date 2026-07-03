@@ -518,24 +518,33 @@ function renderVacationType(value: unknown): string {
   return option?.label ?? String(value ?? '—')
 }
 
-export const groupSelectorColumns: AdminCrudColumnConfig[] = [
-  {
-    key: 'id',
-    label: 'ID'
-  },
-  {
-    key: 'name',
-    label: 'Группа'
-  },
-  {
-    key: 'course',
-    label: 'Курс'
-  },
-  {
-    key: 'description',
-    label: 'Описание'
-  }
-]
+export function createGroupSelectorColumns(
+  academicYearNameById: Map<number, string>
+): AdminCrudColumnConfig[] {
+  return [
+    {
+      key: 'id',
+      label: 'ID'
+    },
+    {
+      key: 'name',
+      label: 'Группа'
+    },
+    {
+      key: 'course',
+      label: 'Курс'
+    },
+    {
+      key: 'academic_year_id',
+      label: 'Учебный год поступления',
+      render: (record) => renderRelation(record.academic_year_id, academicYearNameById)
+    },
+    {
+      key: 'description',
+      label: 'Описание'
+    }
+  ]
+}
 
 export function createCurriculumItemOptions(
   items: AdminCrudRecord[],

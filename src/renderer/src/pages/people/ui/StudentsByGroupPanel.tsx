@@ -16,17 +16,33 @@ export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPa
   const [selectedGroup, setSelectedGroup] = useState<AdminCrudRecord | null>(null)
   const navigate = useNavigate()
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
+  const [academicYearOptions, setAcademicYearOptions] = useState<AdminCrudSelectOption[]>([])
 
   const loadTeacherOptions = useCallback(async () => {
-    const teachers = await window.api.adminCrud.list({
-      entity: 'teachers',
-      page: 1,
-      pageSize: 500,
-      orderBy: 'last_name',
-      orderDirection: 'asc'
-    })
+    const [teachers, academicYears] = await Promise.all([
+      window.api.adminCrud.list({
+        entity: 'teachers',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'last_name',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'starts_at',
+        orderDirection: 'desc'
+      })
+    ])
 
     setTeacherOptions(createPersonOptions(teachers.items))
+    setAcademicYearOptions(
+      academicYears.items.map((academicYear) => ({
+        value: String(academicYear.id),
+        label: String(academicYear.name ?? `#${String(academicYear.id)}`)
+      }))
+    )
   }, [])
 
   useEffect(() => {
@@ -34,10 +50,14 @@ export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPa
   }, [loadTeacherOptions])
 
   const teacherNameByIdForGroups = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
+  const academicYearNameById = useMemo(
+    () => createOptionsMap(academicYearOptions),
+    [academicYearOptions]
+  )
 
   const groupColumns = useMemo(
-    () => createGroupColumns(teacherNameByIdForGroups),
-    [teacherNameByIdForGroups]
+    () => createGroupColumns(teacherNameByIdForGroups, academicYearNameById),
+    [academicYearNameById, teacherNameByIdForGroups]
   )
 
   const studentFilters = useMemo(
