@@ -67,7 +67,7 @@ export function createFacultyFields(): AdminCrudFieldConfig[] {
 }
 
 export function createFacultyColumns(
-  teacherNameById: Map<number, string>
+  employeeNameById: Map<number, string>
 ): AdminCrudColumnConfig[] {
   return [
     {
@@ -83,14 +83,14 @@ export function createFacultyColumns(
       label: 'Краткое'
     },
     {
-      key: 'dean_teacher_id',
+      key: 'dean_employee_id',
       label: 'Декан',
-      render: (record) => renderRelation(record.dean_teacher_id, teacherNameById)
+      render: (record) => renderRelation(record.dean_employee_id, employeeNameById)
     },
     {
-      key: 'deputy_dean_teacher_id',
+      key: 'deputy_dean_employee_id',
       label: 'Зам. декана',
-      render: (record) => renderRelation(record.deputy_dean_teacher_id, teacherNameById)
+      render: (record) => renderRelation(record.deputy_dean_employee_id, employeeNameById)
     }
   ]
 }
@@ -278,7 +278,7 @@ export function getPersonName(record: AdminCrudRecord): string {
 
 function renderRelation(value: unknown, labelsById: Map<number, string>): string {
   if (value === null || value === undefined || value === '') {
-    return 'Не назначен'
+    return '—'
   }
 
   const id = Number(value)

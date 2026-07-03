@@ -1,0 +1,23 @@
+{
+  "createdAt": "2026-07-03T05:44:13.668Z",
+  "backupPath": ".filetags/backups/2026-07-03T05-44-13-631Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/university/config/universityCrudConfig.ts",
+      "backupRelativePath": "files/src/renderer/src/pages/university/config/universityCrudConfig.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/university/config/universityCrudConfig.ts\n   found: yes\n   old: 292 line(s)\n   new: 292 line(s)",
+    "Replace file: src/renderer/src/pages/university/config/universityCrudConfig.ts\n   found: yes\n   old: 292 line(s)\n   new: 292 line(s)",
+    "Replace file: src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx\n   found: yes\n   old: 233 line(s)\n   new: 232 line(s)",
+    "Replace file: src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx\n   found: yes\n   old: 232 line(s)\n   new: 222 line(s)",
+    "Replace file: src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx\n   found: yes\n   old: 222 line(s)\n   new: 221 line(s)",
+    "Replace file: src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx\n   found: yes\n   old: 221 line(s)\n   new: 221 line(s)"
+  ]
+}

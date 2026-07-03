@@ -25,17 +25,28 @@ export function UniversityStructureDrilldown() {
   const [selectedSpecialty, setSelectedSpecialty] = useState<AdminCrudRecord | null>(null)
 
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
+  const [employeeOptions, setEmployeeOptions] = useState<AdminCrudSelectOption[]>([])
 
   const loadRelationOptions = useCallback(async () => {
-    const teachers = await window.api.adminCrud.list({
-      entity: 'teachers',
-      page: 1,
-      pageSize: 100,
-      orderBy: 'last_name',
-      orderDirection: 'asc'
-    })
+    const [teachers, employees] = await Promise.all([
+      window.api.adminCrud.list({
+        entity: 'teachers',
+        page: 1,
+        pageSize: 100,
+        orderBy: 'last_name',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'employees',
+        page: 1,
+        pageSize: 100,
+        orderBy: 'last_name',
+        orderDirection: 'asc'
+      })
+    ])
 
     setTeacherOptions(createOptions(teachers.items, getPersonName))
+    setEmployeeOptions(createOptions(employees.items, getPersonName))
   }, [])
 
   useEffect(() => {
@@ -43,9 +54,10 @@ export function UniversityStructureDrilldown() {
   }, [loadRelationOptions])
 
   const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
+  const employeeNameById = useMemo(() => createOptionsMap(employeeOptions), [employeeOptions])
 
   const facultyFields = useMemo(() => createFacultyFields(), [])
-  const facultyColumns = useMemo(() => createFacultyColumns(teacherNameById), [teacherNameById])
+  const facultyColumns = useMemo(() => createFacultyColumns(employeeNameById), [employeeNameById])
 
   const departmentFields = useMemo(() => createDepartmentFields(), [])
   const departmentColumns = useMemo(
