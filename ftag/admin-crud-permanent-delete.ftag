@@ -1,0 +1,258 @@
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  canArchive: boolean
+@endfind
+@content
+  canDelete: boolean
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  requestArchive: (record: AdminCrudRecord) => void
+@endfind
+@content
+  requestDelete: (record: AdminCrudRecord) => void
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  canArchive?: boolean
+@endfind
+@content
+  canDelete?: boolean
+@endcontent
+@end
+
+@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  canCreate = true,
+  canEdit = true,
+  canArchive = true,
+  orderBy = 'id',
+@endfind
+@with
+  canCreate = true,
+  canEdit = true,
+  canArchive = true,
+  canDelete,
+  orderBy = 'id',
+@endwith
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  const [archiveRecord, setArchiveRecord] = useState<AdminCrudRecord | null>(null)
+@endfind
+@content
+  const [deleteRecord, setDeleteRecord] = useState<AdminCrudRecord | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+@endfind
+@content
+  const canDeleteRecord = canDelete ?? canArchive
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  function requestArchive(record: AdminCrudRecord) {
+    setArchiveRecord(record)
+  }
+@endfind
+@content
+
+  function requestDelete(record: AdminCrudRecord) {
+    setDeleteRecord(record)
+    setDeleteError(null)
+  }
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  async function confirmArchive() {
+    if (!archiveRecord?.id) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      await window.api.adminCrud.archive({
+        entity,
+        id: Number(archiveRecord.id)
+      })
+
+      setArchiveRecord(null)
+      await loadItems()
+      await onAfterMutation?.()
+    } catch (archiveError) {
+      setError(archiveError instanceof Error ? archiveError.message : 'Не удалось архивировать')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+@endfind
+@content
+
+  async function confirmDelete() {
+    if (!deleteRecord?.id) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+    setDeleteError(null)
+
+    try {
+      await window.api.adminCrud.delete({
+        entity,
+        id: Number(deleteRecord.id)
+      })
+
+      setDeleteRecord(null)
+      await loadItems()
+      await onAfterMutation?.()
+    } catch (deleteSubmitError) {
+      setDeleteError(
+        normalizePermanentDeleteError(
+          deleteSubmitError instanceof Error
+            ? deleteSubmitError.message
+            : 'Не удалось удалить запись безвозвратно'
+        )
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+               canArchive,
+@endfind
+@content
+              canDelete: canDeleteRecord,
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+               requestArchive,
+@endfind
+@content
+              requestDelete,
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+                            {canArchive ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Архивировать"
+                                aria-label="Архивировать запись"
+                                onClick={() => requestArchive(record)}
+                              >
+                                <FiArchive />
+                              </Button>
+                            ) : null}
+@endfind
+@content
+
+                            {canDeleteRecord ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Удалить безвозвратно"
+                                aria-label="Удалить запись безвозвратно"
+                                onClick={() => requestDelete(record)}
+                              >
+                                <FiTrash2 />
+                              </Button>
+                            ) : null}
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+       <ConfirmDialog
+        open={Boolean(archiveRecord)}
+        title="Архивировать запись?"
+        description={`Запись "${archiveRecord ? getRecordName(archiveRecord) : ''}" будет скрыта из основного списка. Данные не будут удалены физически и останутся в базе.`}
+        confirmText="Архивировать"
+        cancelText="Отмена"
+        danger
+        isLoading={isSubmitting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveRecord(null)
+          }
+        }}
+        onConfirm={confirmArchive}
+      />
+@endfind
+@content
+
+      <ConfirmDialog
+        open={Boolean(deleteRecord)}
+        title="Удалить запись безвозвратно?"
+        description={createPermanentDeleteDescription(deleteRecord, deleteError)}
+        confirmText="Удалить безвозвратно"
+        cancelText="Отмена"
+        danger
+        isLoading={isSubmitting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteRecord(null)
+            setDeleteError(null)
+          }
+        }}
+        onConfirm={confirmDelete}
+      />
+@endcontent
+@end
+
+@insert-before-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+function applySubmitErrorToForm(
+@endfind
+@content
+function createPermanentDeleteDescription(
+  record: AdminCrudRecord | null,
+  error: string | null
+): string {
+  const recordName = record ? getRecordName(record) : ''
+
+  const baseDescription = `Запись "${recordName}" будет удалена из базы данных безвозвратно. Восстановить её через архив уже не получится.`
+
+  if (!error) {
+    return baseDescription
+  }
+
+  return `${baseDescription}\n\nОшибка удаления: ${error}`
+}
+
+function normalizePermanentDeleteError(message: string): string {
+  if (
+    message.toLowerCase().includes('foreign key') ||
+    message.toLowerCase().includes('constraint')
+  ) {
+    return 'Эту запись нельзя удалить, потому что на неё ссылаются другие данные. Сначала удали или перенеси связанные записи, либо используй архивирование.'
+  }
+
+  return message
+}
+
+@endcontent
+@end

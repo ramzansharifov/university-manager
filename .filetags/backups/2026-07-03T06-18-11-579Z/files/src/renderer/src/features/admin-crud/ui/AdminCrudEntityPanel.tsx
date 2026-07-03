@@ -105,11 +105,9 @@ interface AdminCrudRenderItemsParams {
   emptyMessage: string
   canEdit: boolean
   canArchive: boolean
-  canDelete: boolean
   extraRowActions?: (record: AdminCrudRecord) => ReactNode
   openEditDialog: (record: AdminCrudRecord) => void
   requestArchive: (record: AdminCrudRecord) => void
-  requestDelete: (record: AdminCrudRecord) => void
   formatValue: (value: unknown, column?: AdminCrudColumnConfig) => string
 }
 
@@ -126,7 +124,6 @@ interface AdminCrudEntityPanelProps {
   canCreate?: boolean
   canEdit?: boolean
   canArchive?: boolean
-  canDelete?: boolean
   orderBy?: string
   orderDirection?: AdminCrudOrderDirection
   rowGroupBy?: (record: AdminCrudRecord) => string | number | null | undefined
@@ -154,7 +151,6 @@ export function AdminCrudEntityPanel({
   canCreate = true,
   canEdit = true,
   canArchive = true,
-  canDelete,
   orderBy = 'id',
   orderDirection = 'asc',
   hideSearch = false,
@@ -179,8 +175,6 @@ export function AdminCrudEntityPanel({
   const [dialogMode, setDialogMode] = useState<DialogMode>('create')
   const [selectedRecord, setSelectedRecord] = useState<AdminCrudRecord | null>(null)
   const [archiveRecord, setArchiveRecord] = useState<AdminCrudRecord | null>(null)
-  const [deleteRecord, setDeleteRecord] = useState<AdminCrudRecord | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
   const emptyFormData = useMemo(() => createEmptyFormData(fields), [fields])
 
   const formSchema = useMemo(() => createFormSchema(fields), [fields])
@@ -193,7 +187,6 @@ export function AdminCrudEntityPanel({
   const watchedFormValues = form.watch()
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const canDeleteRecord = canDelete ?? canArchive
   const filtersKey = JSON.stringify(filters ?? {})
 
   useEffect(() => {
@@ -416,10 +409,6 @@ export function AdminCrudEntityPanel({
   function requestArchive(record: AdminCrudRecord) {
     setArchiveRecord(record)
   }
-  function requestDelete(record: AdminCrudRecord) {
-    setDeleteRecord(record)
-    setDeleteError(null)
-  }
 
   async function confirmArchive() {
     if (!archiveRecord?.id) {
@@ -440,36 +429,6 @@ export function AdminCrudEntityPanel({
       await onAfterMutation?.()
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : 'Не удалось архивировать')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-  async function confirmDelete() {
-    if (!deleteRecord?.id) {
-      return
-    }
-
-    setIsSubmitting(true)
-    setError(null)
-    setDeleteError(null)
-
-    try {
-      await window.api.adminCrud.delete({
-        entity,
-        id: Number(deleteRecord.id)
-      })
-
-      setDeleteRecord(null)
-      await loadItems()
-      await onAfterMutation?.()
-    } catch (deleteSubmitError) {
-      setDeleteError(
-        normalizePermanentDeleteError(
-          deleteSubmitError instanceof Error
-            ? deleteSubmitError.message
-            : 'Не удалось удалить запись безвозвратно'
-        )
-      )
     } finally {
       setIsSubmitting(false)
     }
@@ -542,11 +501,9 @@ export function AdminCrudEntityPanel({
               emptyMessage,
               canEdit,
               canArchive,
-              canDelete: canDeleteRecord,
               extraRowActions,
               openEditDialog,
               requestArchive,
-              requestDelete,
               formatValue
             })
           ) : (
@@ -630,17 +587,6 @@ export function AdminCrudEntityPanel({
                                 onClick={() => requestArchive(record)}
                               >
                                 <FiArchive />
-                              </Button>
-                            ) : null}
-                            {canDeleteRecord ? (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                title="Удалить безвозвратно"
-                                aria-label="Удалить запись безвозвратно"
-                                onClick={() => requestDelete(record)}
-                              >
-                                <FiTrash2 />
                               </Button>
                             ) : null}
                           </div>
@@ -823,31 +769,6 @@ export function AdminCrudEntityPanel({
   )
 }
 
-function createPermanentDeleteDescription(
-  record: AdminCrudRecord | null,
-  error: string | null
-): string {
-  const recordName = record ? getRecordName(record) : ''
-
-  const baseDescription = `Запись "${recordName}" будет удалена из базы данных безвозвратно. Восстановить её через архив уже не получится.`
-
-  if (!error) {
-    return baseDescription
-  }
-
-  return `${baseDescription}\n\nОшибка удаления: ${error}`
-}
-
-function normalizePermanentDeleteError(message: string): string {
-  if (
-    message.toLowerCase().includes('foreign key') ||
-    message.toLowerCase().includes('constraint')
-  ) {
-    return 'Эту запись нельзя удалить, потому что на неё ссылаются другие данные. Сначала удали или перенеси связанные записи, либо используй архивирование.'
-  }
-
-  return message
-}
 function applySubmitErrorToForm(
   form: UseFormReturn<Record<string, string>>,
   fields: AdminCrudFieldConfig[],

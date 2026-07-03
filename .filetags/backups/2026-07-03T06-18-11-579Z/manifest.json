@@ -1,0 +1,26 @@
+{
+  "createdAt": "2026-07-03T06:18:11.600Z",
+  "backupPath": ".filetags/backups/2026-07-03T06-18-11-579Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1337 line(s)\n   new: 1338 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1338 line(s)\n   new: 1339 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1339 line(s)\n   new: 1340 line(s)",
+    "Replace file: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1340 line(s)\n   new: 1341 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1341 line(s)\n   new: 1343 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1343 line(s)\n   new: 1344 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1344 line(s)\n   new: 1348 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1348 line(s)\n   new: 1378 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1378 line(s)\n   new: 1379 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1379 line(s)\n   new: 1380 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1380 line(s)\n   new: 1391 line(s)",
+    "Insert after: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: no\n   old: 1391 line(s)\n   new: 1391 line(s)",
+    "Insert before: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1391 line(s)\n   new: 1416 line(s)"
+  ]
+}
