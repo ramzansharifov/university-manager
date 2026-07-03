@@ -1058,7 +1058,7 @@ export class AdminCrudService {
       ...nextData,
       week_id: weekId,
       day_of_week: dayOfWeek,
-      grade_date: formatIsoDate(addDays(parseIsoDate(String(week.starts_at)), dayOfWeek - 1))
+      grade_date: formatDate(addDays(parseDate(String(week.starts_at)), dayOfWeek - 1))
     }
   }
 
