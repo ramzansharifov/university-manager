@@ -193,52 +193,41 @@ export class AdminCrudService {
 
   private prepareFacultyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
     const nextData = { ...data }
-    const facultyId = normalizeNullableNumber(before?.id)
-    const deanTeacherId = normalizeNullableNumber(pickNextValue(nextData, before, 'dean_teacher_id'))
-    const deputyDeanTeacherId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'deputy_dean_teacher_id')
+    const deanEmployeeId = normalizeNullableNumber(
+      pickNextValue(nextData, before, 'dean_employee_id')
+    )
+    const deputyDeanEmployeeId = normalizeNullableNumber(
+      pickNextValue(nextData, before, 'deputy_dean_employee_id')
     )
 
     if (
-      deanTeacherId !== null &&
-      deputyDeanTeacherId !== null &&
-      deanTeacherId === deputyDeanTeacherId
+      deanEmployeeId !== null &&
+      deputyDeanEmployeeId !== null &&
+      deanEmployeeId === deputyDeanEmployeeId
     ) {
-      throw new Error('Декан и заместитель декана должны быть разными преподавателями')
+      throw new Error('Декан и заместитель декана должны быть разными сотрудниками')
     }
 
-    if (deanTeacherId !== null) {
-      const deanTeacher = this.ensureActiveRelatedRecord(
-        'teachers',
-        deanTeacherId,
+    if (deanEmployeeId !== null) {
+      this.ensureActiveRelatedRecord(
+        'employees',
+        deanEmployeeId,
         'Выбранный декан не найден или архивирован'
       )
-
-      if (facultyId !== null) {
-        this.ensureTeacherBelongsToFaculty(deanTeacher, facultyId, 'Декан')
-      }
     }
 
-    if (deputyDeanTeacherId !== null) {
-      const deputyDeanTeacher = this.ensureActiveRelatedRecord(
-        'teachers',
-        deputyDeanTeacherId,
+    if (deputyDeanEmployeeId !== null) {
+      this.ensureActiveRelatedRecord(
+        'employees',
+        deputyDeanEmployeeId,
         'Выбранный заместитель декана не найден или архивирован'
       )
-
-      if (facultyId !== null) {
-        this.ensureTeacherBelongsToFaculty(
-          deputyDeanTeacher,
-          facultyId,
-          'Заместитель декана'
-        )
-      }
     }
 
     return {
       ...nextData,
-      dean_teacher_id: deanTeacherId,
-      deputy_dean_teacher_id: deputyDeanTeacherId
+      dean_employee_id: deanEmployeeId,
+      deputy_dean_employee_id: deputyDeanEmployeeId
     }
   }
 
@@ -369,30 +358,6 @@ export class AdminCrudService {
 
     if (teacherDepartmentId !== departmentId) {
       throw new Error(`${roleTitle} должен относиться к выбранной кафедре`)
-    }
-  }
-  private ensureTeacherBelongsToFaculty(
-    teacher: AdminCrudRecord,
-    facultyId: number,
-    roleTitle: string
-  ): void {
-    const teacherDepartmentId = normalizeNullableNumber(teacher.department_id)
-
-    if (teacherDepartmentId === null) {
-      throw new Error(`${roleTitle} должен быть привязан к кафедре факультета`)
-    }
-
-    const departmentConfig = getAdminCrudEntityConfig('departments')
-    const department = this.repository.getById(departmentConfig, teacherDepartmentId)
-
-    if (!department || Number(department.is_archived) === 1) {
-      throw new Error(`${roleTitle} привязан к несуществующей или архивированной кафедре`)
-    }
-
-    const departmentFacultyId = normalizeNullableNumber(department.faculty_id)
-
-    if (departmentFacultyId !== facultyId) {
-      throw new Error(`${roleTitle} должен относиться к кафедре выбранного факультета`)
     }
   }
   private prepareDictionaryItemData(

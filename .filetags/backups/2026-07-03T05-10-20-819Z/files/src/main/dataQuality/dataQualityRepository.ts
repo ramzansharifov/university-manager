@@ -51,8 +51,8 @@ export class DataQualityRepository {
       FROM faculties
       WHERE is_archived = 0
         AND (
-          dean_teacher_id IS NULL
-          OR deputy_dean_teacher_id IS NULL
+          dean_employee_id IS NULL
+          OR deputy_dean_employee_id IS NULL
         )
     `)
   }

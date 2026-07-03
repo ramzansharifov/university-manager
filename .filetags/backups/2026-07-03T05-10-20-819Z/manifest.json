@@ -1,0 +1,31 @@
+{
+  "createdAt": "2026-07-03T05:10:20.859Z",
+  "backupPath": ".filetags/backups/2026-07-03T05-10-20-819Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/admin/adminCrudEntities.ts",
+      "backupRelativePath": "files/src/main/admin/adminCrudEntities.ts"
+    },
+    {
+      "originalPath": "src/main/services/adminCrudService.ts",
+      "backupRelativePath": "files/src/main/services/adminCrudService.ts"
+    },
+    {
+      "originalPath": "src/main/dataQuality/dataQualityRepository.ts",
+      "backupRelativePath": "files/src/main/dataQuality/dataQualityRepository.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Write file: src/main/migrations/002_required_faculty_teacher_assignments.sql\n   old: missing\n   new: 3 line(s)",
+    "Replace file: src/main/admin/adminCrudEntities.ts\n   found: yes\n   old: 352 line(s)\n   new: 352 line(s)",
+    "Replace file: src/main/services/adminCrudService.ts\n   found: yes\n   old: 905 line(s)\n   new: 916 line(s)",
+    "Insert before: src/main/services/adminCrudService.ts\n   found: yes\n   old: 916 line(s)\n   new: 940 line(s)",
+    "Replace file: src/main/dataQuality/dataQualityRepository.ts\n   found: yes\n   old: 223 line(s)\n   new: 223 line(s)",
+    "Write file: src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx\n   old: 947 line(s)\n   new: 908 line(s)"
+  ]
+}

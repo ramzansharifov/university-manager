@@ -1,3 +1,152 @@
+@write src/main/migrations/002_required_faculty_teacher_assignments.sql
+ALTER TABLE faculties ADD COLUMN dean_teacher_id INTEGER;
+
+ALTER TABLE faculties ADD COLUMN deputy_dean_teacher_id INTEGER;
+@end
+
+@replace-first src/main/admin/adminCrudEntities.ts
+@find
+  faculties: entity(
+    'faculties',
+    ['name', 'short_name', 'description', 'dean_employee_id', 'deputy_dean_employee_id'],
+    ['name', 'short_name']
+  ),
+@endfind
+@with
+  faculties: entity(
+    'faculties',
+    ['name', 'short_name', 'description', 'dean_teacher_id', 'deputy_dean_teacher_id'],
+    ['name', 'short_name']
+  ),
+@endwith
+@end
+
+@replace-block src/main/services/adminCrudService.ts
+@from
+  private prepareFacultyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
+@endfrom
+@to
+  private prepareDepartmentData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
+@endto
+@with
+  private prepareFacultyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
+    const nextData = { ...data }
+    const facultyId = normalizeNullableNumber(before?.id)
+    const deanTeacherId = normalizeNullableNumber(pickNextValue(nextData, before, 'dean_teacher_id'))
+    const deputyDeanTeacherId = normalizeNullableNumber(
+      pickNextValue(nextData, before, 'deputy_dean_teacher_id')
+    )
+
+    if (
+      deanTeacherId !== null &&
+      deputyDeanTeacherId !== null &&
+      deanTeacherId === deputyDeanTeacherId
+    ) {
+      throw new Error('Декан и заместитель декана должны быть разными преподавателями')
+    }
+
+    if (deanTeacherId !== null) {
+      const deanTeacher = this.ensureActiveRelatedRecord(
+        'teachers',
+        deanTeacherId,
+        'Выбранный декан не найден или архивирован'
+      )
+
+      if (facultyId !== null) {
+        this.ensureTeacherBelongsToFaculty(deanTeacher, facultyId, 'Декан')
+      }
+    }
+
+    if (deputyDeanTeacherId !== null) {
+      const deputyDeanTeacher = this.ensureActiveRelatedRecord(
+        'teachers',
+        deputyDeanTeacherId,
+        'Выбранный заместитель декана не найден или архивирован'
+      )
+
+      if (facultyId !== null) {
+        this.ensureTeacherBelongsToFaculty(
+          deputyDeanTeacher,
+          facultyId,
+          'Заместитель декана'
+        )
+      }
+    }
+
+    return {
+      ...nextData,
+      dean_teacher_id: deanTeacherId,
+      deputy_dean_teacher_id: deputyDeanTeacherId
+    }
+  }
+
+  private prepareDepartmentData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
+@endwith
+@end
+
+@insert-before-once src/main/services/adminCrudService.ts
+@find
+  private prepareDictionaryItemData(
+@endfind
+@content
+  private ensureTeacherBelongsToFaculty(
+    teacher: AdminCrudRecord,
+    facultyId: number,
+    roleTitle: string
+  ): void {
+    const teacherDepartmentId = normalizeNullableNumber(teacher.department_id)
+
+    if (teacherDepartmentId === null) {
+      throw new Error(`${roleTitle} должен быть привязан к кафедре факультета`)
+    }
+
+    const departmentConfig = getAdminCrudEntityConfig('departments')
+    const department = this.repository.getById(departmentConfig, teacherDepartmentId)
+
+    if (!department || Number(department.is_archived) === 1) {
+      throw new Error(`${roleTitle} привязан к несуществующей или архивированной кафедре`)
+    }
+
+    const departmentFacultyId = normalizeNullableNumber(department.faculty_id)
+
+    if (departmentFacultyId !== facultyId) {
+      throw new Error(`${roleTitle} должен относиться к кафедре выбранного факультета`)
+    }
+  }
+
+@endcontent
+@end
+
+@replace-first src/main/dataQuality/dataQualityRepository.ts
+@find
+  countFacultiesWithoutRequiredStaff(): number {
+    return this.count(`
+      SELECT COUNT(*) as total
+      FROM faculties
+      WHERE is_archived = 0
+        AND (
+          dean_employee_id IS NULL
+          OR deputy_dean_employee_id IS NULL
+        )
+    `)
+  }
+@endfind
+@with
+  countFacultiesWithoutRequiredStaff(): number {
+    return this.count(`
+      SELECT COUNT(*) as total
+      FROM faculties
+      WHERE is_archived = 0
+        AND (
+          dean_teacher_id IS NULL
+          OR deputy_dean_teacher_id IS NULL
+        )
+    `)
+  }
+@endwith
+@end
+
+@write src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx
 import type { FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
@@ -906,3 +1055,4 @@ function renderRelation(value: unknown, labelsById: Map<number, string>): string
 
   return labelsById.get(id) ?? `#${id}`
 }
+@end
