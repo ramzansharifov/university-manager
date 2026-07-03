@@ -56,16 +56,16 @@ export function UniversityStructureDrilldown() {
   const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
   const employeeNameById = useMemo(() => createOptionsMap(employeeOptions), [employeeOptions])
 
-  const facultyFields = useMemo(() => createFacultyFields(), [])
+  const facultyFields = useMemo(() => createFacultyFields(employeeOptions), [employeeOptions])
   const facultyColumns = useMemo(() => createFacultyColumns(employeeNameById), [employeeNameById])
 
-  const departmentFields = useMemo(() => createDepartmentFields(), [])
+  const departmentFields = useMemo(() => createDepartmentFields(teacherOptions), [teacherOptions])
   const departmentColumns = useMemo(
     () => createDepartmentColumns(teacherNameById),
     [teacherNameById]
   )
 
-  const groupFields = useMemo(() => createGroupFields(), [])
+  const groupFields = useMemo(() => createGroupFields(teacherOptions), [teacherOptions])
   const groupColumns = useMemo(() => createGroupColumns(teacherNameById), [teacherNameById])
 
   const departmentFilters = useMemo(

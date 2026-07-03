@@ -5,7 +5,6 @@ import { createOptions, createPositionOptions, getRecordName } from './config/pe
 import { EmployeesByDivisionPanel } from './ui/EmployeesByDivisionPanel'
 import { StudentsByGroupPanel } from './ui/StudentsByGroupPanel'
 import { TeachersByDepartmentPanel } from './ui/TeachersByDepartmentPanel'
-import { RequiredStaffPanel } from './ui/RequiredStaffPanel'
 
 export function PeoplePage() {
   const [studentStatusOptions, setStudentStatusOptions] = useState<AdminCrudSelectOption[]>([])
@@ -63,7 +62,7 @@ export function PeoplePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Люди</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Студенты, преподаватели, кастомные сотрудники и обязательные назначения.
+          Студенты, преподаватели и сотрудники университета.
         </p>
       </div>
 
@@ -72,7 +71,6 @@ export function PeoplePage() {
           <TabsTrigger value="students">Студенты</TabsTrigger>
           <TabsTrigger value="teachers">Преподаватели</TabsTrigger>
           <TabsTrigger value="employees">Сотрудники</TabsTrigger>
-          <TabsTrigger value="required-staff">Обязательные сотрудники</TabsTrigger>
         </TabsList>
 
         <TabsContent value="students">
@@ -88,9 +86,6 @@ export function PeoplePage() {
             employeeStatusOptions={employeeStatusOptions}
             positionOptions={positionOptions}
           />
-        </TabsContent>
-        <TabsContent value="required-staff">
-          <RequiredStaffPanel />
         </TabsContent>
       </Tabs>
     </div>

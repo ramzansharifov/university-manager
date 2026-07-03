@@ -80,30 +80,6 @@ export class DataQualityService {
         getCount: () => this.dataQualityRepository.countSpecialtiesWithoutGroups()
       },
       {
-        id: 'faculties_without_required_staff',
-        module: 'people',
-        title: 'Факультеты без деканата',
-        description: 'Для факультета нужно назначить декана и заместителя декана.',
-        severity: 'warning',
-        getCount: () => this.dataQualityRepository.countFacultiesWithoutRequiredStaff()
-      },
-      {
-        id: 'departments_without_required_staff',
-        module: 'people',
-        title: 'Кафедры без руководства',
-        description: 'Для кафедры нужно назначить заведующего и заместителя заведующего.',
-        severity: 'warning',
-        getCount: () => this.dataQualityRepository.countDepartmentsWithoutRequiredStaff()
-      },
-      {
-        id: 'groups_without_curators',
-        module: 'people',
-        title: 'Группы без кураторов',
-        description: 'Для учебной группы нужно назначить куратора.',
-        severity: 'warning',
-        getCount: () => this.dataQualityRepository.countGroupsWithoutCurators()
-      },
-      {
         id: 'groups_without_students',
         module: 'people',
         title: 'Группы без студентов',

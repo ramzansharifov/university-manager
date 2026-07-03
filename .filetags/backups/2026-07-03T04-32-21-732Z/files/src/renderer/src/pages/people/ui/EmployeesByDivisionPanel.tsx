@@ -110,7 +110,7 @@ export function EmployeesByDivisionPanel({
         <AdminCrudEntityPanel
           entity="divisions"
           title="Подразделения"
-          description="Выбери ручное подразделение, чтобы открыть список его кастомных сотрудников."
+          description="Выбери подразделение, чтобы открыть список его сотрудников."
           createButtonLabel="Добавить подразделение"
           fields={[]}
           columns={organizationColumns}
@@ -132,7 +132,7 @@ export function EmployeesByDivisionPanel({
         <AdminCrudEntityPanel
           entity="employees"
           title={`Сотрудники: ${getRecordName(selectedDivision)}`}
-          description="Список кастомных сотрудников выбранного ручного подразделения. Деканы, заведующие и кураторы назначаются во вкладке «Обязательные сотрудники»."
+          description="Список сотрудников выбранного подразделения."
           createButtonLabel="Добавить сотрудника"
           fields={employeeFields}
           columns={employeeColumns}

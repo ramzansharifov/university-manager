@@ -44,7 +44,9 @@ export const organizationColumns: AdminCrudColumnConfig[] = [
   }
 ]
 
-export function createFacultyFields(): AdminCrudFieldConfig[] {
+export function createFacultyFields(
+  employeeOptions: AdminCrudSelectOption[]
+): AdminCrudFieldConfig[] {
   return [
     {
       key: 'name',
@@ -56,6 +58,22 @@ export function createFacultyFields(): AdminCrudFieldConfig[] {
       key: 'short_name',
       label: 'Краткое название',
       placeholder: 'Например: ФИТ'
+    },
+    {
+      key: 'dean_employee_id',
+      label: 'Декан',
+      placeholder: 'Выбери декана из сотрудников',
+      type: 'select',
+      valueType: 'number',
+      options: employeeOptions
+    },
+    {
+      key: 'deputy_dean_employee_id',
+      label: 'Заместитель декана',
+      placeholder: 'Выбери заместителя декана',
+      type: 'select',
+      valueType: 'number',
+      options: employeeOptions
     },
     {
       key: 'description',
@@ -95,7 +113,9 @@ export function createFacultyColumns(
   ]
 }
 
-export function createDepartmentFields(): AdminCrudFieldConfig[] {
+export function createDepartmentFields(
+  teacherOptions: AdminCrudSelectOption[]
+): AdminCrudFieldConfig[] {
   return [
     {
       key: 'name',
@@ -107,6 +127,22 @@ export function createDepartmentFields(): AdminCrudFieldConfig[] {
       key: 'short_name',
       label: 'Краткое название',
       placeholder: 'Например: КПИ'
+    },
+    {
+      key: 'head_teacher_id',
+      label: 'Заведующий кафедрой',
+      placeholder: 'Выбери преподавателя',
+      type: 'select',
+      valueType: 'number',
+      options: teacherOptions
+    },
+    {
+      key: 'deputy_head_teacher_id',
+      label: 'Заместитель заведующего',
+      placeholder: 'Выбери преподавателя',
+      type: 'select',
+      valueType: 'number',
+      options: teacherOptions
     },
     {
       key: 'description',
@@ -206,7 +242,7 @@ export const specialtyColumns: AdminCrudColumnConfig[] = [
   }
 ]
 
-export function createGroupFields(): AdminCrudFieldConfig[] {
+export function createGroupFields(teacherOptions: AdminCrudSelectOption[]): AdminCrudFieldConfig[] {
   return [
     {
       key: 'name',
@@ -219,6 +255,14 @@ export function createGroupFields(): AdminCrudFieldConfig[] {
       label: 'Курс',
       placeholder: 'Например: 2',
       type: 'number'
+    },
+    {
+      key: 'curator_teacher_id',
+      label: 'Куратор группы',
+      placeholder: 'Выбери куратора из преподавателей',
+      type: 'select',
+      valueType: 'number',
+      options: teacherOptions
     },
     {
       key: 'description',

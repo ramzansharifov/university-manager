@@ -1,0 +1,56 @@
+{
+  "createdAt": "2026-07-03T04:32:21.793Z",
+  "backupPath": ".filetags/backups/2026-07-03T04-32-21-732Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/services/adminCrudService.ts",
+      "backupRelativePath": "files/src/main/services/adminCrudService.ts"
+    },
+    {
+      "originalPath": "src/main/dataQuality/dataQualityRepository.ts",
+      "backupRelativePath": "files/src/main/dataQuality/dataQualityRepository.ts"
+    },
+    {
+      "originalPath": "src/main/dataQuality/dataQualityService.ts",
+      "backupRelativePath": "files/src/main/dataQuality/dataQualityService.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/university/config/universityCrudConfig.ts",
+      "backupRelativePath": "files/src/renderer/src/pages/university/config/universityCrudConfig.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/people/PeoplePage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/people/PeoplePage.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/people/ui/EmployeesByDivisionPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/people/ui/EmployeesByDivisionPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/main/services/adminCrudService.ts\n   found: yes\n   old: 716 line(s)\n   new: 717 line(s)",
+    "Replace file: src/main/services/adminCrudService.ts\n   found: yes\n   old: 717 line(s)\n   new: 729 line(s)",
+    "Insert before: src/main/services/adminCrudService.ts\n   found: yes\n   old: 729 line(s)\n   new: 898 line(s)",
+    "Insert after: src/main/services/adminCrudService.ts\n   found: yes\n   old: 898 line(s)\n   new: 905 line(s)",
+    "Insert before: src/main/dataQuality/dataQualityRepository.ts\n   found: yes\n   old: 191 line(s)\n   new: 223 line(s)",
+    "Insert before: src/main/dataQuality/dataQualityService.ts\n   found: yes\n   old: 173 line(s)\n   new: 197 line(s)",
+    "Replace file: src/renderer/src/pages/university/config/universityCrudConfig.ts\n   found: yes\n   old: 336 line(s)\n   new: 318 line(s)",
+    "Replace file: src/renderer/src/pages/university/config/universityCrudConfig.ts\n   found: yes\n   old: 318 line(s)\n   new: 300 line(s)",
+    "Replace file: src/renderer/src/pages/university/config/universityCrudConfig.ts\n   found: yes\n   old: 300 line(s)\n   new: 292 line(s)",
+    "Replace file: src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx\n   found: yes\n   old: 233 line(s)\n   new: 233 line(s)",
+    "Replace file: src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx\n   found: yes\n   old: 233 line(s)\n   new: 233 line(s)",
+    "Replace file: src/renderer/src/pages/university/ui/UniversityStructureDrilldown.tsx\n   found: yes\n   old: 233 line(s)\n   new: 233 line(s)",
+    "Write file: src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx\n   old: missing\n   new: 318 line(s)",
+    "Insert after: src/renderer/src/pages/people/PeoplePage.tsx\n   found: yes\n   old: 94 line(s)\n   new: 95 line(s)",
+    "Replace file: src/renderer/src/pages/people/PeoplePage.tsx\n   found: yes\n   old: 95 line(s)\n   new: 95 line(s)",
+    "Insert after: src/renderer/src/pages/people/PeoplePage.tsx\n   found: yes\n   old: 95 line(s)\n   new: 96 line(s)",
+    "Insert after: src/renderer/src/pages/people/PeoplePage.tsx\n   found: yes\n   old: 96 line(s)\n   new: 99 line(s)",
+    "Replace file: src/renderer/src/pages/people/ui/EmployeesByDivisionPanel.tsx\n   found: yes\n   old: 176 line(s)\n   new: 176 line(s)",
+    "Replace file: src/renderer/src/pages/people/ui/EmployeesByDivisionPanel.tsx\n   found: yes\n   old: 176 line(s)\n   new: 176 line(s)"
+  ]
+}

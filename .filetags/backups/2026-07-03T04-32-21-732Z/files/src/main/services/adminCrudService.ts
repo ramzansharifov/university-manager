@@ -7,8 +7,7 @@ import type {
   AdminCrudListResult,
   AdminCrudOperationResult,
   AdminCrudRecord,
-  AdminCrudUpdateParams,
-  AdminEntityKey
+  AdminCrudUpdateParams
 } from '../../shared/types/adminCrud'
 import type { AuditService } from '../audit/auditService'
 import { getAdminCrudEntityConfig } from '../admin/adminCrudEntities'
@@ -138,18 +137,6 @@ export class AdminCrudService {
     data: AdminCrudRecord,
     before?: AdminCrudRecord
   ): AdminCrudRecord {
-    if (entity === 'faculties') {
-      return this.prepareFacultyData(data, before)
-    }
-
-    if (entity === 'departments') {
-      return this.prepareDepartmentData(data, before)
-    }
-
-    if (entity === 'student_groups') {
-      return this.prepareStudentGroupData(data, before)
-    }
-
     if (entity === 'specialties') {
       return this.prepareSpecialtyData(data, before)
     }
@@ -191,175 +178,6 @@ export class AdminCrudService {
     return data
   }
 
-  private prepareFacultyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
-    const nextData = { ...data }
-    const deanEmployeeId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'dean_employee_id')
-    )
-    const deputyDeanEmployeeId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'deputy_dean_employee_id')
-    )
-
-    if (
-      deanEmployeeId !== null &&
-      deputyDeanEmployeeId !== null &&
-      deanEmployeeId === deputyDeanEmployeeId
-    ) {
-      throw new Error('Декан и заместитель декана должны быть разными сотрудниками')
-    }
-
-    if (deanEmployeeId !== null) {
-      this.ensureActiveRelatedRecord(
-        'employees',
-        deanEmployeeId,
-        'Выбранный декан не найден или архивирован'
-      )
-    }
-
-    if (deputyDeanEmployeeId !== null) {
-      this.ensureActiveRelatedRecord(
-        'employees',
-        deputyDeanEmployeeId,
-        'Выбранный заместитель декана не найден или архивирован'
-      )
-    }
-
-    return {
-      ...nextData,
-      dean_employee_id: deanEmployeeId,
-      deputy_dean_employee_id: deputyDeanEmployeeId
-    }
-  }
-
-  private prepareDepartmentData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
-    const nextData = { ...data }
-    const departmentId = normalizeNullableNumber(before?.id)
-    const headTeacherId = normalizeNullableNumber(pickNextValue(nextData, before, 'head_teacher_id'))
-    const deputyHeadTeacherId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'deputy_head_teacher_id')
-    )
-
-    if (
-      headTeacherId !== null &&
-      deputyHeadTeacherId !== null &&
-      headTeacherId === deputyHeadTeacherId
-    ) {
-      throw new Error(
-        'Заведующий кафедрой и заместитель заведующего должны быть разными преподавателями'
-      )
-    }
-
-    if (headTeacherId !== null) {
-      const headTeacher = this.ensureActiveRelatedRecord(
-        'teachers',
-        headTeacherId,
-        'Выбранный заведующий кафедрой не найден или архивирован'
-      )
-
-      if (departmentId !== null) {
-        this.ensureTeacherBelongsToDepartment(
-          headTeacher,
-          departmentId,
-          'Заведующий кафедрой'
-        )
-      }
-    }
-
-    if (deputyHeadTeacherId !== null) {
-      const deputyHeadTeacher = this.ensureActiveRelatedRecord(
-        'teachers',
-        deputyHeadTeacherId,
-        'Выбранный заместитель заведующего кафедрой не найден или архивирован'
-      )
-
-      if (departmentId !== null) {
-        this.ensureTeacherBelongsToDepartment(
-          deputyHeadTeacher,
-          departmentId,
-          'Заместитель заведующего кафедрой'
-        )
-      }
-    }
-
-    return {
-      ...nextData,
-      head_teacher_id: headTeacherId,
-      deputy_head_teacher_id: deputyHeadTeacherId
-    }
-  }
-
-  private prepareStudentGroupData(
-    data: AdminCrudRecord,
-    before?: AdminCrudRecord
-  ): AdminCrudRecord {
-    const nextData = { ...data }
-    const curatorTeacherId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'curator_teacher_id')
-    )
-    const specialtyId = normalizeNullableNumber(pickNextValue(nextData, before, 'specialty_id'))
-
-    if (curatorTeacherId === null) {
-      return {
-        ...nextData,
-        curator_teacher_id: null
-      }
-    }
-
-    if (specialtyId === null) {
-      throw new Error('Для назначения куратора группа должна быть связана со специальностью')
-    }
-
-    const specialty = this.ensureActiveRelatedRecord(
-      'specialties',
-      specialtyId,
-      'Специальность группы не найдена или архивирована'
-    )
-    const specialtyDepartmentId = normalizeNullableNumber(specialty.department_id)
-
-    if (specialtyDepartmentId === null) {
-      throw new Error('У специальности группы не указана кафедра')
-    }
-
-    const curatorTeacher = this.ensureActiveRelatedRecord(
-      'teachers',
-      curatorTeacherId,
-      'Выбранный куратор группы не найден или архивирован'
-    )
-
-    this.ensureTeacherBelongsToDepartment(curatorTeacher, specialtyDepartmentId, 'Куратор группы')
-
-    return {
-      ...nextData,
-      curator_teacher_id: curatorTeacherId
-    }
-  }
-
-  private ensureActiveRelatedRecord(
-    entity: AdminEntityKey,
-    id: number,
-    errorMessage: string
-  ): AdminCrudRecord {
-    const config = getAdminCrudEntityConfig(entity)
-    const record = this.repository.getById(config, id)
-
-    if (!record || Number(record.is_archived) === 1) {
-      throw new Error(errorMessage)
-    }
-
-    return record
-  }
-
-  private ensureTeacherBelongsToDepartment(
-    teacher: AdminCrudRecord,
-    departmentId: number,
-    roleTitle: string
-  ): void {
-    const teacherDepartmentId = normalizeNullableNumber(teacher.department_id)
-
-    if (teacherDepartmentId !== departmentId) {
-      throw new Error(`${roleTitle} должен относиться к выбранной кафедре`)
-    }
-  }
   private prepareDictionaryItemData(
     data: AdminCrudRecord,
     before?: AdminCrudRecord
@@ -774,13 +592,6 @@ function normalizeNullableNumber(value: unknown): number | null {
   const numberValue = Number(value)
 
   return Number.isFinite(numberValue) ? numberValue : null
-}
-function pickNextValue(
-  data: AdminCrudRecord,
-  before: AdminCrudRecord | undefined,
-  key: string
-): unknown {
-  return Object.prototype.hasOwnProperty.call(data, key) ? data[key] : before?.[key]
 }
 
 function createDictionaryItemKey(value: string): string {

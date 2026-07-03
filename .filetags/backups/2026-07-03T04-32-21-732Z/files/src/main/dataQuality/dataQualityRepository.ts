@@ -45,38 +45,6 @@ export class DataQualityRepository {
     `)
   }
 
-  countFacultiesWithoutRequiredStaff(): number {
-    return this.count(`
-      SELECT COUNT(*) as total
-      FROM faculties
-      WHERE is_archived = 0
-        AND (
-          dean_employee_id IS NULL
-          OR deputy_dean_employee_id IS NULL
-        )
-    `)
-  }
-
-  countDepartmentsWithoutRequiredStaff(): number {
-    return this.count(`
-      SELECT COUNT(*) as total
-      FROM departments
-      WHERE is_archived = 0
-        AND (
-          head_teacher_id IS NULL
-          OR deputy_head_teacher_id IS NULL
-        )
-    `)
-  }
-
-  countGroupsWithoutCurators(): number {
-    return this.count(`
-      SELECT COUNT(*) as total
-      FROM student_groups
-      WHERE is_archived = 0
-        AND curator_teacher_id IS NULL
-    `)
-  }
   countGroupsWithoutStudents(): number {
     return this.count(`
       SELECT COUNT(*) as total
