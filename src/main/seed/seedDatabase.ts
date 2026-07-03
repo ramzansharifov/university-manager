@@ -129,9 +129,7 @@ function seedDictionaries(database: Database.Database): void {
     ['grade_categories', 'midterm', 'Промежуточный контроль', 20],
     ['grade_categories', 'final', 'Итоговый контроль', 30],
     ['grade_categories', 'exam', 'Экзамен', 40],
-    ['grade_categories', 'credit', 'Зачёт', 50],
-
-
+    ['grade_categories', 'credit', 'Зачёт', 50]
   ]
 
   for (const item of items) {
@@ -198,8 +196,8 @@ function seedGradeElementTypes(database: Database.Database): void {
       name: 'Зачёт',
       gradingMode: 'pass_fail',
       minScore: 0,
-      maxScore: 100,
-      passingScore: 50,
+      maxScore: 1,
+      passingScore: 1,
       isIntermediate: 0,
       isFinal: 1,
       description: 'Итоговый зачёт'

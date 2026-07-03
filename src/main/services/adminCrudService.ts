@@ -985,18 +985,35 @@ export class AdminCrudService {
   ): AdminCrudRecord {
     const nextData = { ...data }
 
-    const gradingMode = String(nextData.grading_mode ?? before?.grading_mode ?? 'score')
-    const minScore = normalizeNullableNumber(nextData.min_score ?? before?.min_score)
-    const maxScore = normalizeNullableNumber(nextData.max_score ?? before?.max_score)
-    const passingScore = normalizeNullableNumber(nextData.passing_score ?? before?.passing_score)
+    const name = String(nextData.name ?? before?.name ?? '').trim()
+    const gradingMode = String(nextData.grading_mode ?? before?.grading_mode ?? 'score').trim()
+    const minScoreSource = Object.hasOwn(nextData, 'min_score')
+      ? nextData.min_score
+      : before?.min_score
+    const maxScoreSource = Object.hasOwn(nextData, 'max_score')
+      ? nextData.max_score
+      : before?.max_score
+    const passingScoreSource = Object.hasOwn(nextData, 'passing_score')
+      ? nextData.passing_score
+      : before?.passing_score
+    const minScore = normalizeNullableNumber(minScoreSource) ?? 0
+    const maxScore =
+      normalizeNullableNumber(maxScoreSource) ?? (gradingMode === 'pass_fail' ? 1 : 100)
+    const passingScore = normalizeNullableNumber(passingScoreSource)
     const isIntermediate = normalizeBooleanNumber(
       nextData.is_intermediate ?? before?.is_intermediate
     )
     const isFinal = normalizeBooleanNumber(nextData.is_final ?? before?.is_final)
 
+    if (!name) {
+      throw new Error('Укажи название оценочного элемента')
+    }
+
     if (!['score', 'pass_fail'].includes(gradingMode)) {
       throw new Error('Некорректный тип оценивания')
     }
+
+    this.ensureUniqueGradeElementTypeName(name, before)
 
     if (!isIntermediate && !isFinal) {
       throw new Error('Укажи тип элемента: промежуточный или итоговый')
@@ -1007,12 +1024,8 @@ export class AdminCrudService {
     }
 
     if (gradingMode === 'score') {
-      if (minScore === null || maxScore === null) {
-        throw new Error('Для балльного элемента укажи минимальный и максимальный балл')
-      }
-
-      if (maxScore < minScore) {
-        throw new Error('Максимальный балл не может быть меньше минимального')
+      if (maxScore <= minScore) {
+        throw new Error('Максимальный балл должен быть больше минимального')
       }
 
       if (passingScore !== null && (passingScore < minScore || passingScore > maxScore)) {
@@ -1023,6 +1036,7 @@ export class AdminCrudService {
 
       return {
         ...nextData,
+        name,
         grading_mode: gradingMode,
         min_score: minScore,
         max_score: maxScore,
@@ -1034,12 +1048,39 @@ export class AdminCrudService {
 
     return {
       ...nextData,
+      name,
       grading_mode: gradingMode,
-      min_score: null,
-      max_score: null,
-      passing_score: null,
+      min_score: 0,
+      max_score: 1,
+      passing_score: 1,
       is_intermediate: isIntermediate,
       is_final: isFinal
+    }
+  }
+
+  private ensureUniqueGradeElementTypeName(name: string, before?: AdminCrudRecord): void {
+    const config = getAdminCrudEntityConfig('grade_element_types')
+    const existingItems = this.repository.list(config, {
+      entity: 'grade_element_types',
+      page: 1,
+      pageSize: 1000,
+      includeArchived: true,
+      orderBy: 'id',
+      orderDirection: 'asc'
+    }).items
+    const normalizedName = name.toLocaleLowerCase('ru-RU')
+    const currentId = normalizeNullableNumber(before?.id)
+    const duplicate = existingItems.some((item) => {
+      const itemId = normalizeNullableNumber(item.id)
+      const itemName = String(item.name ?? '')
+        .trim()
+        .toLocaleLowerCase('ru-RU')
+
+      return itemId !== currentId && itemName === normalizedName
+    })
+
+    if (duplicate) {
+      throw new Error('Оценочный элемент с таким названием уже существует')
     }
   }
 
@@ -1522,11 +1563,7 @@ function buildWeekPayloadsForRange(
 
   while (currentWeekStartDate.getTime() <= semesterEndDate.getTime()) {
     const calendarWeekEndDate = getCalendarWeekEndDate(currentWeekStartDate)
-    const currentWeekEndDate = clampDate(
-      calendarWeekEndDate,
-      currentWeekStartDate,
-      semesterEndDate
-    )
+    const currentWeekEndDate = clampDate(calendarWeekEndDate, currentWeekStartDate, semesterEndDate)
 
     payloads.push({
       semester_id: semesterId,
@@ -1717,5 +1754,3 @@ function timeToMinutes(value: string): number {
 
   return hours * 60 + minutes
 }
-
-

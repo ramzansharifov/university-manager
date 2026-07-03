@@ -28,6 +28,7 @@ import {
   TabsList,
   TabsTrigger
 } from '../../../shared/ui'
+import { formatDateForDisplay } from '../../../shared/lib/date'
 
 type RequiredStaffRoleKey =
   | 'faculty_dean'
@@ -94,8 +95,7 @@ const requiredStaffRoles: Record<RequiredStaffRoleKey, RequiredStaffRoleConfig> 
     label: 'Заведующий кафедрой',
     targetEntity: 'departments',
     targetField: 'head_teacher_id',
-    description:
-      'Выбери преподавателя, который будет назначен заведующим выбранной кафедрой.'
+    description: 'Выбери преподавателя, который будет назначен заведующим выбранной кафедрой.'
   },
   department_deputy_head: {
     key: 'department_deputy_head',
@@ -191,7 +191,10 @@ export function RequiredStaffPanel() {
     [teacherNameById]
   )
 
-  const groupFields = useMemo(() => createGroupRequiredStaffFields(teacherOptions), [teacherOptions])
+  const groupFields = useMemo(
+    () => createGroupRequiredStaffFields(teacherOptions),
+    [teacherOptions]
+  )
   const groupColumns = useMemo(
     () => createGroupRequiredStaffColumns(teacherNameById),
     [teacherNameById]
@@ -238,7 +241,9 @@ export function RequiredStaffPanel() {
       } catch (error) {
         if (!isCancelled) {
           setTeacherCandidatePool([])
-          setFormError(error instanceof Error ? error.message : 'Не удалось загрузить преподавателей')
+          setFormError(
+            error instanceof Error ? error.message : 'Не удалось загрузить преподавателей'
+          )
         }
       } finally {
         if (!isCancelled) {
@@ -376,7 +381,9 @@ export function RequiredStaffPanel() {
       await loadRelationOptions()
       setRefreshVersion((current) => current + 1)
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Не удалось снять преподавателя с должности')
+      setFormError(
+        error instanceof Error ? error.message : 'Не удалось снять преподавателя с должности'
+      )
     } finally {
       setIsRemoving(false)
     }
@@ -423,10 +430,7 @@ export function RequiredStaffPanel() {
             extraRowActions={(record) => (
               <RequiredStaffRowActions
                 record={record}
-                roles={[
-                  requiredStaffRoles.faculty_dean,
-                  requiredStaffRoles.faculty_deputy_dean
-                ]}
+                roles={[requiredStaffRoles.faculty_dean, requiredStaffRoles.faculty_deputy_dean]}
                 onOpenAssignment={openAssignmentDialog}
                 onOpenRemoval={openRemovalDialog}
               />
@@ -544,9 +548,7 @@ export function RequiredStaffPanel() {
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                 <label className="grid gap-2 xl:col-span-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">
-                    Назначение
-                  </span>
+                  <span className="text-sm font-medium text-[var(--color-text)]">Назначение</span>
                   <Select
                     value={selectedRoleKey || undefined}
                     disabled={!pendingAssignment || pendingAssignment.roles.length <= 1}
@@ -660,7 +662,8 @@ export function RequiredStaffPanel() {
                   Подходящие преподаватели
                 </h3>
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Таблица показывает основные поля карточки преподавателя. Выбери нужную строку и нажми «Назначить».
+                  Таблица показывает основные поля карточки преподавателя. Выбери нужную строку и
+                  нажми «Назначить».
                 </p>
               </div>
 
@@ -731,7 +734,7 @@ export function RequiredStaffPanel() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-[var(--color-text-muted)]">
-                          {formatCellValue(teacher.hire_date)}
+                          {formatDateForDisplay(teacher.hire_date)}
                         </td>
                         <td className="max-w-72 px-4 py-3 text-[var(--color-text-muted)]">
                           <span className="line-clamp-2">{formatCellValue(teacher.note)}</span>
@@ -785,10 +788,7 @@ export function RequiredStaffPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog
-        open={Boolean(pendingRemoval)}
-        onOpenChange={(open) => !open && closeRemovalDialog()}
-      >
+      <Dialog open={Boolean(pendingRemoval)} onOpenChange={(open) => !open && closeRemovalDialog()}>
         <DialogContent className="w-[calc(100%-2rem)] !max-w-2xl">
           <DialogHeader>
             <DialogTitle>Снять обязательного сотрудника</DialogTitle>
@@ -847,7 +847,12 @@ export function RequiredStaffPanel() {
               </Button>
             </DialogClose>
 
-            <Button type="button" variant="primary" disabled={isRemoving} onClick={() => void handleRemoveRequiredStaff()}>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={isRemoving}
+              onClick={() => void handleRemoveRequiredStaff()}
+            >
               {isRemoving ? 'Снимаем...' : 'Снять с должности'}
             </Button>
           </DialogFooter>
@@ -930,7 +935,8 @@ function createDepartmentRequiredStaffFields(
     {
       key: 'head_teacher_id',
       label: 'Заведующий кафедрой',
-      placeholder: teacherOptions.length > 0 ? 'Выбери преподавателя' : 'Сначала добавь преподавателей',
+      placeholder:
+        teacherOptions.length > 0 ? 'Выбери преподавателя' : 'Сначала добавь преподавателей',
       type: 'select',
       valueType: 'number',
       options: teacherOptions

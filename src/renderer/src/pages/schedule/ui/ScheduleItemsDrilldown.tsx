@@ -42,6 +42,20 @@ import {
 
 const dayNumbers = [1, 2, 3, 4, 5, 6, 7]
 
+type ScheduleColumnsPerRow = 1 | 2 | 3 | 4
+
+const scheduleColumnOptions: AdminCrudSelectOption[] = [1, 2, 3, 4].map((value) => ({
+  value: String(value),
+  label: String(value)
+}))
+
+const scheduleGridClasses: Record<ScheduleColumnsPerRow, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-1 md:grid-cols-2',
+  3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
+  4: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4'
+}
+
 interface GradeItemForm {
   day_of_week: string
   discipline_id: string
@@ -66,6 +80,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const [selectedGroupId, setSelectedGroupId] = useState('')
   const [selectedWeekId, setSelectedWeekId] = useState('')
   const [selectedSemesterId, setSelectedSemesterId] = useState('')
+  const [scheduleColumnsPerRow, setScheduleColumnsPerRow] = useState<ScheduleColumnsPerRow>(4)
 
   const [faculties, setFaculties] = useState<AdminCrudRecord[]>([])
   const [specialties, setSpecialties] = useState<AdminCrudRecord[]>([])
@@ -384,7 +399,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const subjectNameById = useMemo(() => createOptionsMap(subjectOptions), [subjectOptions])
   const groupNameById = useMemo(() => createOptionsMap(allGroupOptions), [allGroupOptions])
 
-
   const selectedSemesterDisciplines = useMemo(() => {
     if (!selectedSemesterId) {
       return []
@@ -573,6 +587,14 @@ export function ScheduleItemsDrilldown(): ReactElement {
     setSelectedWeekId('')
   }
 
+  function handleScheduleColumnsChange(value: string): void {
+    const nextValue = Number(value)
+
+    if (nextValue >= 1 && nextValue <= 4) {
+      setScheduleColumnsPerRow(nextValue as ScheduleColumnsPerRow)
+    }
+  }
+
   const canShowSchedule = Boolean(selectedGroup && selectedSemesterId && selectedWeek)
   const canCreateScheduleItem = canShowSchedule && selectedSemesterDisciplines.length > 0
   const canCreateGradeItem = canShowSchedule && selectedWeekDisciplines.length > 0
@@ -731,7 +753,9 @@ export function ScheduleItemsDrilldown(): ReactElement {
             {selectedFaculty ? <Badge>{getRecordName(selectedFaculty)}</Badge> : null}
             {selectedSpecialty ? <Badge>{getRecordName(selectedSpecialty)}</Badge> : null}
             {selectedGroup ? <Badge>{getRecordName(selectedGroup)}</Badge> : null}
-            {selectedSemesterId ? <Badge>{semesterNameById.get(Number(selectedSemesterId))}</Badge> : null}
+            {selectedSemesterId ? (
+              <Badge>{semesterNameById.get(Number(selectedSemesterId))}</Badge>
+            ) : null}
             {selectedWeek ? <Badge>{weekNameById.get(Number(selectedWeek.id))}</Badge> : null}
           </div>
         </CardContent>
@@ -807,6 +831,26 @@ export function ScheduleItemsDrilldown(): ReactElement {
           orderDirection="asc"
           canCreate={canCreateScheduleItem}
           hideSearch
+          headerActions={
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-[var(--color-text-muted)]">Колонок</span>
+              <Select
+                value={String(scheduleColumnsPerRow)}
+                onValueChange={handleScheduleColumnsChange}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {scheduleColumnOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          }
           onAfterMutation={loadOptions}
           renderItems={({
             items,
@@ -814,6 +858,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
             emptyMessage,
             canEdit,
             canArchive,
+            openCreateDialog,
             openEditDialog,
             requestArchive
           }) => (
@@ -831,8 +876,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
               lessonTypeNameById={lessonTypeNameById}
               gradeItems={selectedWeekGradeItems}
               gradeElementTypeNameById={gradeElementTypeNameById}
-           canCreate={canCreate}
-           onCreate={onCreateDay}
+              columnsPerRow={scheduleColumnsPerRow}
               canCreate={canCreateScheduleItem}
               onCreateDay={(dayNumber) => openCreateDialog({ day_of_week: dayNumber })}
               onEdit={openEditDialog}
@@ -1017,6 +1061,7 @@ function ScheduleWeekBoard({
   lessonTypeNameById,
   gradeItems,
   gradeElementTypeNameById,
+  columnsPerRow,
   canCreate,
   onCreateDay,
   onEdit,
@@ -1035,6 +1080,7 @@ function ScheduleWeekBoard({
   lessonTypeNameById: Map<number, string>
   gradeItems: AdminCrudRecord[]
   gradeElementTypeNameById: Map<number, string>
+  columnsPerRow: ScheduleColumnsPerRow
   canCreate: boolean
   onCreateDay: (dayNumber: number) => void
   onEdit: (record: AdminCrudRecord) => void
@@ -1065,7 +1111,7 @@ function ScheduleWeekBoard({
   const gradeItemsByDay = createGradeItemsByDay(gradeItems)
 
   return (
-    <div className="grid gap-4 xl:grid-cols-4">
+    <div className={`grid gap-4 ${scheduleGridClasses[columnsPerRow]}`}>
       {dayNumbers.map((dayNumber) => (
         <ScheduleDayCard
           key={dayNumber}
@@ -1082,6 +1128,8 @@ function ScheduleWeekBoard({
           lessonTypeNameById={lessonTypeNameById}
           gradeItems={gradeItemsByDay.get(dayNumber) ?? []}
           gradeElementTypeNameById={gradeElementTypeNameById}
+          canCreate={canCreate}
+          onCreate={onCreateDay}
           onEdit={onEdit}
           onArchive={onArchive}
         />
@@ -1159,7 +1207,24 @@ function ScheduleDayCard({
           </div>
         ) : null}
 
-        {items.map((item) => {
+        {createScheduleDayEntries(items, lessonPeriodById).map((entry) => {
+          if (entry.kind === 'gap') {
+            return (
+              <div
+                key={`gap:${String(entry.lessonPeriod.id)}`}
+                className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)]/60 px-3 py-2.5"
+              >
+                <span className="inline-flex items-center gap-2 text-xs font-medium text-[var(--color-text-muted)]">
+                  <FiClock />
+                  {getLessonPeriodLabel(entry.lessonPeriod)}
+                </span>
+
+                <Badge variant="muted">Окно</Badge>
+              </div>
+            )
+          }
+
+          const item = entry.item
           const lessonPeriodId = toNumberOrNull(item.lesson_period_id)
           const lessonPeriod = lessonPeriodId === null ? null : lessonPeriodById.get(lessonPeriodId)
 
@@ -1283,6 +1348,70 @@ function createItemsByDay(items: AdminCrudRecord[]): Map<number, AdminCrudRecord
   return result
 }
 
+type ScheduleDayEntry =
+  | {
+      kind: 'lesson'
+      item: AdminCrudRecord
+    }
+  | {
+      kind: 'gap'
+      lessonPeriod: AdminCrudRecord
+    }
+
+function createScheduleDayEntries(
+  items: AdminCrudRecord[],
+  lessonPeriodById: Map<number, AdminCrudRecord>
+): ScheduleDayEntry[] {
+  const lessonPeriodByNumber = new Map<number, AdminCrudRecord>()
+
+  lessonPeriodById.forEach((lessonPeriod) => {
+    const periodNumber = toNumberOrNull(lessonPeriod.number)
+
+    if (periodNumber !== null) {
+      lessonPeriodByNumber.set(periodNumber, lessonPeriod)
+    }
+  })
+
+  const result: ScheduleDayEntry[] = []
+  let previousPeriodNumber: number | null = null
+
+  items.forEach((item) => {
+    const lessonPeriodId = toNumberOrNull(item.lesson_period_id)
+    const lessonPeriod = lessonPeriodId === null ? undefined : lessonPeriodById.get(lessonPeriodId)
+    const currentPeriodNumber = toNumberOrNull(lessonPeriod?.number)
+
+    if (currentPeriodNumber !== null) {
+      const firstMissingPeriodNumber = previousPeriodNumber === null ? 1 : previousPeriodNumber + 1
+
+      for (
+        let missingPeriodNumber = firstMissingPeriodNumber;
+        missingPeriodNumber < currentPeriodNumber;
+        missingPeriodNumber += 1
+      ) {
+        const missingLessonPeriod = lessonPeriodByNumber.get(missingPeriodNumber)
+
+        if (missingLessonPeriod) {
+          result.push({
+            kind: 'gap',
+            lessonPeriod: missingLessonPeriod
+          })
+        }
+      }
+    }
+
+    result.push({
+      kind: 'lesson',
+      item
+    })
+
+    if (currentPeriodNumber !== null) {
+      previousPeriodNumber = currentPeriodNumber
+    }
+  })
+
+  return result
+}
+
 function createGradeItemsByDay(items: AdminCrudRecord[]): Map<number, AdminCrudRecord[]> {
   const result = new Map<number, AdminCrudRecord[]>()
 
@@ -1318,6 +1447,16 @@ function getLessonTimeText(
   }
 
   return renderRelation(item.lesson_period_id, lessonPeriodNameById)
+}
+
+function getLessonPeriodLabel(lessonPeriod: AdminCrudRecord): string {
+  const periodNumber = String(lessonPeriod.number ?? '')
+  const timeRange =
+    lessonPeriod.starts_at && lessonPeriod.ends_at
+      ? ` · ${String(lessonPeriod.starts_at)}–${String(lessonPeriod.ends_at)}`
+      : ''
+
+  return `${periodNumber} пара${timeRange}`
 }
 
 function getLessonPeriodSortValue(

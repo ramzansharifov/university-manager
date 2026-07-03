@@ -24,6 +24,7 @@ import {
   SelectValue,
   Textarea
 } from '../../../shared/ui'
+import { formatDateForDisplay, formatDateRangeForDisplay } from '../../../shared/lib/date'
 
 const emptySelectValue = '__empty__'
 
@@ -445,7 +446,7 @@ export function LearningJournalMatrix(): ReactElement {
           dayOfWeek: day.value,
           date,
           title: day.shortLabel,
-          subtitle: formatShortDateLabel(date)
+          subtitle: formatDateForDisplay(date)
         }
       })
 
@@ -915,7 +916,7 @@ export function LearningJournalMatrix(): ReactElement {
                           <th
                             key={column.id}
                             className="w-14 min-w-14 border-b border-r border-[var(--color-border)] px-1 py-2 text-center last:border-r-0"
-                            title={`${column.title} · ${column.subtitle} · ${formatDateLabel(column.date)}`}
+                            title={`${column.title} · ${column.subtitle} · ${formatDateForDisplay(column.date)}`}
                           >
                             <div className="grid gap-0.5">
                               <span className="font-semibold text-[var(--color-text)]">
@@ -1179,7 +1180,9 @@ function getWeekDateRangeLabel(week: AdminCrudRecord): string {
     return 'Без дат'
   }
 
-  return `${formatDateLabel(String(week.starts_at))}–${formatDateLabel(String(week.ends_at))}`
+  return formatDateRangeForDisplay(week.starts_at, week.ends_at, {
+    fallback: 'Без дат'
+  })
 }
 
 function getGradeItemDayOfWeek(
@@ -1263,18 +1266,6 @@ function getPersonFullName(record: AdminCrudRecord): string {
     .join(' ')
 
   return fullName || getRecordName(record)
-}
-
-function formatDateLabel(value: string): string {
-  const [year, month, day] = value.split('-')
-
-  return year && month && day ? `${day}.${month}.${year}` : value
-}
-
-function formatShortDateLabel(value: string): string {
-  const [, month, day] = value.split('-')
-
-  return month && day ? `${day}.${month}` : ''
 }
 
 function parseDate(value: string): Date {

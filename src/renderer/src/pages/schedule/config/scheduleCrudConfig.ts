@@ -4,6 +4,7 @@ import type {
   AdminCrudRecord,
   AdminCrudSelectOption
 } from '../../../features/admin-crud'
+import { formatDateRangeForDisplay } from '../../../shared/lib/date'
 
 export interface ScheduleColumnMaps {
   audienceTypeNameById: Map<number, string>
@@ -454,8 +455,10 @@ export function createDisciplineOptions(
 
 export function createWeekOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
   return items.map((item) => {
-    const dates =
-      item.starts_at && item.ends_at ? `: ${String(item.starts_at)}–${String(item.ends_at)}` : ''
+    const dateRange = formatDateRangeForDisplay(item.starts_at, item.ends_at, {
+      fallback: ''
+    })
+    const dates = dateRange ? `: ${dateRange}` : ''
 
     return {
       value: String(item.id),

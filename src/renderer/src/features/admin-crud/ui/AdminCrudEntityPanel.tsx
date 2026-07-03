@@ -32,6 +32,7 @@ import {
   Textarea
 } from '../../../shared/ui'
 import { cn } from '../../../shared/lib/cn'
+import { formatDateForDisplay } from '../../../shared/lib/date'
 
 type AdminCrudListResult = Awaited<ReturnType<Window['api']['adminCrud']['list']>>
 
@@ -134,6 +135,7 @@ interface AdminCrudEntityPanelProps {
   renderRowGroupHeader?: (groupKey: string, records: AdminCrudRecord[]) => ReactNode
   hideSearch?: boolean
   renderItems?: (params: AdminCrudRenderItemsParams) => ReactNode
+  headerActions?: ReactNode
   onRowClick?: (record: AdminCrudRecord) => void
   extraRowActions?: (record: AdminCrudRecord) => ReactNode
   onAfterMutation?: () => void | Promise<void>
@@ -160,6 +162,7 @@ export function AdminCrudEntityPanel({
   orderDirection = 'asc',
   hideSearch = false,
   renderItems,
+  headerActions,
   rowGroupBy,
   renderRowGroupHeader,
   onRowClick,
@@ -417,8 +420,9 @@ export function AdminCrudEntityPanel({
       await loadItems()
       await onAfterMutation?.()
     } catch (submitError) {
-      const message =
+      const message = normalizeAdminCrudSubmitError(
         submitError instanceof Error ? submitError.message : 'Не удалось сохранить запись'
+      )
 
       setFormError(message)
       applySubmitErrorToForm(form, fields, message)
@@ -498,11 +502,17 @@ export function AdminCrudEntityPanel({
             <CardDescription>{description}</CardDescription>
           </div>
 
-          {canCreate ? (
-            <Button onClick={openCreateDialog}>
-              <FiPlus />
-              {createButtonLabel}
-            </Button>
+          {headerActions || canCreate ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {headerActions}
+
+              {canCreate ? (
+                <Button onClick={() => openCreateDialog()}>
+                  <FiPlus />
+                  {createButtonLabel}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </CardHeader>
@@ -879,6 +889,32 @@ function normalizePermanentDeleteError(message: string): string {
 
   return message
 }
+
+function normalizeAdminCrudSubmitError(message: string): string {
+  const normalizedMessage = message
+    .replace(/^Error invoking remote method '[^']+':\s*/i, '')
+    .replace(/^Error:\s*/i, '')
+    .trim()
+
+  if (/NOT NULL constraint failed/i.test(normalizedMessage)) {
+    return 'Не заполнено обязательное поле. Проверь данные формы.'
+  }
+
+  if (/UNIQUE constraint failed:\s*grade_element_types\.name/i.test(normalizedMessage)) {
+    return 'Оценочный элемент с таким названием уже существует.'
+  }
+
+  if (/UNIQUE constraint failed/i.test(normalizedMessage)) {
+    return 'Запись с такими данными уже существует.'
+  }
+
+  if (/FOREIGN KEY constraint failed/i.test(normalizedMessage)) {
+    return 'Запись связана с некорректными или отсутствующими данными.'
+  }
+
+  return normalizedMessage || 'Не удалось сохранить запись'
+}
+
 function applySubmitErrorToForm(
   form: UseFormReturn<Record<string, string>>,
   fields: AdminCrudFieldConfig[],
@@ -896,10 +932,7 @@ function applySubmitErrorToForm(
   })
 }
 
-function inferSubmitErrorField(
-  fields: AdminCrudFieldConfig[],
-  message: string
-): string | null {
+function inferSubmitErrorField(fields: AdminCrudFieldConfig[], message: string): string | null {
   const normalizedMessage = normalizeErrorText(message)
 
   const fieldByLabel = fields.find((field) => {
@@ -908,6 +941,10 @@ function inferSubmitErrorField(
 
   if (fieldByLabel) {
     return fieldByLabel.key
+  }
+
+  if (normalizedMessage.includes('назван')) {
+    return fields.find((field) => field.key === 'name')?.key ?? null
   }
 
   if (normalizedMessage.includes('email')) {
@@ -1413,24 +1450,10 @@ function formatValue(value: unknown, column?: AdminCrudColumnConfig): string {
   }
 
   if (column?.type === 'date') {
-    return formatIsoDateToDisplay(String(value))
+    return formatDateForDisplay(value)
   }
 
   return String(value)
-}
-
-function formatIsoDateToDisplay(value: string): string {
-  if (!value) {
-    return '—'
-  }
-
-  const [year, month, day] = value.split('-')
-
-  if (!year || !month || !day) {
-    return value
-  }
-
-  return `${day}.${month}.${year}`
 }
 
 function getRecordName(record: AdminCrudRecord): string {

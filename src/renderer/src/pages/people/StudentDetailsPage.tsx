@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle
 } from '../../shared/ui'
+import { formatDateForDisplay } from '../../shared/lib/date'
 
 type StudentRelatedData = {
   group: AdminCrudRecord | null
@@ -157,13 +158,16 @@ export function StudentDetailsPage() {
                 <InfoItem label="Фамилия" value={student.last_name} />
                 <InfoItem label="Имя" value={student.first_name} />
                 <InfoItem label="Отчество" value={student.middle_name} />
-                <InfoItem label="Дата рождения" value={formatDate(student.birth_date)} />
+                <InfoItem label="Дата рождения" value={formatDateForDisplay(student.birth_date)} />
                 <InfoItem label="Email" value={student.email} />
                 <InfoItem label="Телефон" value={student.phone} />
-                <InfoItem label="Дата поступления" value={formatDate(student.admission_date)} />
+                <InfoItem
+                  label="Дата поступления"
+                  value={formatDateForDisplay(student.admission_date)}
+                />
                 <InfoItem
                   label="Дата изменения статуса"
-                  value={formatDate(student.status_changed_at)}
+                  value={formatDateForDisplay(student.status_changed_at)}
                 />
                 <InfoItem label="Студенческий билет" value={student.student_card_number} />
               </div>
@@ -217,20 +221,6 @@ function formatValue(value: unknown): string {
   }
 
   return String(value)
-}
-
-function formatDate(value: unknown): string {
-  if (value === null || value === undefined || value === '') {
-    return '—'
-  }
-
-  const [year, month, day] = String(value).split('-')
-
-  if (!year || !month || !day) {
-    return String(value)
-  }
-
-  return `${day}.${month}.${year}`
 }
 
 function getPersonName(record: AdminCrudRecord): string {

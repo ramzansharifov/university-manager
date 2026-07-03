@@ -4,6 +4,7 @@ import type {
   AdminCrudRecord,
   AdminCrudSelectOption
 } from '../../../features/admin-crud'
+import { formatDateRangeForDisplay } from '../../../shared/lib/date'
 
 export interface AcademicProcessColumnMaps {
   departmentNameById: Map<number, string>
@@ -413,26 +414,10 @@ function renderSemesterDateRange(semester: AdminCrudRecord | undefined): string 
     return 'Не сформирован'
   }
 
-  const startsAt = formatIsoDateToDisplay(semester.starts_at)
-  const endsAt = formatIsoDateToDisplay(semester.ends_at)
-
-  if (startsAt === '—' || endsAt === '—') {
-    return 'Не сформирован'
-  }
-
-  return `${startsAt} — ${endsAt}`
-}
-
-function formatIsoDateToDisplay(value: unknown): string {
-  const stringValue = String(value ?? '').trim()
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(stringValue)) {
-    return '—'
-  }
-
-  const [year, month, day] = stringValue.split('-')
-
-  return `${day}.${month}.${year}`
+  return formatDateRangeForDisplay(semester.starts_at, semester.ends_at, {
+    fallback: 'Не сформирован',
+    separator: ' — '
+  })
 }
 export const vacationTypeOptions: AdminCrudSelectOption[] = [
   {

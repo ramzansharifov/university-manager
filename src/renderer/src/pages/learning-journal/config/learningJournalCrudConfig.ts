@@ -4,6 +4,7 @@ import type {
   AdminCrudRecord,
   AdminCrudSelectOption
 } from '../../../features/admin-crud'
+import { formatDateForDisplay, formatDateRangeForDisplay } from '../../../shared/lib/date'
 
 export const lessonSessionStatusOptions: AdminCrudSelectOption[] = [
   { value: 'planned', label: 'Запланировано' },
@@ -48,6 +49,8 @@ export const gradeElementTypeFields: AdminCrudFieldConfig[] = [
     label: 'Минимальный балл',
     placeholder: 'Например: 0',
     type: 'number',
+    required: true,
+    defaultValue: '0',
     visibleWhen: {
       fieldKey: 'grading_mode',
       value: 'score'
@@ -58,6 +61,8 @@ export const gradeElementTypeFields: AdminCrudFieldConfig[] = [
     label: 'Максимальный балл',
     placeholder: 'Например: 100',
     type: 'number',
+    required: true,
+    defaultValue: '100',
     visibleWhen: {
       fieldKey: 'grading_mode',
       value: 'score'
@@ -68,6 +73,7 @@ export const gradeElementTypeFields: AdminCrudFieldConfig[] = [
     label: 'Проходной балл',
     placeholder: 'Например: 60',
     type: 'number',
+    defaultValue: '50',
     visibleWhen: {
       fieldKey: 'grading_mode',
       value: 'score'
@@ -79,7 +85,7 @@ export const gradeElementTypeFields: AdminCrudFieldConfig[] = [
     placeholder: 'Промежуточный элемент, например контрольная',
     type: 'toggle',
     valueType: 'number',
-    defaultValue: '0',
+    defaultValue: '1',
     exclusiveGroup: 'grade-element-kind'
   },
   {
@@ -112,15 +118,18 @@ export const gradeElementTypeColumns: AdminCrudColumnConfig[] = [
   },
   {
     key: 'min_score',
-    label: 'Мин. балл'
+    label: 'Мин. балл',
+    render: (record) => renderGradeElementScore(record, 'min_score')
   },
   {
     key: 'max_score',
-    label: 'Макс. балл'
+    label: 'Макс. балл',
+    render: (record) => renderGradeElementScore(record, 'max_score')
   },
   {
     key: 'passing_score',
-    label: 'Проходной'
+    label: 'Проходной',
+    render: (record) => renderGradeElementScore(record, 'passing_score')
   },
   {
     key: 'is_intermediate',
@@ -741,7 +750,7 @@ export function createLessonSessionOptions(
 
     return {
       value: String(item.id),
-      label: `${String(item.lesson_date ?? '')} / ${renderRelation(item.schedule_item_id, maps.scheduleItemNameById)}`,
+      label: `${formatDateForDisplay(item.lesson_date)} / ${renderRelation(item.schedule_item_id, maps.scheduleItemNameById)}`,
       meta: {
         group_id: groupId === null ? null : String(groupId)
       }
@@ -792,8 +801,10 @@ export function createDisciplineOptions(
 
 export function createWeekOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
   return items.map((item) => {
-    const dates =
-      item.starts_at && item.ends_at ? `: ${String(item.starts_at)}–${String(item.ends_at)}` : ''
+    const dateRange = formatDateRangeForDisplay(item.starts_at, item.ends_at, {
+      fallback: ''
+    })
+    const dates = dateRange ? `: ${dateRange}` : ''
 
     return {
       value: String(item.id),
@@ -894,6 +905,19 @@ function renderGradingMode(value: unknown): string {
   }
 
   return 'Баллы'
+}
+
+function renderGradeElementScore(
+  record: AdminCrudRecord,
+  field: 'min_score' | 'max_score' | 'passing_score'
+): string {
+  if (record.grading_mode === 'pass_fail') {
+    return '—'
+  }
+
+  const value = record[field]
+
+  return value === null || value === undefined || value === '' ? '—' : String(value)
 }
 
 function renderBoolean(value: unknown): string {
