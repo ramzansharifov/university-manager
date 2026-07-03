@@ -189,9 +189,6 @@ export class AdminCrudService {
       return this.prepareLessonPeriodData(data, before)
     }
 
-    if (entity === 'disciplines') {
-      return this.prepareDisciplineData(data, before)
-    }
     if (entity === 'schedule_items') {
       return this.prepareScheduleItemData(data, before)
     }
@@ -804,80 +801,6 @@ export class AdminCrudService {
     return nextData
   }
 
-  private prepareDisciplineData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
-    const nextData = { ...data }
-
-    const curriculumItemId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'curriculum_item_id')
-    )
-    const teacherId = normalizeNullableNumber(pickNextValue(nextData, before, 'teacher_id'))
-
-    if (curriculumItemId === null) {
-      throw new Error('Выбери пункт учебного плана')
-    }
-
-    if (teacherId === null) {
-      throw new Error('Выбери преподавателя')
-    }
-
-    const curriculumItem = this.ensureActiveRelatedRecord(
-      'curriculum_items',
-      curriculumItemId,
-      'Выбранный пункт учебного плана не найден или архивирован'
-    )
-
-    const subjectId = normalizeNullableNumber(curriculumItem.subject_id)
-    const semesterId = normalizeNullableNumber(curriculumItem.semester_id)
-
-    if (subjectId === null) {
-      throw new Error('У выбранного пункта учебного плана не указан предмет')
-    }
-
-    if (semesterId === null) {
-      throw new Error('У выбранного пункта учебного плана не указан семестр')
-    }
-
-    const subject = this.ensureActiveRelatedRecord(
-      'subjects',
-      subjectId,
-      'Предмет выбранного пункта учебного плана не найден или архивирован'
-    )
-    const teacher = this.ensureActiveRelatedRecord(
-      'teachers',
-      teacherId,
-      'Выбранный преподаватель не найден или архивирован'
-    )
-
-    const subjectDepartmentId = normalizeNullableNumber(subject.department_id)
-    const teacherDepartmentId = normalizeNullableNumber(teacher.department_id)
-
-    if (subjectDepartmentId === null) {
-      throw new Error('У выбранного предмета не указана кафедра')
-    }
-
-    if (teacherDepartmentId !== subjectDepartmentId) {
-      throw new Error('Преподаватель должен относиться к кафедре выбранного предмета')
-    }
-
-    if (!teacherTeachesSubject(teacher.teaching_subjects, subject.name)) {
-      throw new Error(
-        `Преподаватель ${formatPersonName(teacher)} не преподаёт предмет "${String(
-          subject.name ?? ''
-        )}". Выбери преподавателя, у которого этот предмет указан в поле «Преподаёт».`
-      )
-    }
-
-    const subjectName = String(subject.name ?? '').trim()
-
-    return {
-      ...nextData,
-      curriculum_item_id: curriculumItemId,
-      subject_id: subjectId,
-      semester_id: semesterId,
-      teacher_id: teacherId,
-      name: String(nextData.name ?? before?.name ?? subjectName).trim() || subjectName
-    }
-  }
   private prepareScheduleItemData(
     data: AdminCrudRecord,
     before?: AdminCrudRecord
@@ -1170,32 +1093,6 @@ function getPeopleEntityLabel(entity: AdminEntityKey): string {
   }
 
   return 'человека'
-}
-function teacherTeachesSubject(teachingSubjects: unknown, subjectName: unknown): boolean {
-  const normalizedSubjectName = normalizeSubjectNameForMatch(subjectName)
-
-  if (!normalizedSubjectName) {
-    return false
-  }
-
-  return String(teachingSubjects ?? '')
-    .split(/[\n,;]+/)
-    .map((item) => normalizeSubjectNameForMatch(item))
-    .filter(Boolean)
-    .includes(normalizedSubjectName)
-}
-
-function normalizeSubjectNameForMatch(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
-}
-
-function formatPersonName(record: AdminCrudRecord): string {
-  const fullName = [record.last_name, record.first_name, record.middle_name]
-    .filter(Boolean)
-    .map(String)
-    .join(' ')
-
-  return fullName || `#${String(record.id ?? '')}`
 }
 
 function createDictionaryItemKey(value: string): string {

@@ -1,0 +1,237 @@
+@replace-first src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx
+@find
+    setTeacherOptions(createTeacherOptions(teachers.items, nextDepartmentFacultyIdById))
+@endfind
+@with
+    setTeacherOptions(createTeacherOptions(teachers.items, nextDepartmentFacultyIdById, subjects.items))
+@endwith
+@end
+
+@replace-block src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx
+@from
+function createTeacherOptions(
+@endfrom
+@to
+}
+@endto
+@with
+function createTeacherOptions(
+  teachers: AdminCrudRecord[],
+  departmentFacultyIdById: Map<number, number>,
+  subjects: AdminCrudRecord[]
+): AdminCrudSelectOption[] {
+  const subjectIdByDepartmentAndName = createSubjectIdByDepartmentAndName(subjects)
+
+  return teachers.map((teacher) => {
+    const departmentId = toNumberOrNull(teacher.department_id)
+    const facultyId =
+      departmentId === null ? null : (departmentFacultyIdById.get(departmentId) ?? null)
+    const subjectId =
+      departmentId === null
+        ? null
+        : (subjectIdByDepartmentAndName.get(
+            createDepartmentSubjectKey(departmentId, teacher.teaching_subjects)
+          ) ?? null)
+    const label = getPersonName(teacher).trim()
+
+    return {
+      value: String(teacher.id),
+      label: label || `#${String(teacher.id)}`,
+      meta: {
+        subject_id: subjectId === null ? null : String(subjectId),
+        subject_department_id: departmentId === null ? null : String(departmentId),
+        subject_faculty_id: facultyId === null ? null : String(facultyId)
+      }
+    }
+  })
+}
+@endwith
+@end
+
+@insert-before-once src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx
+@find
+function toNumberOrNull(value: unknown): number | null {
+@endfind
+@content
+function createSubjectIdByDepartmentAndName(subjects: AdminCrudRecord[]): Map<string, number> {
+  const result = new Map<string, number>()
+
+  subjects.forEach((subject) => {
+    const subjectId = toNumberOrNull(subject.id)
+    const departmentId = toNumberOrNull(subject.department_id)
+
+    if (subjectId === null || departmentId === null) {
+      return
+    }
+
+    result.set(createDepartmentSubjectKey(departmentId, subject.name), subjectId)
+  })
+
+  return result
+}
+
+function createDepartmentSubjectKey(departmentId: number, subjectName: unknown): string {
+  return `${departmentId}:${normalizeSubjectName(subjectName)}`
+}
+
+function normalizeSubjectName(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/academic-process/config/academicProcessCrudConfig.ts
+@find
+      dependsOn: 'subject_department_id',
+      dependencyPlaceholder: 'Сначала выбери пункт учебного плана',
+@endfind
+@with
+      dependsOn: 'subject_id',
+      dependencyPlaceholder: 'Сначала выбери пункт учебного плана',
+@endwith
+@end
+
+@insert-before-once src/main/services/adminCrudService.ts
+@find
+    if (entity === 'schedule_items') {
+@endfind
+@content
+    if (entity === 'disciplines') {
+      return this.prepareDisciplineData(data, before)
+    }
+
+@endcontent
+@end
+
+@insert-before-once src/main/services/adminCrudService.ts
+@find
+  private prepareScheduleItemData(
+@endfind
+@content
+  private prepareDisciplineData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
+    const nextData = { ...data }
+
+    const curriculumItemId = normalizeNullableNumber(
+      pickNextValue(nextData, before, 'curriculum_item_id')
+    )
+    const teacherId = normalizeNullableNumber(pickNextValue(nextData, before, 'teacher_id'))
+
+    if (curriculumItemId === null) {
+      throw new Error('Выбери пункт учебного плана')
+    }
+
+    if (teacherId === null) {
+      throw new Error('Выбери преподавателя')
+    }
+
+    const curriculumItem = this.ensureActiveRelatedRecord(
+      'curriculum_items',
+      curriculumItemId,
+      'Выбранный пункт учебного плана не найден или архивирован'
+    )
+
+    const subjectId = normalizeNullableNumber(curriculumItem.subject_id)
+    const semesterId = normalizeNullableNumber(curriculumItem.semester_id)
+
+    if (subjectId === null) {
+      throw new Error('У выбранного пункта учебного плана не указан предмет')
+    }
+
+    if (semesterId === null) {
+      throw new Error('У выбранного пункта учебного плана не указан семестр')
+    }
+
+    const subject = this.ensureActiveRelatedRecord(
+      'subjects',
+      subjectId,
+      'Предмет выбранного пункта учебного плана не найден или архивирован'
+    )
+    const teacher = this.ensureActiveRelatedRecord(
+      'teachers',
+      teacherId,
+      'Выбранный преподаватель не найден или архивирован'
+    )
+
+    const subjectDepartmentId = normalizeNullableNumber(subject.department_id)
+    const teacherDepartmentId = normalizeNullableNumber(teacher.department_id)
+
+    if (subjectDepartmentId === null) {
+      throw new Error('У выбранного предмета не указана кафедра')
+    }
+
+    if (teacherDepartmentId !== subjectDepartmentId) {
+      throw new Error('Преподаватель должен относиться к кафедре выбранного предмета')
+    }
+
+    if (!teacherTeachesSubject(teacher.teaching_subjects, subject.name)) {
+      throw new Error(
+        `Преподаватель ${formatPersonName(teacher)} не преподаёт предмет "${String(
+          subject.name ?? ''
+        )}". Выбери преподавателя, у которого этот предмет указан в поле «Преподаёт».`
+      )
+    }
+
+    const subjectName = String(subject.name ?? '').trim()
+
+    return {
+      ...nextData,
+      curriculum_item_id: curriculumItemId,
+      subject_id: subjectId,
+      semester_id: semesterId,
+      teacher_id: teacherId,
+      name: String(nextData.name ?? before?.name ?? subjectName).trim() || subjectName
+    }
+  }
+
+@endcontent
+@end
+
+@insert-after-once src/main/services/adminCrudService.ts
+@find
+function getPeopleEntityLabel(entity: AdminEntityKey): string {
+  if (entity === 'students') {
+    return 'студента'
+  }
+
+  if (entity === 'teachers') {
+    return 'преподавателя'
+  }
+
+  if (entity === 'employees') {
+    return 'сотрудника'
+  }
+
+  return 'человека'
+}
+@endfind
+@content
+
+function teacherTeachesSubject(teachingSubjects: unknown, subjectName: unknown): boolean {
+  const normalizedSubjectName = normalizeSubjectNameForMatch(subjectName)
+
+  if (!normalizedSubjectName) {
+    return false
+  }
+
+  return String(teachingSubjects ?? '')
+    .split(/[\n,;]+/)
+    .map((item) => normalizeSubjectNameForMatch(item))
+    .filter(Boolean)
+    .includes(normalizedSubjectName)
+}
+
+function normalizeSubjectNameForMatch(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function formatPersonName(record: AdminCrudRecord): string {
+  const fullName = [record.last_name, record.first_name, record.middle_name]
+    .filter(Boolean)
+    .map(String)
+    .join(' ')
+
+  return fullName || `#${String(record.id ?? '')}`
+}
+@endcontent
+@end

@@ -88,7 +88,7 @@ export function GroupDisciplinesDrilldown() {
     const nextSubjectDepartmentIdById = createSubjectDepartmentMap(subjects.items)
 
     setSubjectOptions(createOptions(subjects.items, getRecordName))
-    setTeacherOptions(createTeacherOptions(teachers.items, nextDepartmentFacultyIdById, subjects.items))
+    setTeacherOptions(createTeacherOptions(teachers.items, nextDepartmentFacultyIdById))
     setSemesterOptions(createOptions(semesters.items, getSemesterName))
     setCurriculumItems(curriculumItemsResult.items)
     setCurriculumPlans(curriculumPlansResult.items)
@@ -275,35 +275,18 @@ function createDepartmentFacultyMap(departments: AdminCrudRecord[]): Map<number,
 
 function createTeacherOptions(
   teachers: AdminCrudRecord[],
-  departmentFacultyIdById: Map<number, number>,
-  subjects: AdminCrudRecord[]
+  departmentFacultyIdById: Map<number, number>
 ): AdminCrudSelectOption[] {
-  const subjectIdByDepartmentAndName = createSubjectIdByDepartmentAndName(subjects)
-
   return teachers.map((teacher) => {
     const departmentId = toNumberOrNull(teacher.department_id)
     const facultyId =
       departmentId === null ? null : (departmentFacultyIdById.get(departmentId) ?? null)
-    const subjectId =
-      departmentId === null
-        ? null
-        : (subjectIdByDepartmentAndName.get(
-            createDepartmentSubjectKey(departmentId, teacher.teaching_subjects)
-          ) ?? null)
     const label = getPersonName(teacher).trim()
 
     return {
       value: String(teacher.id),
       label: label || `#${String(teacher.id)}`,
       meta: {
-        subject_id: subjectId === null ? null : String(subjectId),
-        subject_department_id: departmentId === null ? null : String(departmentId),
-        subject_faculty_id: facultyId === null ? null : String(facultyId)
-      }
-    }
-  })
-}`,
-      meta: {
         subject_department_id: departmentId === null ? null : String(departmentId),
         subject_faculty_id: facultyId === null ? null : String(facultyId)
       }
@@ -311,30 +294,6 @@ function createTeacherOptions(
   })
 }
 
-function createSubjectIdByDepartmentAndName(subjects: AdminCrudRecord[]): Map<string, number> {
-  const result = new Map<string, number>()
-
-  subjects.forEach((subject) => {
-    const subjectId = toNumberOrNull(subject.id)
-    const departmentId = toNumberOrNull(subject.department_id)
-
-    if (subjectId === null || departmentId === null) {
-      return
-    }
-
-    result.set(createDepartmentSubjectKey(departmentId, subject.name), subjectId)
-  })
-
-  return result
-}
-
-function createDepartmentSubjectKey(departmentId: number, subjectName: unknown): string {
-  return `${departmentId}:${normalizeSubjectName(subjectName)}`
-}
-
-function normalizeSubjectName(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
-}
 function toNumberOrNull(value: unknown): number | null {
   if (value === null || value === undefined || value === '') {
     return null

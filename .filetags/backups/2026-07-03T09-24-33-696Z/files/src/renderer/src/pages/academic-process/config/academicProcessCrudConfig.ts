@@ -503,7 +503,7 @@ export function createDisciplineFields(options: {
       type: 'select',
       valueType: 'number',
       options: options.teacherOptions,
-      dependsOn: 'subject_id',
+      dependsOn: 'subject_department_id',
       dependencyPlaceholder: 'Сначала выбери пункт учебного плана',
       required: true
     },
