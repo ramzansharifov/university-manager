@@ -1,7 +1,7 @@
 import type { FormEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { Resolver, UseFormReturn } from 'react-hook-form'
+import type { Resolver } from 'react-hook-form'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { FiArchive, FiEdit2, FiPlus, FiRefreshCcw, FiSearch, FiTrash2 } from 'react-icons/fi'
@@ -169,7 +169,6 @@ export function AdminCrudEntityPanel({
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<DialogMode>('create')
@@ -316,8 +315,6 @@ export function AdminCrudEntityPanel({
   function openCreateDialog() {
     setDialogMode('create')
     setSelectedRecord(null)
-    setFormError(null)
-    form.clearErrors()
     form.reset(createEmptyFormData(fields))
     setDialogOpen(true)
   }
@@ -325,8 +322,6 @@ export function AdminCrudEntityPanel({
   function openEditDialog(record: AdminCrudRecord) {
     setDialogMode('edit')
     setSelectedRecord(record)
-    setFormError(null)
-    form.clearErrors()
 
     const nextFormData = fields.reduce<Record<string, string>>((result, field) => {
       const value = record[field.key]
@@ -344,8 +339,6 @@ export function AdminCrudEntityPanel({
     if (!open) {
       setDialogMode('create')
       setSelectedRecord(null)
-      setFormError(null)
-      form.clearErrors()
       form.reset(emptyFormData)
       setIsSubmitting(false)
     }
@@ -366,8 +359,6 @@ export function AdminCrudEntityPanel({
   async function handleFormSubmit(formValues: Record<string, string>) {
     setIsSubmitting(true)
     setError(null)
-    setFormError(null)
-    form.clearErrors()
 
     try {
       const payload = {
@@ -396,11 +387,7 @@ export function AdminCrudEntityPanel({
       await loadItems()
       await onAfterMutation?.()
     } catch (submitError) {
-      const message =
-        submitError instanceof Error ? submitError.message : 'Не удалось сохранить запись'
-
-      setFormError(message)
-      applySubmitErrorToForm(form, fields, message)
+      setError(submitError instanceof Error ? submitError.message : 'Не удалось сохранить запись')
     } finally {
       setIsSubmitting(false)
     }
@@ -686,11 +673,6 @@ export function AdminCrudEntityPanel({
             onSubmit={(event) => void form.handleSubmit(handleFormSubmit)(event)}
           >
             <div className="grid min-h-0 grid-cols-1 gap-4 overflow-y-auto px-6 py-5 md:grid-cols-2 xl:grid-cols-3">
-              {formError ? (
-                <div className="rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)] md:col-span-2 xl:col-span-3">
-                  {formError}
-                </div>
-              ) : null}
               {fields
                 .filter((field) => isFieldVisible(field, watchedFormValues))
                 .map((field) => {
@@ -769,62 +751,6 @@ export function AdminCrudEntityPanel({
   )
 }
 
-function applySubmitErrorToForm(
-  form: UseFormReturn<Record<string, string>>,
-  fields: AdminCrudFieldConfig[],
-  message: string
-): void {
-  const fieldKey = inferSubmitErrorField(fields, message)
-
-  if (!fieldKey) {
-    return
-  }
-
-  form.setError(fieldKey, {
-    type: 'server',
-    message
-  })
-}
-
-function inferSubmitErrorField(
-  fields: AdminCrudFieldConfig[],
-  message: string
-): string | null {
-  const normalizedMessage = normalizeErrorText(message)
-
-  const fieldByLabel = fields.find((field) => {
-    return normalizedMessage.includes(normalizeErrorText(field.label))
-  })
-
-  if (fieldByLabel) {
-    return fieldByLabel.key
-  }
-
-  if (normalizedMessage.includes('email')) {
-    return fields.find((field) => field.key === 'email')?.key ?? null
-  }
-
-  if (
-    normalizedMessage.includes('телефон') ||
-    normalizedMessage.includes('phone') ||
-    normalizedMessage.includes('номер телефона')
-  ) {
-    return fields.find((field) => field.key === 'phone')?.key ?? null
-  }
-
-  if (
-    normalizedMessage.includes('студенческий') ||
-    normalizedMessage.includes('номер студенческого')
-  ) {
-    return fields.find((field) => field.key === 'student_card_number')?.key ?? null
-  }
-
-  return null
-}
-
-function normalizeErrorText(value: string): string {
-  return value.trim().toLowerCase()
-}
 type AdminCrudTableRow =
   | {
       type: 'group'
