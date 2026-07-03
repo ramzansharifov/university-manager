@@ -12,7 +12,6 @@ export interface PeopleFieldOptions {
   departmentOptions: AdminCrudSelectOption[]
   divisionOptions: AdminCrudSelectOption[]
   positionOptions: AdminCrudSelectOption[]
-  subjectOptions?: AdminCrudSelectOption[]
 }
 
 export interface PeopleColumnMaps {
@@ -45,6 +44,14 @@ export const groupColumns: AdminCrudColumnConfig[] = [
 
 export function createStudentFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
   return [
+    {
+      key: 'status_id',
+      label: 'Статус',
+      placeholder: 'Выбери статус студента',
+      type: 'select',
+      valueType: 'number',
+      options: options.studentStatusOptions
+    },
     {
       key: 'last_name',
       label: 'Фамилия',
@@ -116,6 +123,12 @@ export function createStudentFields(options: PeopleFieldOptions): AdminCrudField
       type: 'textarea'
     },
     {
+      key: 'status_changed_at',
+      label: 'Дата изменения статуса',
+      placeholder: 'дд.мм.гггг',
+      type: 'date'
+    },
+    {
       key: 'note',
       label: 'Примечание',
       placeholder: 'Дополнительная информация',
@@ -168,8 +181,6 @@ export function createStudentColumns(maps: PeopleColumnMaps): AdminCrudColumnCon
 }
 
 export function createTeacherFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
-  const subjectOptions = options.subjectOptions ?? []
-
   return [
     {
       key: 'department_id',
@@ -182,14 +193,15 @@ export function createTeacherFields(options: PeopleFieldOptions): AdminCrudField
     {
       key: 'teaching_subjects',
       label: 'Преподаёт',
-      placeholder:
-        subjectOptions.length > 0
-          ? 'Выбери предмет кафедры'
-          : 'Сначала добавь предметы в разделе «Учебный процесс»',
+      placeholder: 'Например: Математика, программирование, базы данных'
+    },
+    {
+      key: 'status_id',
+      label: 'Статус',
+      placeholder: 'Выбери статус преподавателя',
       type: 'select',
-      options: subjectOptions,
-      dependsOn: 'department_id',
-      dependencyPlaceholder: 'Сначала выбери кафедру'
+      valueType: 'number',
+      options: options.teacherStatusOptions
     },
     {
       key: 'last_name',
@@ -235,6 +247,12 @@ export function createTeacherFields(options: PeopleFieldOptions): AdminCrudField
     {
       key: 'hire_date',
       label: 'Дата приёма',
+      placeholder: 'дд.мм.гггг',
+      type: 'date'
+    },
+    {
+      key: 'dismissal_date',
+      label: 'Дата увольнения',
       placeholder: 'дд.мм.гггг',
       type: 'date'
     },
@@ -307,6 +325,14 @@ export function createEmployeeFields(options: PeopleFieldOptions): AdminCrudFiel
       dependencyPlaceholder: 'Сначала выбери подразделение'
     },
     {
+      key: 'status_id',
+      label: 'Статус',
+      placeholder: 'Выбери статус сотрудника',
+      type: 'select',
+      valueType: 'number',
+      options: options.employeeStatusOptions
+    },
+    {
       key: 'last_name',
       label: 'Фамилия',
       placeholder: 'Например: Сидоров',
@@ -350,6 +376,12 @@ export function createEmployeeFields(options: PeopleFieldOptions): AdminCrudFiel
     {
       key: 'hire_date',
       label: 'Дата приёма',
+      placeholder: 'дд.мм.гггг',
+      type: 'date'
+    },
+    {
+      key: 'dismissal_date',
+      label: 'Дата увольнения',
       placeholder: 'дд.мм.гггг',
       type: 'date'
     },
@@ -477,22 +509,6 @@ export function createPositionOptions(items: AdminCrudRecord[]): AdminCrudSelect
   }))
 }
 
-export function createSubjectOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
-  return items.map((item) => {
-    const name = String(item.name ?? `#${item.id}`).trim()
-
-    return {
-      value: name,
-      label: name,
-      meta: {
-        department_id:
-          item.department_id === null || item.department_id === undefined
-            ? null
-            : String(item.department_id)
-      }
-    }
-  })
-}
 export function createOptions(
   items: AdminCrudRecord[],
   labelFactory: (record: AdminCrudRecord) => string

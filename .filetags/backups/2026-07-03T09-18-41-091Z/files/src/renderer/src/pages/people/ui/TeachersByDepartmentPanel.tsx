@@ -6,7 +6,6 @@ import { Badge, Button, Card, CardContent } from '../../../shared/ui'
 import { createDepartmentColumns } from '../../university/config/universityCrudConfig'
 import {
   createOptionsMap,
-  createSubjectOptions,
   createTeacherColumns,
   createTeacherFields
 } from '../config/peopleCrudConfig'
@@ -31,28 +30,17 @@ export function TeachersByDepartmentPanel({
 }: TeachersByDepartmentPanelProps) {
   const [selectedDepartment, setSelectedDepartment] = useState<AdminCrudRecord | null>(null)
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
-  const [subjectOptions, setSubjectOptions] = useState<AdminCrudSelectOption[]>([])
 
   const loadTeacherOptions = useCallback(async () => {
-    const [teachers, subjects] = await Promise.all([
-      window.api.adminCrud.list({
-        entity: 'teachers',
-        page: 1,
-        pageSize: 500,
-        orderBy: 'last_name',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'subjects',
-        page: 1,
-        pageSize: 500,
-        orderBy: 'name',
-        orderDirection: 'asc'
-      })
-    ])
+    const teachers = await window.api.adminCrud.list({
+      entity: 'teachers',
+      page: 1,
+      pageSize: 500,
+      orderBy: 'last_name',
+      orderDirection: 'asc'
+    })
 
     setTeacherOptions(createPersonOptions(teachers.items))
-    setSubjectOptions(createSubjectOptions(subjects.items))
   }, [])
 
   useEffect(() => {
@@ -83,15 +71,6 @@ export function TeachersByDepartmentPanel({
     () => createOptionsMap(teacherStatusOptions),
     [teacherStatusOptions]
   )
-  const availableSubjectOptions = useMemo(() => {
-    if (!selectedDepartment) {
-      return []
-    }
-
-    return subjectOptions.filter((option) => {
-      return String(option.meta?.department_id ?? '') === String(selectedDepartment.id)
-    })
-  }, [subjectOptions, selectedDepartment])
 
   const teacherFields = useMemo(
     () =>
@@ -101,26 +80,9 @@ export function TeachersByDepartmentPanel({
         employeeStatusOptions: [],
         departmentOptions: [],
         divisionOptions: [],
-        positionOptions: [],
-        subjectOptions: availableSubjectOptions
-      })
-        .filter((field) => field.key !== 'department_id')
-        .map((field) => {
-          if (field.key !== 'teaching_subjects') {
-            return field
-          }
-
-          return {
-            ...field,
-            dependsOn: undefined,
-            dependencyPlaceholder: undefined,
-            placeholder:
-              availableSubjectOptions.length > 0
-                ? 'Выбери предмет кафедры'
-                : 'Сначала добавь предметы этой кафедры в разделе «Учебный процесс»'
-          }
-        }),
-    [teacherStatusOptions, availableSubjectOptions]
+        positionOptions: []
+      }).filter((field) => field.key !== 'department_id'),
+    [teacherStatusOptions]
   )
 
   const teacherColumns = useMemo(

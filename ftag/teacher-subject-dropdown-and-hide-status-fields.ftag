@@ -1,48 +1,21 @@
-import type {
-  AdminCrudColumnConfig,
-  AdminCrudFieldConfig,
-  AdminCrudRecord,
-  AdminCrudSelectOption
-} from '../../../features/admin-crud'
-
-export interface PeopleFieldOptions {
-  studentStatusOptions: AdminCrudSelectOption[]
-  teacherStatusOptions: AdminCrudSelectOption[]
-  employeeStatusOptions: AdminCrudSelectOption[]
-  departmentOptions: AdminCrudSelectOption[]
-  divisionOptions: AdminCrudSelectOption[]
+@insert-after-once src/renderer/src/pages/people/config/peopleCrudConfig.ts
+@find
   positionOptions: AdminCrudSelectOption[]
+@endfind
+@content
   subjectOptions?: AdminCrudSelectOption[]
+@endcontent
+@end
+
+@replace-block src/renderer/src/pages/people/config/peopleCrudConfig.ts
+@from
+export function createStudentFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
+@endfrom
+@to
+  ]
 }
-
-export interface PeopleColumnMaps {
-  studentStatusNameById: Map<number, string>
-  teacherStatusNameById: Map<number, string>
-  employeeStatusNameById: Map<number, string>
-  departmentNameById: Map<number, string>
-  divisionNameById: Map<number, string>
-  positionNameById: Map<number, string>
-}
-
-export const groupColumns: AdminCrudColumnConfig[] = [
-  {
-    key: 'id',
-    label: 'ID'
-  },
-  {
-    key: 'name',
-    label: 'Группа'
-  },
-  {
-    key: 'course',
-    label: 'Курс'
-  },
-  {
-    key: 'description',
-    label: 'Описание'
-  }
-]
-
+@endto
+@with
 export function createStudentFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
   return [
     {
@@ -123,50 +96,18 @@ export function createStudentFields(options: PeopleFieldOptions): AdminCrudField
     }
   ]
 }
+@endwith
+@end
 
-export function createStudentColumns(maps: PeopleColumnMaps): AdminCrudColumnConfig[] {
-  return [
-    {
-      key: 'id',
-      label: 'ID'
-    },
-    {
-      key: 'status_id',
-      label: 'Статус',
-      render: (record) => renderRelation(record.status_id, maps.studentStatusNameById)
-    },
-    {
-      key: 'last_name',
-      label: 'Фамилия'
-    },
-    {
-      key: 'first_name',
-      label: 'Имя'
-    },
-    {
-      key: 'middle_name',
-      label: 'Отчество'
-    },
-    {
-      key: 'birth_date',
-      label: 'Дата рождения',
-      type: 'date'
-    },
-    {
-      key: 'email',
-      label: 'Email'
-    },
-    {
-      key: 'phone',
-      label: 'Телефон'
-    },
-    {
-      key: 'student_card_number',
-      label: 'Студенческий'
-    }
+@replace-block src/renderer/src/pages/people/config/peopleCrudConfig.ts
+@from
+export function createTeacherFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
+@endfrom
+@to
   ]
 }
-
+@endto
+@with
 export function createTeacherFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
   const subjectOptions = options.subjectOptions ?? []
 
@@ -246,46 +187,18 @@ export function createTeacherFields(options: PeopleFieldOptions): AdminCrudField
     }
   ]
 }
+@endwith
+@end
 
-export function createTeacherColumns(maps: PeopleColumnMaps): AdminCrudColumnConfig[] {
-  return [
-    {
-      key: 'id',
-      label: 'ID'
-    },
-    {
-      key: 'status_id',
-      label: 'Статус',
-      render: (record) => renderRelation(record.status_id, maps.teacherStatusNameById)
-    },
-    {
-      key: 'last_name',
-      label: 'Фамилия'
-    },
-    {
-      key: 'first_name',
-      label: 'Имя'
-    },
-    {
-      key: 'middle_name',
-      label: 'Отчество'
-    },
-    {
-      key: 'department_id',
-      label: 'Кафедра',
-      render: (record) => renderRelation(record.department_id, maps.departmentNameById)
-    },
-    {
-      key: 'teaching_subjects',
-      label: 'Преподаёт'
-    },
-    {
-      key: 'phone',
-      label: 'Телефон'
-    }
+@replace-block src/renderer/src/pages/people/config/peopleCrudConfig.ts
+@from
+export function createEmployeeFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
+@endfrom
+@to
   ]
 }
-
+@endto
+@with
 export function createEmployeeFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
   return [
     {
@@ -361,122 +274,14 @@ export function createEmployeeFields(options: PeopleFieldOptions): AdminCrudFiel
     }
   ]
 }
+@endwith
+@end
 
-export function createEmployeeColumns(maps: PeopleColumnMaps): AdminCrudColumnConfig[] {
-  return [
-    {
-      key: 'id',
-      label: 'ID'
-    },
-    {
-      key: 'status_id',
-      label: 'Статус',
-      render: (record) => renderRelation(record.status_id, maps.employeeStatusNameById)
-    },
-    {
-      key: 'last_name',
-      label: 'Фамилия'
-    },
-    {
-      key: 'first_name',
-      label: 'Имя'
-    },
-    {
-      key: 'middle_name',
-      label: 'Отчество'
-    },
-    {
-      key: 'division_id',
-      label: 'Подразделение',
-      render: (record) => renderRelation(record.division_id, maps.divisionNameById)
-    },
-    {
-      key: 'position_id',
-      label: 'Должность',
-      render: (record) => renderRelation(record.position_id, maps.positionNameById)
-    },
-    {
-      key: 'phone',
-      label: 'Телефон'
-    }
-  ]
-}
-
-export function createPositionFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
-  return [
-    {
-      key: 'division_id',
-      label: 'Подразделение',
-      placeholder: 'Выбери подразделение',
-      type: 'select',
-      valueType: 'number',
-      options: options.divisionOptions,
-      required: true
-    },
-    {
-      key: 'name',
-      label: 'Название должности',
-      placeholder: 'Например: Заведующий учебной частью',
-      required: true
-    },
-    {
-      key: 'description',
-      label: 'Описание',
-      placeholder: 'Дополнительная информация',
-      type: 'textarea'
-    }
-  ]
-}
-
-export function createPositionColumns(maps: PeopleColumnMaps): AdminCrudColumnConfig[] {
-  return [
-    {
-      key: 'id',
-      label: 'ID'
-    },
-    {
-      key: 'division_id',
-      label: 'Подразделение',
-      render: (record) => renderRelation(record.division_id, maps.divisionNameById)
-    },
-    {
-      key: 'name',
-      label: 'Должность'
-    },
-    {
-      key: 'description',
-      label: 'Описание'
-    }
-  ]
-}
-
-function renderRelation(value: unknown, labelsById: Map<number, string>): string {
-  if (value === null || value === undefined || value === '') {
-    return '—'
-  }
-
-  const id = Number(value)
-
-  if (!Number.isFinite(id)) {
-    return String(value)
-  }
-
-  return labelsById.get(id) ?? `#${id}`
-}
-
-export function createPositionOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
-  return items.map((item) => ({
-    value: String(item.id),
-    label: getRecordName(item),
-    meta: {
-      division_id:
-        item.division_id === null || item.division_id === undefined
-          ? null
-          : String(item.division_id)
-    }
-  }))
-}
-
+@insert-before-once src/renderer/src/pages/people/config/peopleCrudConfig.ts
+@find
+export function createOptions(
+@endfind
+@content
 export function createSubjectOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
   return items.map((item) => {
     const name = String(item.name ?? `#${item.id}`).trim()
@@ -493,31 +298,133 @@ export function createSubjectOptions(items: AdminCrudRecord[]): AdminCrudSelectO
     }
   })
 }
-export function createOptions(
-  items: AdminCrudRecord[],
-  labelFactory: (record: AdminCrudRecord) => string
-) {
-  return items.map((item) => ({
-    value: String(item.id),
-    label: labelFactory(item)
-  }))
-}
 
-export function createOptionsMap(options: AdminCrudSelectOption[]): Map<number, string> {
-  return new Map(options.map((option) => [Number(option.value), option.label]))
-}
+@endcontent
+@end
 
-export function getPersonName(record: AdminCrudRecord): string {
-  return [record.last_name, record.first_name, record.middle_name]
-    .filter(Boolean)
-    .map(String)
-    .join(' ')
-}
+@replace-first src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx
+@find
+  createOptionsMap,
+  createTeacherColumns,
+  createTeacherFields
+@endfind
+@with
+  createOptionsMap,
+  createSubjectOptions,
+  createTeacherColumns,
+  createTeacherFields
+@endwith
+@end
 
-export function getRecordName(record: AdminCrudRecord): string {
-  if (record.name) {
-    return String(record.name)
-  }
+@replace-first src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx
+@find
+  const [selectedDepartment, setSelectedDepartment] = useState<AdminCrudRecord | null>(null)
+  const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
+@endfind
+@with
+  const [selectedDepartment, setSelectedDepartment] = useState<AdminCrudRecord | null>(null)
+  const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
+  const [subjectOptions, setSubjectOptions] = useState<AdminCrudSelectOption[]>([])
+@endwith
+@end
 
-  return getPersonName(record) || `#${String(record.id)}`
-}
+@replace-block src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx
+@from
+  const loadTeacherOptions = useCallback(async () => {
+@endfrom
+@to
+  }, [])
+@endto
+@with
+  const loadTeacherOptions = useCallback(async () => {
+    const [teachers, subjects] = await Promise.all([
+      window.api.adminCrud.list({
+        entity: 'teachers',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'last_name',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'subjects',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'name',
+        orderDirection: 'asc'
+      })
+    ])
+
+    setTeacherOptions(createPersonOptions(teachers.items))
+    setSubjectOptions(createSubjectOptions(subjects.items))
+  }, [])
+@endwith
+@end
+
+@insert-after-once src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx
+@find
+  const teacherStatusNameById = useMemo(
+    () => createOptionsMap(teacherStatusOptions),
+    [teacherStatusOptions]
+  )
+@endfind
+@content
+
+  const availableSubjectOptions = useMemo(() => {
+    if (!selectedDepartment) {
+      return []
+    }
+
+    return subjectOptions.filter((option) => {
+      return String(option.meta?.department_id ?? '') === String(selectedDepartment.id)
+    })
+  }, [subjectOptions, selectedDepartment])
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx
+@find
+  const teacherFields = useMemo(
+    () =>
+      createTeacherFields({
+        studentStatusOptions: [],
+        teacherStatusOptions,
+        employeeStatusOptions: [],
+        departmentOptions: [],
+        divisionOptions: [],
+        positionOptions: []
+      }).filter((field) => field.key !== 'department_id'),
+    [teacherStatusOptions]
+  )
+@endfind
+@with
+  const teacherFields = useMemo(
+    () =>
+      createTeacherFields({
+        studentStatusOptions: [],
+        teacherStatusOptions,
+        employeeStatusOptions: [],
+        departmentOptions: [],
+        divisionOptions: [],
+        positionOptions: [],
+        subjectOptions: availableSubjectOptions
+      })
+        .filter((field) => field.key !== 'department_id')
+        .map((field) => {
+          if (field.key !== 'teaching_subjects') {
+            return field
+          }
+
+          return {
+            ...field,
+            dependsOn: undefined,
+            dependencyPlaceholder: undefined,
+            placeholder:
+              availableSubjectOptions.length > 0
+                ? 'Выбери предмет кафедры'
+                : 'Сначала добавь предметы этой кафедры в разделе «Учебный процесс»'
+          }
+        }),
+    [teacherStatusOptions, availableSubjectOptions]
+  )
+@endwith
+@end
