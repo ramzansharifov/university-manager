@@ -1,0 +1,18 @@
+{
+  "createdAt": "2026-07-03T05:30:22.663Z",
+  "backupPath": ".filetags/backups/2026-07-03T05-30-22-647Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/services/adminCrudService.ts",
+      "backupRelativePath": "files/src/main/services/adminCrudService.ts"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Insert after: src/main/services/adminCrudService.ts\n   found: yes\n   old: 940 line(s)\n   new: 946 line(s)",
+    "Insert after: src/main/services/adminCrudService.ts\n   found: yes\n   old: 946 line(s)\n   new: 952 line(s)",
+    "Insert after: src/main/services/adminCrudService.ts\n   found: yes\n   old: 952 line(s)\n   new: 958 line(s)",
+    "Insert after: src/main/services/adminCrudService.ts\n   found: yes\n   old: 958 line(s)\n   new: 964 line(s)",
+    "Insert before: src/main/services/adminCrudService.ts\n   found: yes\n   old: 964 line(s)\n   new: 1122 line(s)"
+  ]
+}
