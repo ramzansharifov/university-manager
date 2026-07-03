@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-07-03T04:59:35.841Z",
+  "backupPath": ".filetags/backups/2026-07-03T04-59-35-820Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Write file: src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx\n   old: 924 line(s)\n   new: 947 line(s)"
+  ]
+}

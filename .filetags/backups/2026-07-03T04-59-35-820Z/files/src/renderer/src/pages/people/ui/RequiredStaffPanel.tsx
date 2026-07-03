@@ -44,19 +44,22 @@ type TargetEntity = 'faculties' | 'departments' | 'student_groups'
 interface RequiredStaffRoleConfig {
   key: RequiredStaffRoleKey
   label: string
+  shortLabel: string
   personEntity: PersonEntity
   targetEntity: TargetEntity
   targetField: string
+  formTitle: string
   formDescription: string
+  submitLabel: string
 }
 
 interface PendingAssignment {
-  roles: RequiredStaffRoleConfig[]
+  role: RequiredStaffRoleConfig
   record: AdminCrudRecord
+  teacherDepartmentId?: number
 }
 
 interface StaffFormState {
-  role_key: string
   status_id: string
   last_name: string
   first_name: string
@@ -71,7 +74,6 @@ interface StaffFormState {
 }
 
 const initialStaffFormState: StaffFormState = {
-  role_key: '',
   status_id: '',
   last_name: '',
   first_name: '',
@@ -89,47 +91,62 @@ const requiredStaffRoles: Record<RequiredStaffRoleKey, RequiredStaffRoleConfig> 
   faculty_dean: {
     key: 'faculty_dean',
     label: 'Декан',
+    shortLabel: 'Добавить декана',
     personEntity: 'employees',
     targetEntity: 'faculties',
     targetField: 'dean_employee_id',
+    formTitle: 'Добавить декана факультета',
     formDescription:
-      'Создай сотрудника. После сохранения он будет назначен деканом выбранного факультета.'
+      'Создай сотрудника. После сохранения он будет назначен деканом выбранного факультета.',
+    submitLabel: 'Создать и назначить деканом'
   },
   faculty_deputy_dean: {
     key: 'faculty_deputy_dean',
     label: 'Заместитель декана',
+    shortLabel: 'Добавить зам. декана',
     personEntity: 'employees',
     targetEntity: 'faculties',
     targetField: 'deputy_dean_employee_id',
+    formTitle: 'Добавить заместителя декана',
     formDescription:
-      'Создай сотрудника. После сохранения он будет назначен заместителем декана выбранного факультета.'
+      'Создай сотрудника. После сохранения он будет назначен заместителем декана выбранного факультета.',
+    submitLabel: 'Создать и назначить зам. декана'
   },
   department_head: {
     key: 'department_head',
     label: 'Заведующий кафедрой',
+    shortLabel: 'Добавить заведующего',
     personEntity: 'teachers',
     targetEntity: 'departments',
     targetField: 'head_teacher_id',
+    formTitle: 'Добавить заведующего кафедрой',
     formDescription:
-      'Создай преподавателя. После сохранения он будет назначен заведующим выбранной кафедрой.'
+      'Создай преподавателя. После сохранения он будет назначен заведующим выбранной кафедрой.',
+    submitLabel: 'Создать и назначить заведующим'
   },
   department_deputy_head: {
     key: 'department_deputy_head',
     label: 'Заместитель заведующего',
+    shortLabel: 'Добавить зам. заведующего',
     personEntity: 'teachers',
     targetEntity: 'departments',
     targetField: 'deputy_head_teacher_id',
+    formTitle: 'Добавить заместителя заведующего',
     formDescription:
-      'Создай преподавателя. После сохранения он будет назначен заместителем заведующего выбранной кафедрой.'
+      'Создай преподавателя. После сохранения он будет назначен заместителем заведующего выбранной кафедрой.',
+    submitLabel: 'Создать и назначить заместителем'
   },
   group_curator: {
     key: 'group_curator',
     label: 'Куратор группы',
+    shortLabel: 'Добавить куратора',
     personEntity: 'teachers',
     targetEntity: 'student_groups',
     targetField: 'curator_teacher_id',
+    formTitle: 'Добавить куратора группы',
     formDescription:
-      'Создай преподавателя. После сохранения он будет назначен куратором выбранной группы.'
+      'Создай преподавателя. После сохранения он будет назначен куратором выбранной группы.',
+    submitLabel: 'Создать и назначить куратором'
   }
 }
 
@@ -216,21 +233,29 @@ export function RequiredStaffPanel() {
     [teacherNameById]
   )
 
-  const selectedRole = pendingAssignment
-    ? getSelectedRole(pendingAssignment.roles, staffForm.role_key)
-    : null
+  async function openAssignmentDialog(record: AdminCrudRecord, roleKey: RequiredStaffRoleKey) {
+    const role = requiredStaffRoles[roleKey]
 
-  function openAssignmentDialog(record: AdminCrudRecord, roles: RequiredStaffRoleConfig[]) {
     setPageError(null)
     setFormError(null)
-    setPendingAssignment({
-      roles,
-      record
-    })
-    setStaffForm({
-      ...initialStaffFormState,
-      role_key: roles[0]?.key ?? ''
-    })
+
+    try {
+      const teacherDepartmentId =
+        role.key === 'department_head' || role.key === 'department_deputy_head'
+          ? normalizeRequiredNumber(record.id, 'У выбранной кафедры нет ID')
+          : role.key === 'group_curator'
+            ? await getGroupTeacherDepartmentId(record)
+            : undefined
+
+      setPendingAssignment({
+        role,
+        record,
+        teacherDepartmentId
+      })
+      setStaffForm(initialStaffFormState)
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : 'Не удалось открыть форму назначения')
+    }
   }
 
   function closeAssignmentDialog() {
@@ -261,22 +286,11 @@ export function RequiredStaffPanel() {
     setFormError(null)
 
     try {
-      const role = getSelectedRole(pendingAssignment.roles, staffForm.role_key)
-
-      if (!role) {
-        throw new Error('Выбери назначение сотрудника')
-      }
-
       validateStaffForm(staffForm)
 
-      const teacherDepartmentId =
-        role.personEntity === 'teachers'
-          ? await getTeacherDepartmentIdForAssignment(role, pendingAssignment.record)
-          : undefined
-
       const createdPerson = await window.api.adminCrud.create({
-        entity: role.personEntity,
-        data: buildPersonPayload(role, staffForm, teacherDepartmentId)
+        entity: pendingAssignment.role.personEntity,
+        data: buildPersonPayload(pendingAssignment, staffForm)
       })
 
       const createdPersonId = normalizeRequiredNumber(
@@ -285,10 +299,10 @@ export function RequiredStaffPanel() {
       )
 
       await window.api.adminCrud.update({
-        entity: role.targetEntity,
+        entity: pendingAssignment.role.targetEntity,
         id: normalizeRequiredNumber(pendingAssignment.record.id, 'У выбранной записи нет ID'),
         data: {
-          [role.targetField]: createdPersonId
+          [pendingAssignment.role.targetField]: createdPersonId
         }
       })
 
@@ -307,8 +321,8 @@ export function RequiredStaffPanel() {
     <div className="grid gap-4">
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
         Здесь назначаются обязательные сотрудники учебной структуры: деканат факультетов,
-        руководство кафедр и кураторы групп. Нажми «Добавить» в строке нужного факультета,
-        кафедры или группы, а затем выбери назначение внутри формы.
+        руководство кафедр и кураторы групп. Нажми кнопку добавления в строке нужного факультета,
+        кафедры или группы — откроется форма создания сотрудника с автоматическим назначением.
       </div>
 
       {pageError ? (
@@ -334,7 +348,6 @@ export function RequiredStaffPanel() {
             fields={facultyFields}
             columns={facultyColumns}
             canCreate={false}
-            canEdit={false}
             canArchive={false}
             orderBy="name"
             orderDirection="asc"
@@ -362,7 +375,6 @@ export function RequiredStaffPanel() {
             fields={departmentFields}
             columns={departmentColumns}
             canCreate={false}
-            canEdit={false}
             canArchive={false}
             orderBy="name"
             orderDirection="asc"
@@ -390,7 +402,6 @@ export function RequiredStaffPanel() {
             fields={groupFields}
             columns={groupColumns}
             canCreate={false}
-            canEdit={false}
             canArchive={false}
             orderBy="name"
             orderDirection="asc"
@@ -406,10 +417,7 @@ export function RequiredStaffPanel() {
         </TabsContent>
       </Tabs>
 
-      <Dialog
-        open={Boolean(pendingAssignment)}
-        onOpenChange={(open) => !open && closeAssignmentDialog()}
-      >
+      <Dialog open={Boolean(pendingAssignment)} onOpenChange={(open) => !open && closeAssignmentDialog()}>
         <DialogContent
           className="flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] !max-w-4xl flex-col overflow-hidden p-0"
           onPointerDownOutside={(event) => {
@@ -427,10 +435,10 @@ export function RequiredStaffPanel() {
           }}
         >
           <DialogHeader className="border-b border-[var(--color-border)] px-6 py-5 pr-14">
-            <DialogTitle>Добавить обязательного сотрудника</DialogTitle>
+            <DialogTitle>{pendingAssignment?.role.formTitle ?? 'Добавить сотрудника'}</DialogTitle>
             <DialogDescription>
               {pendingAssignment
-                ? `${selectedRole?.formDescription ?? 'Создай сотрудника и выбери назначение.'} Выбранная запись: ${getRecordName(
+                ? `${pendingAssignment.role.formDescription} Выбранная запись: ${getRecordName(
                     pendingAssignment.record
                   )}.`
                 : 'Заполни форму сотрудника.'}
@@ -441,8 +449,7 @@ export function RequiredStaffPanel() {
             <div className="grid min-h-0 grid-cols-1 gap-4 overflow-y-auto px-6 py-5 md:grid-cols-2 xl:grid-cols-3">
               <StaffFormFields
                 form={staffForm}
-                roles={pendingAssignment?.roles ?? []}
-                personEntity={selectedRole?.personEntity ?? 'employees'}
+                personEntity={pendingAssignment?.role.personEntity ?? 'employees'}
                 employeeStatusOptions={employeeStatusOptions}
                 teacherStatusOptions={teacherStatusOptions}
                 onChange={updateStaffFormField}
@@ -463,7 +470,9 @@ export function RequiredStaffPanel() {
               </DialogClose>
 
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Сохранение...' : 'Создать и назначить'}
+                {isSubmitting
+                  ? 'Сохранение...'
+                  : (pendingAssignment?.role.submitLabel ?? 'Создать и назначить')}
               </Button>
             </DialogFooter>
           </form>
@@ -480,25 +489,39 @@ function RequiredStaffRowActions({
 }: {
   record: AdminCrudRecord
   roles: RequiredStaffRoleConfig[]
-  onOpenAssignment: (record: AdminCrudRecord, roles: RequiredStaffRoleConfig[]) => void
+  onOpenAssignment: (record: AdminCrudRecord, roleKey: RequiredStaffRoleKey) => Promise<void>
 }) {
   return (
-    <Button size="sm" variant="primary" onClick={() => onOpenAssignment(record, roles)}>
-      Добавить
-    </Button>
+    <>
+      {roles.map((role) => {
+        const hasAssignedPerson = Boolean(record[role.targetField])
+        const label = hasAssignedPerson
+          ? role.shortLabel.replace('Добавить', 'Заменить')
+          : role.shortLabel
+
+        return (
+          <Button
+            key={role.key}
+            size="sm"
+            variant={hasAssignedPerson ? 'secondary' : 'primary'}
+            onClick={() => void onOpenAssignment(record, role.key)}
+          >
+            {label}
+          </Button>
+        )
+      })}
+    </>
   )
 }
 
 function StaffFormFields({
   form,
-  roles,
   personEntity,
   employeeStatusOptions,
   teacherStatusOptions,
   onChange
 }: {
   form: StaffFormState
-  roles: RequiredStaffRoleConfig[]
   personEntity: PersonEntity
   employeeStatusOptions: AdminCrudSelectOption[]
   teacherStatusOptions: AdminCrudSelectOption[]
@@ -508,29 +531,6 @@ function StaffFormFields({
 
   return (
     <>
-      <label className="grid gap-2 md:col-span-2 xl:col-span-3">
-        <span className="text-sm font-medium text-[var(--color-text)]">
-          Назначение <span className="text-[var(--color-danger)]">*</span>
-        </span>
-        <Select
-          value={form.role_key || undefined}
-          disabled={roles.length <= 1}
-          onValueChange={(value) => onChange('role_key', value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Выбери назначение" />
-          </SelectTrigger>
-
-          <SelectContent>
-            {roles.map((role) => (
-              <SelectItem key={role.key} value={role.key}>
-                {role.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </label>
-
       <label className="grid gap-2">
         <span className="text-sm font-medium text-[var(--color-text)]">Статус</span>
         <Select
@@ -799,18 +799,7 @@ function createGroupRequiredStaffColumns(
   ]
 }
 
-function getSelectedRole(
-  roles: RequiredStaffRoleConfig[],
-  roleKey: string
-): RequiredStaffRoleConfig | null {
-  return roles.find((role) => role.key === roleKey) ?? roles[0] ?? null
-}
-
 function validateStaffForm(form: StaffFormState): void {
-  if (!form.role_key.trim()) {
-    throw new Error('Выбери назначение сотрудника')
-  }
-
   if (!form.last_name.trim()) {
     throw new Error('Укажи фамилию')
   }
@@ -821,9 +810,8 @@ function validateStaffForm(form: StaffFormState): void {
 }
 
 function buildPersonPayload(
-  role: RequiredStaffRoleConfig,
-  form: StaffFormState,
-  teacherDepartmentId?: number
+  assignment: PendingAssignment,
+  form: StaffFormState
 ): AdminCrudRecord {
   const basePayload: AdminCrudRecord = {
     status_id: normalizeOptionalNumber(form.status_id),
@@ -838,10 +826,10 @@ function buildPersonPayload(
     note: form.note.trim()
   }
 
-  if (role.personEntity === 'teachers') {
+  if (assignment.role.personEntity === 'teachers') {
     return {
       ...basePayload,
-      department_id: teacherDepartmentId ?? null,
+      department_id: assignment.teacherDepartmentId ?? null,
       teaching_subjects: form.teaching_subjects.trim()
     }
   }
@@ -849,36 +837,25 @@ function buildPersonPayload(
   return basePayload
 }
 
-async function getTeacherDepartmentIdForAssignment(
-  role: RequiredStaffRoleConfig,
-  record: AdminCrudRecord
-): Promise<number> {
-  if (role.targetEntity === 'departments') {
-    return normalizeRequiredNumber(record.id, 'У выбранной кафедры нет ID')
+async function getGroupTeacherDepartmentId(record: AdminCrudRecord): Promise<number> {
+  const specialtyId = normalizeRequiredNumber(
+    record.specialty_id,
+    'У выбранной группы не указана специальность'
+  )
+
+  const specialty = await window.api.adminCrud.getById({
+    entity: 'specialties',
+    id: specialtyId
+  })
+
+  if (!specialty) {
+    throw new Error('Специальность выбранной группы не найдена')
   }
 
-  if (role.targetEntity === 'student_groups') {
-    const specialtyId = normalizeRequiredNumber(
-      record.specialty_id,
-      'У выбранной группы не указана специальность'
-    )
-
-    const specialty = await window.api.adminCrud.getById({
-      entity: 'specialties',
-      id: specialtyId
-    })
-
-    if (!specialty) {
-      throw new Error('Специальность выбранной группы не найдена')
-    }
-
-    return normalizeRequiredNumber(
-      specialty.department_id,
-      'У специальности выбранной группы не указана кафедра'
-    )
-  }
-
-  throw new Error('Для выбранного назначения невозможно определить кафедру преподавателя')
+  return normalizeRequiredNumber(
+    specialty.department_id,
+    'У специальности выбранной группы не указана кафедра'
+  )
 }
 
 function normalizeRequiredNumber(value: unknown, errorMessage: string): number {
