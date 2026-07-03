@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-07-03T09:33:01.080Z",
+  "backupPath": ".filetags/backups/2026-07-03T09-33-00-977Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/people/config/peopleCrudConfig.ts",
+      "backupRelativePath": "files/src/renderer/src/pages/people/config/peopleCrudConfig.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/people/config/peopleCrudConfig.ts\n   found: yes\n   old: 524 line(s)\n   new: 524 line(s)",
+    "Replace file: src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx\n   found: yes\n   old: 340 line(s)\n   new: 368 line(s)"
+  ]
+}

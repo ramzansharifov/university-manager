@@ -280,30 +280,27 @@ function createTeacherOptions(
 ): AdminCrudSelectOption[] {
   const subjectIdByDepartmentAndName = createSubjectIdByDepartmentAndName(subjects)
 
-  return teachers.flatMap((teacher) => {
+  return teachers.map((teacher) => {
     const departmentId = toNumberOrNull(teacher.department_id)
     const facultyId =
       departmentId === null ? null : (departmentFacultyIdById.get(departmentId) ?? null)
-    const teacherSubjectIds =
+    const subjectId =
       departmentId === null
-        ? []
-        : getTeacherSubjectIds(
-            teacher.teaching_subjects,
-            departmentId,
-            subjectIdByDepartmentAndName
-          )
-    const subjectIds = teacherSubjectIds.length > 0 ? teacherSubjectIds : [null]
-    const label = getPersonName(teacher).trim() || `#${String(teacher.id)}`
+        ? null
+        : (subjectIdByDepartmentAndName.get(
+            createDepartmentSubjectKey(departmentId, teacher.teaching_subjects)
+          ) ?? null)
+    const label = getPersonName(teacher).trim()
 
-    return subjectIds.map((subjectId) => ({
+    return {
       value: String(teacher.id),
-      label,
+      label: label || `#${String(teacher.id)}`,
       meta: {
         subject_id: subjectId === null ? null : String(subjectId),
         subject_department_id: departmentId === null ? null : String(departmentId),
         subject_faculty_id: facultyId === null ? null : String(facultyId)
       }
-    }))
+    }
   })
 }
 
@@ -324,30 +321,6 @@ function createSubjectIdByDepartmentAndName(subjects: AdminCrudRecord[]): Map<st
   return result
 }
 
-function getTeacherSubjectIds(
-  teachingSubjects: unknown,
-  departmentId: number,
-  subjectIdByDepartmentAndName: Map<string, number>
-): Array<number | null> {
-  const subjectIds = new Set<number>()
-
-  String(teachingSubjects ?? '')
-    .split(/[\n,;]+/)
-    .map((item) => normalizeSubjectName(item))
-    .filter(Boolean)
-    .forEach((subjectName) => {
-      const subjectId = subjectIdByDepartmentAndName.get(
-        createDepartmentSubjectKey(departmentId, subjectName)
-      )
-
-      if (subjectId !== undefined) {
-        subjectIds.add(subjectId)
-      }
-    })
-
-  return Array.from(subjectIds)
-}
-
 function createDepartmentSubjectKey(departmentId: number, subjectName: unknown): string {
   return `${departmentId}:${normalizeSubjectName(subjectName)}`
 }
@@ -355,7 +328,6 @@ function createDepartmentSubjectKey(departmentId: number, subjectName: unknown):
 function normalizeSubjectName(value: unknown): string {
   return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
-
 function toNumberOrNull(value: unknown): number | null {
   if (value === null || value === undefined || value === '') {
     return null

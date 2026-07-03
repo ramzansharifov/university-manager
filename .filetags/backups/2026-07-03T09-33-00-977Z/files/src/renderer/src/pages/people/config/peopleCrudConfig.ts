@@ -43,7 +43,7 @@ export const groupColumns: AdminCrudColumnConfig[] = [
   }
 ]
 
-export function createStudentFields(_options: PeopleFieldOptions): AdminCrudFieldConfig[] {
+export function createStudentFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
   return [
     {
       key: 'last_name',
