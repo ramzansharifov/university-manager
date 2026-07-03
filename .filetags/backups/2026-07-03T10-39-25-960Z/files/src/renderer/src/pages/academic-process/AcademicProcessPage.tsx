@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { AdminCrudRecord, AdminCrudSelectOption } from '../../features/admin-crud'
+import type { AdminCrudSelectOption } from '../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../features/admin-crud'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
 import {
+  academicYearColumns,
   academicYearFields,
-  createAcademicYearColumns,
-  createSemesterByAcademicYearAndNumber,
   createAcademicVacationColumns,
   createAcademicVacationFields,
   createOptions,
@@ -20,10 +19,9 @@ import { GroupDisciplinesDrilldown } from './ui/GroupDisciplinesDrilldown'
 export function AcademicProcessPage() {
   const [departmentOptions, setDepartmentOptions] = useState<AdminCrudSelectOption[]>([])
   const [academicYearOptions, setAcademicYearOptions] = useState<AdminCrudSelectOption[]>([])
-  const [semesters, setSemesters] = useState<AdminCrudRecord[]>([])
 
   const loadOptions = useCallback(async () => {
-    const [departments, academicYears, semestersResult] = await Promise.all([
+    const [departments, academicYears] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'departments',
         page: 1,
@@ -37,19 +35,11 @@ export function AcademicProcessPage() {
         pageSize: 100,
         orderBy: 'starts_at',
         orderDirection: 'desc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'semesters',
-        page: 1,
-        pageSize: 300,
-        orderBy: 'academic_year_id',
-        orderDirection: 'asc'
       })
     ])
 
     setDepartmentOptions(createOptions(departments.items, getRecordName))
     setAcademicYearOptions(createOptions(academicYears.items, getRecordName))
-    setSemesters(semestersResult.items)
   }, [])
 
   useEffect(() => {
@@ -62,18 +52,6 @@ export function AcademicProcessPage() {
     [academicYearOptions]
   )
 
-  const semesterByAcademicYearAndNumber = useMemo(
-    () => createSemesterByAcademicYearAndNumber(semesters),
-    [semesters]
-  )
-
-  const academicYearColumns = useMemo(
-    () =>
-      createAcademicYearColumns({
-        semesterByAcademicYearAndNumber
-      }),
-    [semesterByAcademicYearAndNumber]
-  )
   const subjectFields = useMemo(() => createSubjectFields(departmentOptions), [departmentOptions])
 
   const subjectColumns = useMemo(

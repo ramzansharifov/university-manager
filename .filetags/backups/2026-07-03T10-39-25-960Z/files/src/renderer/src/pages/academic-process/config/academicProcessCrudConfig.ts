@@ -328,112 +328,26 @@ export const academicYearFields: AdminCrudFieldConfig[] = [
   }
 ]
 
-export function createAcademicYearColumns(maps: {
-  semesterByAcademicYearAndNumber: Map<string, AdminCrudRecord>
-}): AdminCrudColumnConfig[] {
-  return [
-    {
-      key: 'id',
-      label: 'ID'
-    },
-    {
-      key: 'name',
-      label: 'Учебный год'
-    },
-    {
-      key: 'starts_at',
-      label: 'Начало года',
-      type: 'date'
-    },
-    {
-      key: 'ends_at',
-      label: 'Окончание года',
-      type: 'date'
-    },
-    {
-      key: 'first_semester_dates',
-      label: '1 семестр',
-      render: (record) =>
-        renderSemesterDateRange(
-          getAcademicYearSemester(maps.semesterByAcademicYearAndNumber, record, 1)
-        )
-    },
-    {
-      key: 'second_semester_dates',
-      label: '2 семестр',
-      render: (record) =>
-        renderSemesterDateRange(
-          getAcademicYearSemester(maps.semesterByAcademicYearAndNumber, record, 2)
-        )
-    }
-  ]
-}
-
-export function createSemesterByAcademicYearAndNumber(
-  items: AdminCrudRecord[]
-): Map<string, AdminCrudRecord> {
-  const result = new Map<string, AdminCrudRecord>()
-
-  items.forEach((semester) => {
-    const academicYearId = toNumberOrNull(semester.academic_year_id)
-    const semesterNumber = toNumberOrNull(semester.number)
-
-    if (academicYearId === null || semesterNumber === null) {
-      return
-    }
-
-    result.set(createAcademicYearSemesterKey(academicYearId, semesterNumber), semester)
-  })
-
-  return result
-}
-
-function getAcademicYearSemester(
-  semesterByAcademicYearAndNumber: Map<string, AdminCrudRecord>,
-  academicYear: AdminCrudRecord,
-  semesterNumber: number
-): AdminCrudRecord | undefined {
-  const academicYearId = toNumberOrNull(academicYear.id)
-
-  if (academicYearId === null) {
-    return undefined
+export const academicYearColumns: AdminCrudColumnConfig[] = [
+  {
+    key: 'id',
+    label: 'ID'
+  },
+  {
+    key: 'name',
+    label: 'Учебный год'
+  },
+  {
+    key: 'starts_at',
+    label: 'Начало',
+    type: 'date'
+  },
+  {
+    key: 'ends_at',
+    label: 'Окончание',
+    type: 'date'
   }
-
-  return semesterByAcademicYearAndNumber.get(
-    createAcademicYearSemesterKey(academicYearId, semesterNumber)
-  )
-}
-
-function createAcademicYearSemesterKey(academicYearId: number, semesterNumber: number): string {
-  return `${academicYearId}:${semesterNumber}`
-}
-
-function renderSemesterDateRange(semester: AdminCrudRecord | undefined): string {
-  if (!semester) {
-    return 'Не сформирован'
-  }
-
-  const startsAt = formatIsoDateToDisplay(semester.starts_at)
-  const endsAt = formatIsoDateToDisplay(semester.ends_at)
-
-  if (startsAt === '—' || endsAt === '—') {
-    return 'Не сформирован'
-  }
-
-  return `${startsAt} — ${endsAt}`
-}
-
-function formatIsoDateToDisplay(value: unknown): string {
-  const stringValue = String(value ?? '').trim()
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(stringValue)) {
-    return '—'
-  }
-
-  const [year, month, day] = stringValue.split('-')
-
-  return `${day}.${month}.${year}`
-}
+]
 export const vacationTypeOptions: AdminCrudSelectOption[] = [
   {
     value: 'intermediate',
