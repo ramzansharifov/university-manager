@@ -1,131 +1,59 @@
-import { app, dialog } from 'electron'
-import type Database from 'better-sqlite3'
-import { readFileSync, writeFileSync } from 'fs'
-import { join } from 'path'
-import { seedDatabase } from '../seed/seedDatabase'
-import type { DatabaseMaintenanceResult } from '../../shared/types/system'
-
-interface DatabaseJsonTable {
-  name: string
-  rows: Record<string, unknown>[]
-}
-
-interface DatabaseJsonExport {
-  app: 'university-manager'
+@replace-first src/main/database/databaseTransferService.ts
+@find
+  version: 1
+@endfind
+@with
   version: 1 | 2
-  exportedAt: string
-  tables: DatabaseJsonTable[]
-}
+@endwith
+@end
 
-interface TableInfoRow {
-  name: string
-}
-
+@insert-after-once src/main/database/databaseTransferService.ts
+@find
 const excludedTables = new Set(['schema_migrations'])
+@endfind
+@content
 
 const exportFormatVersion = 2
+@endcontent
+@end
 
-const resetTableOrder = [
-  'user_sessions',
-  'audit_logs',
-  'role_permissions',
-
-  'lesson_completion_records',
-  'attendance_records',
-  'grades',
-  'grade_items',
-  'score_scales',
-  'grade_element_types',
-
-  'lesson_sessions',
-  'schedule_items',
-
-  'disciplines',
-  'curriculum_items',
-  'curriculum_plans',
-  'subjects',
-
-  'students',
-  'student_groups',
-
-  'employees',
-  'teachers',
-  'positions',
-  'divisions',
-
-  'audiences',
-  'audience_types',
-  'buildings',
-
-  'lesson_periods',
+@insert-after-once src/main/database/databaseTransferService.ts
+@find
   'weeks',
   'semesters',
+@endfind
+@content
   'academic_vacations',
-  'academic_years',
+@endcontent
+@end
 
-  'specialties',
-  'departments',
-  'faculties',
-
-  'app_users',
-  'permissions',
-  'roles',
-  'dictionary_items',
-  'app_settings'
-]
-
-export class DatabaseTransferService {
-  constructor(private readonly database: Database.Database) {}
-
+@insert-after-once src/main/database/databaseTransferService.ts
+@find
   async exportToJson(): Promise<DatabaseMaintenanceResult> {
+@endfind
+@content
     this.normalizeDerivedAcademicCalendar()
-    const tableNames = this.getTransferTableNames()
 
-    const tables = tableNames.map((tableName) => {
-      const rows = this.database
-        .prepare(`SELECT * FROM ${quoteIdentifier(tableName)}`)
-        .all() as Record<string, unknown>[]
+@endcontent
+@end
 
-      return {
-        name: tableName,
-        rows
-      }
-    })
-
-    const payload: DatabaseJsonExport = {
-      app: 'university-manager',
+@replace-first src/main/database/databaseTransferService.ts
+@find
+      version: 1,
+@endfind
+@with
       version: exportFormatVersion,
-      exportedAt: new Date().toISOString(),
-      tables
-    }
+@endwith
+@end
 
-    const rowsCount = tables.reduce((sum, table) => sum + table.rows.length, 0)
-
-    const result = await dialog.showSaveDialog({
-      title: 'Экспорт данных',
-      defaultPath: join(app.getPath('documents'), createExportFileName()),
-      filters: [{ name: 'JSON', extensions: ['json'] }]
-    })
-
-    if (result.canceled || !result.filePath) {
-      return {
-        success: false,
-        canceled: true,
-        message: 'Экспорт отменён'
-      }
-    }
-
-    writeFileSync(result.filePath, JSON.stringify(payload, null, 2), 'utf-8')
-
-    return {
-      success: true,
-      filePath: result.filePath,
-      tablesCount: tables.length,
-      rowsCount,
-      message: `Экспортировано таблиц: ${tables.length}, строк: ${rowsCount}`
-    }
-  }
-
+@replace-block src/main/database/databaseTransferService.ts
+@from
+  async importFromJson(): Promise<DatabaseMaintenanceResult> {
+@endfrom
+@to
+  resetDatabase(): DatabaseMaintenanceResult {
+@endto
+@with
   async importFromJson(): Promise<DatabaseMaintenanceResult> {
     const result = await dialog.showOpenDialog({
       title: 'Импорт данных',
@@ -185,26 +113,14 @@ export class DatabaseTransferService {
   }
 
   resetDatabase(): DatabaseMaintenanceResult {
-    const tableNames = this.getResetTableNames()
+@endwith
+@end
 
-    this.withForeignKeysDisabled(() => {
-      const transaction = this.database.transaction(() => {
-        this.clearTables(tableNames)
-      })
-
-      transaction()
-    })
-
-    seedDatabase(this.database)
-
-    return {
-      success: true,
-      tablesCount: tableNames.length,
-      rowsCount: 0,
-      message: 'База очищена. Системные роли, права, словари и admin/admin созданы заново.'
-    }
-  }
-
+@insert-before-once src/main/database/databaseTransferService.ts
+@find
+  private getTransferTableNames(): string[] {
+@endfind
+@content
   private normalizeDerivedAcademicCalendar(): void {
     if (
       !this.tableExists('academic_years') ||
@@ -518,118 +434,24 @@ export class DatabaseTransferService {
         .run(weekId)
     })
   }
-  private getTransferTableNames(): string[] {
-    const rows = this.database
-      .prepare(
-        `
-          SELECT name
-          FROM sqlite_master
-          WHERE type = 'table'
-            AND name NOT LIKE 'sqlite_%'
-          ORDER BY name
-        `
-      )
-      .all() as Array<{ name: string }>
 
-    return rows.map((row) => row.name).filter((tableName) => !excludedTables.has(tableName))
-  }
+@endcontent
+@end
 
-  private getResetTableNames(): string[] {
-    const existingTableNames = new Set(this.getTransferTableNames())
-    const orderedTables = resetTableOrder.filter((tableName) => existingTableNames.has(tableName))
-    const orderedTableSet = new Set(orderedTables)
-    const remainingTables = [...existingTableNames].filter(
-      (tableName) => !orderedTableSet.has(tableName)
-    )
-
-    return [...remainingTables, ...orderedTables]
-  }
-
-  private clearTables(tableNames: string[]): void {
-    tableNames.forEach((tableName) => {
-      this.database.prepare(`DELETE FROM ${quoteIdentifier(tableName)}`).run()
-    })
-
-    if (this.tableExists('sqlite_sequence')) {
-      tableNames.forEach((tableName) => {
-        this.database.prepare('DELETE FROM sqlite_sequence WHERE name = ?').run(tableName)
-      })
-    }
-  }
-
-  private insertRows(tableName: string, rows: Record<string, unknown>[]): void {
-    if (rows.length === 0) {
-      return
-    }
-
-    const columns = this.getTableColumns(tableName)
-
-    rows.forEach((row) => {
-      const rowColumns = Object.keys(row).filter((column) => columns.has(column))
-
-      if (rowColumns.length === 0) {
-        return
-      }
-
-      const statement = this.database.prepare(`
-        INSERT INTO ${quoteIdentifier(tableName)} (${rowColumns.map(quoteIdentifier).join(', ')})
-        VALUES (${rowColumns.map(() => '?').join(', ')})
-      `)
-
-      statement.run(...rowColumns.map((column) => row[column] ?? null))
-    })
-  }
-
-  private getTableColumns(tableName: string): Set<string> {
-    const rows = this.database
-      .prepare(`PRAGMA table_info(${quoteIdentifier(tableName)})`)
-      .all() as TableInfoRow[]
-
-    return new Set(rows.map((row) => row.name))
-  }
-
-  private tableExists(tableName: string): boolean {
-    const row = this.database
-      .prepare(
-        `
-          SELECT name
-          FROM sqlite_master
-          WHERE name = ?
-          LIMIT 1
-        `
-      )
-      .get(tableName)
-
-    return Boolean(row)
-  }
-
-  private parseImportFile(content: string): DatabaseJsonExport {
-    const parsed = JSON.parse(content) as Partial<DatabaseJsonExport>
-
-    if (
-      parsed.app !== 'university-manager' ||
+@replace-first src/main/database/databaseTransferService.ts
+@find
+      parsed.version !== 1 ||
+@endfind
+@with
       (parsed.version !== 1 && parsed.version !== 2) ||
-      !Array.isArray(parsed.tables)
-    ) {
-      throw new Error('Файл не похож на экспорт University Manager')
-    }
+@endwith
+@end
 
-    return parsed as DatabaseJsonExport
-  }
-
-  private withForeignKeysDisabled<T>(operation: () => T): T {
-    const previousValue = Number(this.database.pragma('foreign_keys', { simple: true }))
-
-    this.database.pragma('foreign_keys = OFF')
-
-    try {
-      return operation()
-    } finally {
-      this.database.pragma(previousValue === 1 ? 'foreign_keys = ON' : 'foreign_keys = OFF')
-    }
-  }
-}
-
+@insert-before-once src/main/database/databaseTransferService.ts
+@find
+function quoteIdentifier(value: string): string {
+@endfind
+@content
 function normalizeNullableNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') {
     return null
@@ -843,16 +665,68 @@ function getIsoWeekday(date: Date): number {
 
   return day === 0 ? 7 : day
 }
-function quoteIdentifier(value: string): string {
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
-    throw new Error(`Некорректное имя SQL-идентификатора: ${value}`)
+
+@endcontent
+@end
+
+@replace-first src/main/seed/seedDatabase.ts
+@find
+    ['lesson_types', 'lecture', 'Лекция', 10],
+    ['lesson_types', 'seminar', 'Семинар', 20],
+    ['lesson_types', 'practice', 'Практика', 30],
+    ['lesson_types', 'lab', 'Лабораторная работа', 40],
+    ['lesson_types', 'consultation', 'Консультация', 50],
+    ['lesson_types', 'exam', 'Экзамен', 60],
+    ['lesson_types', 'credit', 'Зачёт', 70]
+@endfind
+@with
+@endwith
+@end
+
+@replace-block src/renderer/src/pages/schedule/config/scheduleCrudConfig.ts
+@from
+export const lessonTypeFields: AdminCrudFieldConfig[] = [
+@endfrom
+@to
+]
+
+export const lessonTypeColumns: AdminCrudColumnConfig[] = [
+@endto
+@with
+export const lessonTypeFields: AdminCrudFieldConfig[] = [
+  {
+    key: 'name',
+    label: 'Название типа занятия',
+    placeholder: 'Например: Лекция, Практика, Контрольная работа',
+    required: true
   }
+]
 
-  return `"${value}"`
-}
+export const lessonTypeColumns: AdminCrudColumnConfig[] = [
+@endwith
+@end
 
-function createExportFileName(): string {
-  const date = new Date().toISOString().slice(0, 10)
+@replace-block src/renderer/src/pages/schedule/config/scheduleCrudConfig.ts
+@from
+export const lessonTypeColumns: AdminCrudColumnConfig[] = [
+@endfrom
+@to
+]
 
-  return `university-manager-export-${date}.json`
-}
+export const buildingFields: AdminCrudFieldConfig[] = [
+@endto
+@with
+export const lessonTypeColumns: AdminCrudColumnConfig[] = [
+  {
+    key: 'id',
+    label: 'ID'
+  },
+  {
+    key: 'name',
+    label: 'Тип занятия'
+  }
+]
+
+export const buildingFields: AdminCrudFieldConfig[] = [
+@endwith
+@end

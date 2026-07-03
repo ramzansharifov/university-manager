@@ -131,7 +131,13 @@ function seedDictionaries(database: Database.Database): void {
     ['grade_categories', 'exam', 'Экзамен', 40],
     ['grade_categories', 'credit', 'Зачёт', 50],
 
-
+    ['lesson_types', 'lecture', 'Лекция', 10],
+    ['lesson_types', 'seminar', 'Семинар', 20],
+    ['lesson_types', 'practice', 'Практика', 30],
+    ['lesson_types', 'lab', 'Лабораторная работа', 40],
+    ['lesson_types', 'consultation', 'Консультация', 50],
+    ['lesson_types', 'exam', 'Экзамен', 60],
+    ['lesson_types', 'credit', 'Зачёт', 70]
   ]
 
   for (const item of items) {

@@ -1,0 +1,33 @@
+{
+  "createdAt": "2026-07-03T11:04:09.880Z",
+  "backupPath": ".filetags/backups/2026-07-03T11-04-09-810Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/database/databaseTransferService.ts",
+      "backupRelativePath": "files/src/main/database/databaseTransferService.ts"
+    },
+    {
+      "originalPath": "src/main/seed/seedDatabase.ts",
+      "backupRelativePath": "files/src/main/seed/seedDatabase.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/schedule/config/scheduleCrudConfig.ts",
+      "backupRelativePath": "files/src/renderer/src/pages/schedule/config/scheduleCrudConfig.ts"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 328 line(s)\n   new: 328 line(s)",
+    "Insert after: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 328 line(s)\n   new: 330 line(s)",
+    "Insert after: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 330 line(s)\n   new: 331 line(s)",
+    "Insert after: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 331 line(s)\n   new: 332 line(s)",
+    "Replace file: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 332 line(s)\n   new: 332 line(s)",
+    "Replace file: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 332 line(s)\n   new: 333 line(s)",
+    "Insert before: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 333 line(s)\n   new: 646 line(s)",
+    "Replace file: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 646 line(s)\n   new: 646 line(s)",
+    "Insert before: src/main/database/databaseTransferService.ts\n   found: yes\n   old: 646 line(s)\n   new: 859 line(s)",
+    "Replace file: src/main/seed/seedDatabase.ts\n   found: yes\n   old: 287 line(s)\n   new: 281 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/config/scheduleCrudConfig.ts\n   found: yes\n   old: 632 line(s)\n   new: 625 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/config/scheduleCrudConfig.ts\n   found: yes\n   old: 625 line(s)\n   new: 617 line(s)"
+  ]
+}
