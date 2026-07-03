@@ -89,19 +89,10 @@ export class AdminCrudService {
     }
 
     const archived = this.repository.archive(config, params.id)
-    let finalItem = archived
-
-    if (params.entity === 'lesson_periods') {
-      finalItem = this.renumberLessonPeriods(Number(archived.id))
-    }
-
-    if (params.entity === 'academic_vacations') {
-      const academicYearId = normalizeNullableNumber(before.academic_year_id)
-
-      if (academicYearId !== null) {
-        this.syncAcademicYearStructure(academicYearId)
-      }
-    }
+    const finalItem =
+      params.entity === 'lesson_periods'
+        ? this.renumberLessonPeriods(Number(archived.id))
+        : archived
 
     this.auditService.write({
       action: 'archive',
@@ -126,16 +117,7 @@ export class AdminCrudService {
       throw new Error('Record not found')
     }
 
-    const academicYearIdToSync =
-      params.entity === 'academic_vacations'
-        ? normalizeNullableNumber(before.academic_year_id)
-        : null
-
     this.repository.delete(config, params.id)
-
-    if (academicYearIdToSync !== null) {
-      this.syncAcademicYearStructure(academicYearIdToSync)
-    }
 
     this.auditService.write({
       action: 'delete',
@@ -1336,17 +1318,10 @@ export class AdminCrudService {
       return normalizeNullableNumber(week.semester_id) === semesterId
     })
     const weekPayloads = buildWeekPayloadsForRange(semesterId, range.startsAt, range.endsAt)
-    const activeWeekNumbers = new Set<number>()
 
     weekPayloads.forEach((weekPayload) => {
-      const weekNumber = normalizeNullableNumber(weekPayload.number)
-
-      if (weekNumber !== null) {
-        activeWeekNumbers.add(weekNumber)
-      }
-
       const existingWeek = existingWeeks.find((week) => {
-        return normalizeNullableNumber(week.number) === weekNumber
+        return normalizeNullableNumber(week.number) === weekPayload.number
       })
 
       if (existingWeek?.id) {
@@ -1356,19 +1331,7 @@ export class AdminCrudService {
 
       this.repository.create(weekConfig, weekPayload)
     })
-
-    existingWeeks.forEach((week) => {
-      const weekId = normalizeNullableNumber(week.id)
-      const weekNumber = normalizeNullableNumber(week.number)
-
-      if (weekId === null || (weekNumber !== null && activeWeekNumbers.has(weekNumber))) {
-        return
-      }
-
-      this.repository.archive(weekConfig, weekId)
-    })
   }
-
   private prepareSpecialtyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
     const nextData = { ...data }
     const duration = normalizeNullableNumber(
@@ -1515,45 +1478,28 @@ function buildWeekPayloadsForRange(
   endsAt: string
 ): AdminCrudRecord[] {
   const payloads: AdminCrudRecord[] = []
-  const semesterStartDate = parseIsoDate(startsAt)
-  const semesterEndDate = parseIsoDate(endsAt)
   let weekNumber = 1
-  let currentWeekStartDate = semesterStartDate
+  let currentDate = parseIsoDate(startsAt)
+  const endDate = parseIsoDate(endsAt)
 
-  while (currentWeekStartDate.getTime() <= semesterEndDate.getTime()) {
-    const calendarWeekEndDate = getCalendarWeekEndDate(currentWeekStartDate)
-    const currentWeekEndDate = clampDate(
-      calendarWeekEndDate,
-      currentWeekStartDate,
-      semesterEndDate
-    )
+  while (currentDate.getTime() <= endDate.getTime()) {
+    const weekEndDate = addDays(currentDate, 6)
 
     payloads.push({
       semester_id: semesterId,
       number: weekNumber,
-      starts_at: formatIsoDate(currentWeekStartDate),
-      ends_at: formatIsoDate(currentWeekEndDate),
+      starts_at: formatIsoDate(currentDate),
+      ends_at: formatIsoDate(clampDate(weekEndDate, currentDate, endDate)),
       week_type: weekNumber % 2 === 1 ? 'odd' : 'even',
       status: 'active'
     })
 
-    currentWeekStartDate = addDays(currentWeekEndDate, 1)
+    currentDate = addDays(weekEndDate, 1)
     weekNumber += 1
   }
 
   return payloads
 }
-
-function getCalendarWeekEndDate(date: Date): Date {
-  return addDays(date, 7 - getIsoWeekday(date))
-}
-
-function getIsoWeekday(date: Date): number {
-  const day = date.getUTCDay()
-
-  return day === 0 ? 7 : day
-}
-
 function pickNextValue(
   data: AdminCrudRecord,
   before: AdminCrudRecord | undefined,

@@ -294,31 +294,14 @@ export function ScheduleItemsDrilldown(): ReactElement {
   }, [selectedGroupDisciplines])
 
   const availableSemesterOptions = useMemo(() => {
-    if (!selectedGroup) {
-      return []
-    }
-
-    const selectedGroupAcademicYearId = toNumberOrNull(selectedGroup.academic_year_id)
-
-    if (selectedGroupAcademicYearId !== null) {
-      return semesterOptions.filter((semesterOption) => {
-        const semester = semesters.find((item) => String(item.id) === semesterOption.value)
-
-        return (
-          semester !== undefined &&
-          normalizeNumber(semester.academic_year_id) === selectedGroupAcademicYearId
-        )
-      })
-    }
-
-    if (selectedGroupSemesterIds.size === 0) {
+    if (!selectedGroup || selectedGroupSemesterIds.size === 0) {
       return []
     }
 
     return semesterOptions.filter((semesterOption) => {
       return selectedGroupSemesterIds.has(Number(semesterOption.value))
     })
-  }, [selectedGroup, selectedGroupSemesterIds, semesterOptions, semesters])
+  }, [selectedGroup, selectedGroupSemesterIds, semesterOptions])
 
   const availableWeekOptions = useMemo(() => {
     if (!selectedSemesterId) {
@@ -1333,15 +1316,6 @@ function getLessonCountText(count: number): string {
   return 'пар'
 }
 
-function normalizeNumber(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-
-  const numberValue = Number(value)
-
-  return Number.isFinite(numberValue) ? numberValue : null
-}
 function toNumberOrNull(value: unknown): number | null {
   if (value === null || value === undefined || value === '') {
     return null
