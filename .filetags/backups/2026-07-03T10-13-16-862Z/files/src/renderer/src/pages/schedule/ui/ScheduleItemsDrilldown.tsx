@@ -65,7 +65,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState('')
   const [selectedWeekId, setSelectedWeekId] = useState('')
-  const [selectedSemesterId, setSelectedSemesterId] = useState('')
 
   const [faculties, setFaculties] = useState<AdminCrudRecord[]>([])
   const [specialties, setSpecialties] = useState<AdminCrudRecord[]>([])
@@ -307,50 +306,37 @@ export function ScheduleItemsDrilldown(): ReactElement {
     )
   }, [selectedGroupDisciplines])
 
-  const selectedWeekDisciplines = selectedSemesterDisciplines
+  const selectedWeekDisciplines = useMemo(() => {
+    const semesterId = toNumberOrNull(selectedWeek?.semester_id)
 
-  const availableSemesterOptions = useMemo(() => {
-    if (!selectedGroup || selectedGroupSemesterIds.size === 0) {
+    if (semesterId === null) {
       return []
     }
 
-    return semesterOptions.filter((semesterOption) => {
-      return selectedGroupSemesterIds.has(Number(semesterOption.value))
-    })
-  }, [selectedGroup, selectedGroupSemesterIds, semesterOptions])
+    return selectedGroupDisciplines.filter(
+      (discipline) => Number(discipline.semester_id) === semesterId
+    )
+  }, [selectedGroupDisciplines, selectedWeek])
 
   const availableWeekOptions = useMemo(() => {
-    if (!selectedSemesterId) {
+    if (!selectedGroup) {
+      return []
+    }
+
+    if (selectedGroupSemesterIds.size === 0) {
       return []
     }
 
     return weekOptions.filter((weekOption) => {
       const semesterId = toNumberOrNull(weekOption.meta?.semester_id)
 
-      return semesterId !== null && semesterId === Number(selectedSemesterId)
+      return semesterId !== null && selectedGroupSemesterIds.has(semesterId)
     })
-  }, [selectedSemesterId, weekOptions])
+  }, [selectedGroup, selectedGroupSemesterIds, weekOptions])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       if (!selectedGroupId) {
-        setSelectedSemesterId('')
-        setSelectedWeekId('')
-        return
-      }
-
-      const selectedSemesterStillAvailable = availableSemesterOptions.some(
-        (semesterOption) => semesterOption.value === selectedSemesterId
-      )
-
-      if (selectedSemesterId && !selectedSemesterStillAvailable) {
-        setSelectedSemesterId('')
-        setSelectedWeekId('')
-        return
-      }
-
-      if (!selectedSemesterId && availableSemesterOptions.length > 0) {
-        setSelectedSemesterId(availableSemesterOptions[0].value)
         setSelectedWeekId('')
         return
       }
@@ -370,34 +356,18 @@ export function ScheduleItemsDrilldown(): ReactElement {
     }, 0)
 
     return () => window.clearTimeout(timeoutId)
-  }, [
-    availableSemesterOptions,
-    availableWeekOptions,
-    selectedGroupId,
-    selectedSemesterId,
-    selectedWeekId
-  ])
+  }, [availableWeekOptions, selectedGroupId, selectedWeekId])
 
   const subjectNameById = useMemo(() => createOptionsMap(subjectOptions), [subjectOptions])
   const groupNameById = useMemo(() => createOptionsMap(allGroupOptions), [allGroupOptions])
 
-  const selectedSemesterDisciplines = useMemo(() => {
-    if (!selectedSemesterId) {
-      return []
-    }
-
-    return selectedGroupDisciplines.filter(
-      (discipline) => Number(discipline.semester_id) === Number(selectedSemesterId)
-    )
-  }, [selectedGroupDisciplines, selectedSemesterId])
-
   const disciplineOptions = useMemo(
     () =>
-      createDisciplineOptions(selectedSemesterDisciplines, {
+      createDisciplineOptions(selectedGroupDisciplines, {
         subjectNameById,
         groupNameById
       }),
-    [groupNameById, selectedSemesterDisciplines, subjectNameById]
+    [groupNameById, selectedGroupDisciplines, subjectNameById]
   )
   const gradeDisciplineOptions = useMemo(
     () =>
@@ -521,40 +491,31 @@ export function ScheduleItemsDrilldown(): ReactElement {
   }, [selectedGroupId, selectedWeekId])
 
   const scheduleFixedData = useMemo(() => {
-    if (!selectedGroupId || !selectedSemesterId || !selectedWeekId) {
+    if (!selectedGroupId || !selectedWeekId) {
       return undefined
     }
 
     return {
       group_id: Number(selectedGroupId),
-      semester_id: Number(selectedSemesterId),
       week_id: Number(selectedWeekId)
     }
-  }, [selectedGroupId, selectedSemesterId, selectedWeekId])
+  }, [selectedGroupId, selectedWeekId])
 
   function handleFacultyChange(value: string): void {
     setSelectedFacultyId(value)
     setSelectedSpecialtyId('')
     setSelectedGroupId('')
-    setSelectedSemesterId('')
     setSelectedWeekId('')
   }
 
   function handleSpecialtyChange(value: string): void {
     setSelectedSpecialtyId(value)
     setSelectedGroupId('')
-    setSelectedSemesterId('')
     setSelectedWeekId('')
   }
 
   function handleGroupChange(value: string): void {
     setSelectedGroupId(value)
-    setSelectedSemesterId('')
-    setSelectedWeekId('')
-  }
-
-  function handleSemesterChange(value: string): void {
-    setSelectedSemesterId(value)
     setSelectedWeekId('')
   }
 
@@ -562,12 +523,11 @@ export function ScheduleItemsDrilldown(): ReactElement {
     setSelectedFacultyId('')
     setSelectedSpecialtyId('')
     setSelectedGroupId('')
-    setSelectedSemesterId('')
     setSelectedWeekId('')
   }
 
-  const canShowSchedule = Boolean(selectedGroup && selectedSemesterId && selectedWeek)
-  const canCreateScheduleItem = canShowSchedule && selectedSemesterDisciplines.length > 0
+  const canShowSchedule = Boolean(selectedGroup && selectedWeek)
+  const canCreateScheduleItem = canShowSchedule && selectedGroupDisciplines.length > 0
   const canCreateGradeItem = canShowSchedule && selectedWeekDisciplines.length > 0
 
   function openGradeItemDialog(): void {
@@ -662,8 +622,8 @@ export function ScheduleItemsDrilldown(): ReactElement {
             <div>
               <CardTitle>Расписание занятий</CardTitle>
               <CardDescription>
-                Выбери факультет, специальность, группу, семестр и неделю. Ниже расписание будет
-                показано карточками по дням недели.
+                Выбери неделю, факультет, специальность и группу. Ниже расписание будет показано
+                карточками по дням недели.
               </CardDescription>
             </div>
 
@@ -675,7 +635,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
         </CardHeader>
 
         <CardContent>
-          <div className="grid gap-4 xl:grid-cols-5">
+          <div className="grid gap-4 xl:grid-cols-4">
             <ScheduleFilterSelect
               label="Факультет"
               value={selectedFacultyId}
@@ -701,21 +661,13 @@ export function ScheduleItemsDrilldown(): ReactElement {
               disabled={!selectedSpecialtyId || groupOptions.length === 0}
               onChange={handleGroupChange}
             />
-            <ScheduleFilterSelect
-              label="Семестр"
-              value={selectedSemesterId}
-              placeholder={selectedGroupId ? 'Выбери семестр' : 'Сначала группу'}
-              options={availableSemesterOptions}
-              disabled={!selectedGroupId || availableSemesterOptions.length === 0}
-              onChange={handleSemesterChange}
-            />
 
             <ScheduleFilterSelect
               label="Неделя"
               value={selectedWeekId}
-              placeholder={selectedSemesterId ? 'Выбери неделю' : 'Сначала семестр'}
+              placeholder={selectedGroupId ? 'Выбери неделю' : 'Сначала группу'}
               options={availableWeekOptions}
-              disabled={!selectedSemesterId || availableWeekOptions.length === 0}
+              disabled={!selectedGroupId || availableWeekOptions.length === 0}
               onChange={setSelectedWeekId}
             />
           </div>
@@ -724,7 +676,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
             {selectedFaculty ? <Badge>{getRecordName(selectedFaculty)}</Badge> : null}
             {selectedSpecialty ? <Badge>{getRecordName(selectedSpecialty)}</Badge> : null}
             {selectedGroup ? <Badge>{getRecordName(selectedGroup)}</Badge> : null}
-            {selectedSemesterId ? <Badge>{semesterNameById.get(Number(selectedSemesterId))}</Badge> : null}
             {selectedWeek ? <Badge>{weekNameById.get(Number(selectedWeek.id))}</Badge> : null}
           </div>
         </CardContent>
@@ -734,7 +685,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
         <Card>
           <CardContent className="py-10 text-center">
             <p className="text-sm font-medium text-[var(--color-text)]">
-              Выбери факультет, специальность, группу, семестр и неделю.
+              Выбери факультет, специальность, группу и неделю.
             </p>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
               После выбора фильтров здесь появится расписание недели в виде карточек по дням.

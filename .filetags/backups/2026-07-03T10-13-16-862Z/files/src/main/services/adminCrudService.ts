@@ -157,13 +157,6 @@ export class AdminCrudService {
     if (entity === 'curriculum_plans') {
       return this.prepareCurriculumPlanData(data, before)
     }
-    if (entity === 'academic_years') {
-      return this.prepareAcademicYearData(data, before)
-    }
-
-    if (entity === 'academic_vacations') {
-      return this.prepareAcademicVacationData(data, before)
-    }
 
     if (entity === 'dictionary_items') {
       return this.prepareDictionaryItemData(data, before)
@@ -217,9 +210,7 @@ export class AdminCrudService {
   private prepareFacultyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
     const nextData = { ...data }
     const facultyId = normalizeNullableNumber(before?.id)
-    const deanTeacherId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'dean_teacher_id')
-    )
+    const deanTeacherId = normalizeNullableNumber(pickNextValue(nextData, before, 'dean_teacher_id'))
     const deputyDeanTeacherId = normalizeNullableNumber(
       pickNextValue(nextData, before, 'deputy_dean_teacher_id')
     )
@@ -258,7 +249,11 @@ export class AdminCrudService {
       )
 
       if (facultyId !== null) {
-        this.ensureTeacherBelongsToFaculty(deputyDeanTeacher, facultyId, 'Заместитель декана')
+        this.ensureTeacherBelongsToFaculty(
+          deputyDeanTeacher,
+          facultyId,
+          'Заместитель декана'
+        )
       }
       this.ensureTeacherHasNoConflictingLeadershipRole(deputyDeanTeacherId, {
         entity: 'faculties',
@@ -278,9 +273,7 @@ export class AdminCrudService {
   private prepareDepartmentData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
     const nextData = { ...data }
     const departmentId = normalizeNullableNumber(before?.id)
-    const headTeacherId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'head_teacher_id')
-    )
+    const headTeacherId = normalizeNullableNumber(pickNextValue(nextData, before, 'head_teacher_id'))
     const deputyHeadTeacherId = normalizeNullableNumber(
       pickNextValue(nextData, before, 'deputy_head_teacher_id')
     )
@@ -303,7 +296,11 @@ export class AdminCrudService {
       )
 
       if (departmentId !== null) {
-        this.ensureTeacherBelongsToDepartment(headTeacher, departmentId, 'Заведующий кафедрой')
+        this.ensureTeacherBelongsToDepartment(
+          headTeacher,
+          departmentId,
+          'Заведующий кафедрой'
+        )
       }
       this.ensureTeacherHasNoConflictingLeadershipRole(headTeacherId, {
         entity: 'departments',
@@ -682,20 +679,6 @@ export class AdminCrudService {
   }
 
   private afterDataSaved(entity: string, savedRecord: AdminCrudRecord): AdminCrudRecord {
-    if (entity === 'academic_years') {
-      return this.syncAcademicYearStructure(Number(savedRecord.id))
-    }
-
-    if (entity === 'academic_vacations') {
-      const academicYearId = normalizeNullableNumber(savedRecord.academic_year_id)
-
-      if (academicYearId !== null) {
-        this.syncAcademicYearStructure(academicYearId)
-      }
-
-      return savedRecord
-    }
-
     if (entity === 'lesson_periods') {
       return this.renumberLessonPeriods(Number(savedRecord.id))
     }
@@ -1092,240 +1075,6 @@ export class AdminCrudService {
     }
   }
 
-  private prepareAcademicYearData(
-    data: AdminCrudRecord,
-    before?: AdminCrudRecord
-  ): AdminCrudRecord {
-    const startsAt = normalizeIsoDate(pickNextValue(data, before, 'starts_at'))
-
-    if (!startsAt) {
-      throw new Error('Укажи дату начала учебного года')
-    }
-
-    const startDate = parseIsoDate(startsAt)
-    const endDate = addDays(addYears(startDate, 1), -1)
-    const endsAt = formatIsoDate(endDate)
-    const name = `${startDate.getUTCFullYear()}-${endDate.getUTCFullYear()}`
-    const status = String(pickNextValue(data, before, 'status') ?? 'active').trim() || 'active'
-
-    return {
-      ...data,
-      name,
-      starts_at: startsAt,
-      ends_at: endsAt,
-      status
-    }
-  }
-
-  private prepareAcademicVacationData(
-    data: AdminCrudRecord,
-    before?: AdminCrudRecord
-  ): AdminCrudRecord {
-    const nextData = { ...data }
-    const academicYearId = normalizeNullableNumber(
-      pickNextValue(nextData, before, 'academic_year_id')
-    )
-    const vacationType = normalizeVacationType(pickNextValue(nextData, before, 'vacation_type'))
-    const startsAt = normalizeIsoDate(pickNextValue(nextData, before, 'starts_at'))
-    const endsAt = normalizeIsoDate(pickNextValue(nextData, before, 'ends_at'))
-
-    if (academicYearId === null) {
-      throw new Error('Выбери учебный год для каникул')
-    }
-
-    if (!vacationType) {
-      throw new Error('Выбери тип каникул')
-    }
-
-    if (!startsAt || !endsAt) {
-      throw new Error('Укажи дату начала и дату окончания каникул')
-    }
-
-    const academicYear = this.ensureActiveRelatedRecord(
-      'academic_years',
-      academicYearId,
-      'Учебный год для каникул не найден или архивирован'
-    )
-    const academicYearStartsAt = normalizeIsoDate(academicYear.starts_at)
-    const academicYearEndsAt = normalizeIsoDate(academicYear.ends_at)
-
-    if (!academicYearStartsAt || !academicYearEndsAt) {
-      throw new Error('У выбранного учебного года не указаны даты начала и окончания')
-    }
-
-    if (parseIsoDate(endsAt).getTime() < parseIsoDate(startsAt).getTime()) {
-      throw new Error('Дата окончания каникул должна быть позже даты начала')
-    }
-
-    if (
-      parseIsoDate(startsAt).getTime() < parseIsoDate(academicYearStartsAt).getTime() ||
-      parseIsoDate(endsAt).getTime() > parseIsoDate(academicYearEndsAt).getTime()
-    ) {
-      throw new Error('Каникулы должны находиться внутри выбранного учебного года')
-    }
-
-    const currentId = normalizeNullableNumber(before?.id)
-    const duplicateVacation = this.listAllActiveRecords('academic_vacations').find((vacation) => {
-      const vacationId = normalizeNullableNumber(vacation.id)
-
-      return (
-        normalizeNullableNumber(vacation.academic_year_id) === academicYearId &&
-        String(vacation.vacation_type) === vacationType &&
-        vacationId !== currentId
-      )
-    })
-
-    if (duplicateVacation) {
-      throw new Error(
-        `Для выбранного учебного года уже есть каникулы типа «${getVacationTypeLabel(vacationType)}»`
-      )
-    }
-
-    return {
-      ...nextData,
-      academic_year_id: academicYearId,
-      vacation_type: vacationType,
-      name: getVacationTypeLabel(vacationType),
-      starts_at: startsAt,
-      ends_at: endsAt
-    }
-  }
-
-  private syncAcademicYearStructure(academicYearId: number): AdminCrudRecord {
-    const academicYearConfig = getAdminCrudEntityConfig('academic_years')
-    const academicYear = this.repository.getById(academicYearConfig, academicYearId)
-
-    if (!academicYear) {
-      throw new Error('Учебный год не найден')
-    }
-
-    const semesterRanges = this.resolveAcademicYearSemesterRanges(academicYear)
-    const firstSemester = this.upsertSemester(academicYearId, 1, semesterRanges.first)
-    const secondSemester = this.upsertSemester(academicYearId, 2, semesterRanges.second)
-
-    this.syncWeeksForSemester(Number(firstSemester.id), semesterRanges.first)
-    this.syncWeeksForSemester(Number(secondSemester.id), semesterRanges.second)
-
-    return this.repository.getById(academicYearConfig, academicYearId) ?? academicYear
-  }
-
-  private resolveAcademicYearSemesterRanges(academicYear: AdminCrudRecord): {
-    first: { startsAt: string; endsAt: string }
-    second: { startsAt: string; endsAt: string }
-  } {
-    const startsAt = normalizeIsoDate(academicYear.starts_at)
-    const endsAt = normalizeIsoDate(academicYear.ends_at)
-    const academicYearId = normalizeNullableNumber(academicYear.id)
-
-    if (!startsAt || !endsAt || academicYearId === null) {
-      throw new Error('У учебного года не указаны корректные даты')
-    }
-
-    const yearStartDate = parseIsoDate(startsAt)
-    const yearEndDate = parseIsoDate(endsAt)
-    const yearDayCount = Math.max(1, differenceInDays(yearStartDate, yearEndDate) + 1)
-    const fallbackFirstSemesterEndDate = addDays(
-      yearStartDate,
-      Math.max(0, Math.floor(yearDayCount / 2) - 1)
-    )
-
-    const vacations = this.listAllActiveRecords('academic_vacations').filter((vacation) => {
-      return normalizeNullableNumber(vacation.academic_year_id) === academicYearId
-    })
-
-    const intermediateVacation = vacations.find(
-      (vacation) => String(vacation.vacation_type) === 'intermediate'
-    )
-    const afterCourseVacation = vacations.find(
-      (vacation) => String(vacation.vacation_type) === 'after_course'
-    )
-
-    const intermediateStartsAt = normalizeIsoDate(intermediateVacation?.starts_at)
-    const intermediateEndsAt = normalizeIsoDate(intermediateVacation?.ends_at)
-    const afterCourseStartsAt = normalizeIsoDate(afterCourseVacation?.starts_at)
-
-    const firstSemesterEndDate = intermediateStartsAt
-      ? addDays(parseIsoDate(intermediateStartsAt), -1)
-      : fallbackFirstSemesterEndDate
-    const secondSemesterStartDate =
-      intermediateEndsAt !== null
-        ? addDays(parseIsoDate(intermediateEndsAt), 1)
-        : addDays(firstSemesterEndDate, 1)
-    const secondSemesterEndDate = afterCourseStartsAt
-      ? addDays(parseIsoDate(afterCourseStartsAt), -1)
-      : yearEndDate
-
-    const normalizedFirstEndDate = clampDate(firstSemesterEndDate, yearStartDate, yearEndDate)
-    const normalizedSecondStartDate = clampDate(secondSemesterStartDate, yearStartDate, yearEndDate)
-    const normalizedSecondEndDate = clampDate(
-      secondSemesterEndDate,
-      normalizedSecondStartDate,
-      yearEndDate
-    )
-
-    return {
-      first: {
-        startsAt,
-        endsAt: formatIsoDate(normalizedFirstEndDate)
-      },
-      second: {
-        startsAt: formatIsoDate(normalizedSecondStartDate),
-        endsAt: formatIsoDate(normalizedSecondEndDate)
-      }
-    }
-  }
-
-  private upsertSemester(
-    academicYearId: number,
-    semesterNumber: number,
-    range: { startsAt: string; endsAt: string }
-  ): AdminCrudRecord {
-    const semesterConfig = getAdminCrudEntityConfig('semesters')
-    const existingSemester = this.listAllActiveRecords('semesters').find((semester) => {
-      return (
-        normalizeNullableNumber(semester.academic_year_id) === academicYearId &&
-        normalizeNullableNumber(semester.number) === semesterNumber
-      )
-    })
-    const payload = {
-      academic_year_id: academicYearId,
-      number: semesterNumber,
-      name: `${semesterNumber} семестр`,
-      starts_at: range.startsAt,
-      ends_at: range.endsAt,
-      status: 'active'
-    }
-
-    if (existingSemester?.id) {
-      return this.repository.update(semesterConfig, Number(existingSemester.id), payload)
-    }
-
-    return this.repository.create(semesterConfig, payload)
-  }
-
-  private syncWeeksForSemester(
-    semesterId: number,
-    range: { startsAt: string; endsAt: string }
-  ): void {
-    const weekConfig = getAdminCrudEntityConfig('weeks')
-    const existingWeeks = this.listAllActiveRecords('weeks').filter((week) => {
-      return normalizeNullableNumber(week.semester_id) === semesterId
-    })
-    const weekPayloads = buildWeekPayloadsForRange(semesterId, range.startsAt, range.endsAt)
-
-    weekPayloads.forEach((weekPayload) => {
-      const existingWeek = existingWeeks.find((week) => {
-        return normalizeNullableNumber(week.number) === weekPayload.number
-      })
-
-      if (existingWeek?.id) {
-        this.repository.update(weekConfig, Number(existingWeek.id), weekPayload)
-        return
-      }
-
-      this.repository.create(weekConfig, weekPayload)
-    })
-  }
   private prepareSpecialtyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
     const nextData = { ...data }
     const duration = normalizeNullableNumber(
@@ -1392,108 +1141,6 @@ function normalizeNullableNumber(value: unknown): number | null {
 
   return Number.isFinite(numberValue) ? numberValue : null
 }
-function normalizeIsoDate(value: unknown): string | null {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-
-  const stringValue = String(value)
-
-  return /^\d{4}-\d{2}-\d{2}$/.test(stringValue) ? stringValue : null
-}
-
-function parseIsoDate(value: string): Date {
-  const [year, month, day] = value.split('-').map(Number)
-
-  return new Date(Date.UTC(year, month - 1, day))
-}
-
-function formatIsoDate(date: Date): string {
-  const year = date.getUTCFullYear()
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(date.getUTCDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
-}
-
-function addYears(date: Date, years: number): Date {
-  const nextDate = new Date(date.getTime())
-
-  nextDate.setUTCFullYear(nextDate.getUTCFullYear() + years)
-
-  return nextDate
-}
-
-function differenceInDays(startDate: Date, endDate: Date): number {
-  return Math.floor((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000))
-}
-
-function clampDate(date: Date, minDate: Date, maxDate: Date): Date {
-  if (date.getTime() < minDate.getTime()) {
-    return minDate
-  }
-
-  if (date.getTime() > maxDate.getTime()) {
-    return maxDate
-  }
-
-  return date
-}
-
-function normalizeVacationType(value: unknown): string | null {
-  const type = String(value ?? '').trim()
-
-  if (type === 'intermediate' || type === 'after_course') {
-    return type
-  }
-
-  return null
-}
-
-function getVacationTypeLabel(type: string): string {
-  if (type === 'intermediate') {
-    return 'Промежуточные каникулы'
-  }
-
-  if (type === 'after_course') {
-    return 'Послекурсовые каникулы'
-  }
-
-  return 'Каникулы'
-}
-
-function buildWeekPayloadsForRange(
-  semesterId: number,
-  startsAt: string,
-  endsAt: string
-): AdminCrudRecord[] {
-  const payloads: AdminCrudRecord[] = []
-  let weekNumber = 1
-  let currentDate = parseIsoDate(startsAt)
-  const endDate = parseIsoDate(endsAt)
-
-  while (currentDate.getTime() <= endDate.getTime()) {
-    const weekEndDate = addDays(currentDate, 6)
-
-    payloads.push({
-      semester_id: semesterId,
-      number: weekNumber,
-      starts_at: formatIsoDate(currentDate),
-      ends_at: formatIsoDate(clampDate(weekEndDate, currentDate, endDate)),
-      week_type: weekNumber % 2 === 1 ? 'odd' : 'even',
-      status: 'active'
-    })
-
-    currentDate = addDays(weekEndDate, 1)
-    weekNumber += 1
-  }
-
-  return payloads
-}
 function pickNextValue(
   data: AdminCrudRecord,
   before: AdminCrudRecord | undefined,
@@ -1502,9 +1149,7 @@ function pickNextValue(
   return Object.prototype.hasOwnProperty.call(data, key) ? data[key] : before?.[key]
 }
 function normalizeEmailForUniqueness(value: unknown): string {
-  return String(value ?? '')
-    .trim()
-    .toLowerCase()
+  return String(value ?? '').trim().toLowerCase()
 }
 
 function normalizePhoneForUniqueness(value: unknown): string {
@@ -1541,10 +1186,7 @@ function teacherTeachesSubject(teachingSubjects: unknown, subjectName: unknown):
 }
 
 function normalizeSubjectNameForMatch(value: unknown): string {
-  return String(value ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
+  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
 function formatPersonName(record: AdminCrudRecord): string {

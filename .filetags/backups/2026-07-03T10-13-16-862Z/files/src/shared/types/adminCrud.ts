@@ -9,7 +9,6 @@ export type AdminEntityKey =
   | 'academic_years'
   | 'semesters'
   | 'weeks'
-  | 'academic_vacations'
   | 'lesson_periods'
   | 'teachers'
   | 'employees'

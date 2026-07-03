@@ -89,11 +89,6 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['semester_id', 'number', 'starts_at', 'ends_at', 'week_type', 'status'],
     ['week_type', 'status']
   ),
-  academic_vacations: entity(
-    'academic_vacations',
-    ['academic_year_id', 'vacation_type', 'name', 'starts_at', 'ends_at', 'description'],
-    ['vacation_type', 'name', 'description']
-  ),
   lesson_periods: entity(
     'lesson_periods',
     ['number', 'name', 'starts_at', 'ends_at'],

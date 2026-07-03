@@ -320,11 +320,27 @@ export function createCurriculumItemColumns(maps: {
 }
 export const academicYearFields: AdminCrudFieldConfig[] = [
   {
-    key: 'starts_at',
-    label: 'Дата начала учебного года',
-    placeholder: 'дд.мм.гггг',
-    type: 'date',
+    key: 'name',
+    label: 'Название учебного года',
+    placeholder: 'Например: 2025-2026',
     required: true
+  },
+  {
+    key: 'starts_at',
+    label: 'Дата начала',
+    placeholder: 'дд.мм.гггг',
+    type: 'date'
+  },
+  {
+    key: 'ends_at',
+    label: 'Дата окончания',
+    placeholder: 'дд.мм.гггг',
+    type: 'date'
+  },
+  {
+    key: 'status',
+    label: 'Статус',
+    placeholder: 'Например: active'
   }
 ]
 
@@ -346,103 +362,12 @@ export const academicYearColumns: AdminCrudColumnConfig[] = [
     key: 'ends_at',
     label: 'Окончание',
     type: 'date'
-  }
-]
-export const vacationTypeOptions: AdminCrudSelectOption[] = [
-  {
-    value: 'intermediate',
-    label: 'Промежуточные каникулы'
   },
   {
-    value: 'after_course',
-    label: 'Послекурсовые каникулы'
+    key: 'status',
+    label: 'Статус'
   }
 ]
-
-export function createAcademicVacationFields(
-  academicYearOptions: AdminCrudSelectOption[]
-): AdminCrudFieldConfig[] {
-  return [
-    {
-      key: 'academic_year_id',
-      label: 'Учебный год',
-      placeholder: 'Выбери учебный год',
-      type: 'select',
-      valueType: 'number',
-      options: academicYearOptions,
-      required: true
-    },
-    {
-      key: 'vacation_type',
-      label: 'Тип каникул',
-      placeholder: 'Выбери тип каникул',
-      type: 'select',
-      options: vacationTypeOptions,
-      required: true
-    },
-    {
-      key: 'starts_at',
-      label: 'Дата начала',
-      placeholder: 'дд.мм.гггг',
-      type: 'date',
-      required: true
-    },
-    {
-      key: 'ends_at',
-      label: 'Дата окончания',
-      placeholder: 'дд.мм.гггг',
-      type: 'date',
-      required: true
-    },
-    {
-      key: 'description',
-      label: 'Примечание',
-      placeholder: 'Дополнительная информация',
-      type: 'textarea'
-    }
-  ]
-}
-
-export function createAcademicVacationColumns(maps: {
-  academicYearNameById: Map<number, string>
-}): AdminCrudColumnConfig[] {
-  return [
-    {
-      key: 'id',
-      label: 'ID'
-    },
-    {
-      key: 'academic_year_id',
-      label: 'Учебный год',
-      render: (record) => renderRelation(record.academic_year_id, maps.academicYearNameById)
-    },
-    {
-      key: 'vacation_type',
-      label: 'Тип',
-      render: (record) => renderVacationType(record.vacation_type)
-    },
-    {
-      key: 'starts_at',
-      label: 'Начало',
-      type: 'date'
-    },
-    {
-      key: 'ends_at',
-      label: 'Окончание',
-      type: 'date'
-    },
-    {
-      key: 'description',
-      label: 'Примечание'
-    }
-  ]
-}
-
-function renderVacationType(value: unknown): string {
-  const option = vacationTypeOptions.find((item) => item.value === String(value))
-
-  return option?.label ?? String(value ?? '—')
-}
 
 export const groupSelectorColumns: AdminCrudColumnConfig[] = [
   {
