@@ -1,3 +1,4 @@
+@write src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx
 import type { FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
@@ -1089,3 +1090,4 @@ function formatCellValue(value: unknown): string {
 
   return String(value)
 }
+@end

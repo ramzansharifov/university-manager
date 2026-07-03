@@ -8,7 +8,6 @@ import type {
 } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import {
-  Badge,
   Button,
   Dialog,
   DialogClose,
@@ -53,18 +52,12 @@ interface PendingAssignment {
 
 interface TeacherSearchState {
   name: string
-  department_id: string
-  status_id: string
   contact: string
   subject: string
 }
 
-const allSelectValue = '__all__'
-
 const initialTeacherSearchState: TeacherSearchState = {
   name: '',
-  department_id: '',
-  status_id: '',
   contact: '',
   subject: ''
 }
@@ -112,12 +105,10 @@ const requiredStaffRoles: Record<RequiredStaffRoleKey, RequiredStaffRoleConfig> 
 
 export function RequiredStaffPanel() {
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
-  const [departmentOptions, setDepartmentOptions] = useState<AdminCrudSelectOption[]>([])
-  const [teacherStatusOptions, setTeacherStatusOptions] = useState<AdminCrudSelectOption[]>([])
   const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null)
   const [selectedRoleKey, setSelectedRoleKey] = useState('')
   const [teacherSearch, setTeacherSearch] = useState<TeacherSearchState>(initialTeacherSearchState)
-  const [teacherCandidatePool, setTeacherCandidatePool] = useState<AdminCrudRecord[]>([])
+  const [teacherCandidates, setTeacherCandidates] = useState<AdminCrudRecord[]>([])
   const [isLoadingTeachers, setIsLoadingTeachers] = useState(false)
   const [isAssigning, setIsAssigning] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -125,34 +116,15 @@ export function RequiredStaffPanel() {
   const [refreshVersion, setRefreshVersion] = useState(0)
 
   const loadRelationOptions = useCallback(async () => {
-    const [teachers, departments, teacherStatuses] = await Promise.all([
-      window.api.adminCrud.list({
-        entity: 'teachers',
-        page: 1,
-        pageSize: 500,
-        orderBy: 'last_name',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'departments',
-        page: 1,
-        pageSize: 500,
-        orderBy: 'name',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'dictionary_items',
-        page: 1,
-        pageSize: 100,
-        filters: { dictionary_key: 'teacher_statuses' },
-        orderBy: 'sort_order',
-        orderDirection: 'asc'
-      })
-    ])
+    const teachers = await window.api.adminCrud.list({
+      entity: 'teachers',
+      page: 1,
+      pageSize: 100,
+      orderBy: 'last_name',
+      orderDirection: 'asc'
+    })
 
     setTeacherOptions(createPersonOptions(teachers.items))
-    setDepartmentOptions(createNamedOptions(departments.items))
-    setTeacherStatusOptions(createDictionaryOptions(teacherStatuses.items))
   }, [])
 
   useEffect(() => {
@@ -160,11 +132,6 @@ export function RequiredStaffPanel() {
   }, [loadRelationOptions])
 
   const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
-  const departmentNameById = useMemo(() => createOptionsMap(departmentOptions), [departmentOptions])
-  const teacherStatusNameById = useMemo(
-    () => createOptionsMap(teacherStatusOptions),
-    [teacherStatusOptions]
-  )
 
   const facultyFields = useMemo(
     () => createFacultyRequiredStaffFields(teacherOptions),
@@ -194,18 +161,6 @@ export function RequiredStaffPanel() {
     ? getSelectedRole(pendingAssignment.roles, selectedRoleKey)
     : null
 
-  const teacherCandidates = useMemo(
-    () => filterTeacherCandidates(teacherCandidatePool, teacherSearch),
-    [
-      teacherCandidatePool,
-      teacherSearch.name,
-      teacherSearch.department_id,
-      teacherSearch.status_id,
-      teacherSearch.contact,
-      teacherSearch.subject
-    ]
-  )
-
   useEffect(() => {
     if (!pendingAssignment || !selectedRole) {
       return
@@ -219,13 +174,14 @@ export function RequiredStaffPanel() {
 
       try {
         const candidates = await loadTeacherCandidates(selectedRole, pendingAssignment.record)
+        const filteredCandidates = filterTeacherCandidates(candidates, teacherSearch)
 
         if (!isCancelled) {
-          setTeacherCandidatePool(candidates)
+          setTeacherCandidates(filteredCandidates)
         }
       } catch (error) {
         if (!isCancelled) {
-          setTeacherCandidatePool([])
+          setTeacherCandidates([])
           setFormError(error instanceof Error ? error.message : 'Не удалось загрузить преподавателей')
         }
       } finally {
@@ -240,7 +196,13 @@ export function RequiredStaffPanel() {
     return () => {
       isCancelled = true
     }
-  }, [pendingAssignment, selectedRole])
+  }, [
+    pendingAssignment,
+    selectedRole,
+    teacherSearch.name,
+    teacherSearch.contact,
+    teacherSearch.subject
+  ])
 
   function openAssignmentDialog(record: AdminCrudRecord, roles: RequiredStaffRoleConfig[]) {
     setPageError(null)
@@ -251,7 +213,7 @@ export function RequiredStaffPanel() {
     })
     setSelectedRoleKey(roles[0]?.key ?? '')
     setTeacherSearch(initialTeacherSearchState)
-    setTeacherCandidatePool([])
+    setTeacherCandidates([])
   }
 
   function closeAssignmentDialog() {
@@ -262,14 +224,14 @@ export function RequiredStaffPanel() {
     setPendingAssignment(null)
     setSelectedRoleKey('')
     setTeacherSearch(initialTeacherSearchState)
-    setTeacherCandidatePool([])
+    setTeacherCandidates([])
     setFormError(null)
   }
 
   function updateTeacherSearchField(field: keyof TeacherSearchState, value: string) {
     setTeacherSearch((current) => ({
       ...current,
-      [field]: value === allSelectValue ? '' : value
+      [field]: value
     }))
   }
 
@@ -299,7 +261,7 @@ export function RequiredStaffPanel() {
       setPendingAssignment(null)
       setSelectedRoleKey('')
       setTeacherSearch(initialTeacherSearchState)
-      setTeacherCandidatePool([])
+      setTeacherCandidates([])
       await loadRelationOptions()
       setRefreshVersion((current) => current + 1)
     } catch (error) {
@@ -318,7 +280,7 @@ export function RequiredStaffPanel() {
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
         Здесь назначаются обязательные сотрудники учебной структуры. Нажми «Добавить» в строке
         нужного факультета, кафедры или группы, выбери назначение и найди преподавателя по ФИО,
-        кафедре, статусу, контактам или преподаваемым дисциплинам.
+        контактам или преподаваемым дисциплинам.
       </div>
 
       {pageError ? (
@@ -421,7 +383,7 @@ export function RequiredStaffPanel() {
         onOpenChange={(open) => !open && closeAssignmentDialog()}
       >
         <DialogContent
-          className="flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] !max-w-[1500px] flex-col overflow-hidden p-0"
+          className="flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] !max-w-5xl flex-col overflow-hidden p-0"
           onPointerDownOutside={(event) => {
             event.preventDefault()
           }}
@@ -447,129 +409,66 @@ export function RequiredStaffPanel() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto px-6 py-5">
-            <form
-              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
-              onSubmit={handleSearchSubmit}
-            >
-              <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--color-text)]">
-                    Панель поиска преподавателя
-                  </h3>
-                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                    Фильтры применяются к списку преподавателей, подходящих для выбранной структуры.
-                  </p>
-                </div>
+          <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-5">
+            <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" onSubmit={handleSearchSubmit}>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-[var(--color-text)]">
+                  Назначение
+                </span>
+                <Select
+                  value={selectedRoleKey || undefined}
+                  disabled={!pendingAssignment || pendingAssignment.roles.length <= 1}
+                  onValueChange={setSelectedRoleKey}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выбери назначение" />
+                  </SelectTrigger>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="muted">Всего кандидатов: {teacherCandidatePool.length}</Badge>
-                  <Badge>Найдено: {teacherCandidates.length}</Badge>
-                </div>
-              </div>
+                  <SelectContent>
+                    {(pendingAssignment?.roles ?? []).map((role) => (
+                      <SelectItem key={role.key} value={role.key}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-                <label className="grid gap-2 xl:col-span-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">
-                    Назначение
-                  </span>
-                  <Select
-                    value={selectedRoleKey || undefined}
-                    disabled={!pendingAssignment || pendingAssignment.roles.length <= 1}
-                    onValueChange={setSelectedRoleKey}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Выбери назначение" />
-                    </SelectTrigger>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-[var(--color-text)]">ФИО</span>
+                <Input
+                  value={teacherSearch.name}
+                  placeholder="Фамилия, имя или отчество"
+                  onChange={(event) => updateTeacherSearchField('name', event.target.value)}
+                />
+              </label>
 
-                    <SelectContent>
-                      {(pendingAssignment?.roles ?? []).map((role) => (
-                        <SelectItem key={role.key} value={role.key}>
-                          {role.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-[var(--color-text)]">
+                  Email / телефон
+                </span>
+                <Input
+                  value={teacherSearch.contact}
+                  placeholder="email или номер телефона"
+                  onChange={(event) => updateTeacherSearchField('contact', event.target.value)}
+                />
+              </label>
 
-                <label className="grid gap-2 xl:col-span-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">ФИО</span>
-                  <Input
-                    value={teacherSearch.name}
-                    placeholder="Фамилия, имя или отчество"
-                    onChange={(event) => updateTeacherSearchField('name', event.target.value)}
-                  />
-                </label>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-[var(--color-text)]">Преподаёт</span>
+                <Input
+                  value={teacherSearch.subject}
+                  placeholder="Дисциплина или предмет"
+                  onChange={(event) => updateTeacherSearchField('subject', event.target.value)}
+                />
+              </label>
 
-                <label className="grid gap-2 xl:col-span-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">Кафедра</span>
-                  <Select
-                    value={teacherSearch.department_id || allSelectValue}
-                    onValueChange={(value) => updateTeacherSearchField('department_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Все кафедры" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      <SelectItem value={allSelectValue}>Все кафедры</SelectItem>
-                      {departmentOptions.map((department) => (
-                        <SelectItem key={department.value} value={department.value}>
-                          {department.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-
-                <label className="grid gap-2 xl:col-span-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">Статус</span>
-                  <Select
-                    value={teacherSearch.status_id || allSelectValue}
-                    onValueChange={(value) => updateTeacherSearchField('status_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Все статусы" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      <SelectItem value={allSelectValue}>Все статусы</SelectItem>
-                      {teacherStatusOptions.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-
-                <label className="grid gap-2 xl:col-span-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">
-                    Email / телефон
-                  </span>
-                  <Input
-                    value={teacherSearch.contact}
-                    placeholder="email или номер телефона"
-                    onChange={(event) => updateTeacherSearchField('contact', event.target.value)}
-                  />
-                </label>
-
-                <label className="grid gap-2 xl:col-span-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">Преподаёт</span>
-                  <Input
-                    value={teacherSearch.subject}
-                    placeholder="Дисциплина или предмет"
-                    onChange={(event) => updateTeacherSearchField('subject', event.target.value)}
-                  />
-                </label>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="flex items-end gap-2 md:col-span-2 xl:col-span-4">
                 <Button type="submit" variant="secondary" disabled={isLoadingTeachers}>
                   Найти
                 </Button>
                 <Button type="button" variant="ghost" onClick={resetTeacherSearch}>
-                  Сбросить фильтры
+                  Сбросить
                 </Button>
               </div>
             </form>
@@ -581,124 +480,72 @@ export function RequiredStaffPanel() {
             ) : null}
 
             <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
-              <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
-                <h3 className="text-sm font-semibold text-[var(--color-text)]">
-                  Подходящие преподаватели
-                </h3>
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Таблица показывает основные поля карточки преподавателя. Выбери нужную строку и нажми «Назначить».
-                </p>
-              </div>
+              <table className="w-full border-collapse text-sm">
+                <thead className="bg-[var(--color-surface-muted)]">
+                  <tr>
+                    <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
+                      ФИО
+                    </th>
+                    <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
+                      Контакты
+                    </th>
+                    <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
+                      Преподаёт
+                    </th>
+                    <th className="w-40 border-b border-[var(--color-border)] px-4 py-3 text-right font-semibold text-[var(--color-text-muted)]">
+                      Действие
+                    </th>
+                  </tr>
+                </thead>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-[1320px] w-full border-collapse text-sm">
-                  <thead className="bg-[var(--color-surface-muted)]">
-                    <tr>
-                      <th className="w-16 border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        ID
-                      </th>
-                      <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        ФИО
-                      </th>
-                      <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        Кафедра
-                      </th>
-                      <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        Статус
-                      </th>
-                      <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        Email
-                      </th>
-                      <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        Телефон
-                      </th>
-                      <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        Преподаёт
-                      </th>
-                      <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        Дата приёма
-                      </th>
-                      <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        Примечание
-                      </th>
-                      <th className="w-40 border-b border-[var(--color-border)] px-4 py-3 text-right font-semibold text-[var(--color-text-muted)]">
-                        Действие
-                      </th>
+                <tbody>
+                  {teacherCandidates.map((teacher) => (
+                    <tr key={String(teacher.id)} className="border-b border-[var(--color-border)] last:border-b-0">
+                      <td className="px-4 py-3 text-[var(--color-text)]">
+                        {getPersonName(teacher)}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--color-text-muted)]">
+                        {[teacher.email, teacher.phone].filter(Boolean).map(String).join(' · ') || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--color-text-muted)]">
+                        {String(teacher.teaching_subjects ?? '—')}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          disabled={isAssigning}
+                          onClick={() => void handleAssignTeacher(teacher)}
+                        >
+                          Назначить
+                        </Button>
+                      </td>
                     </tr>
-                  </thead>
+                  ))}
 
-                  <tbody>
-                    {teacherCandidates.map((teacher) => (
-                      <tr
-                        key={String(teacher.id)}
-                        className="border-b border-[var(--color-border)] last:border-b-0"
+                  {!isLoadingTeachers && teacherCandidates.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
                       >
-                        <td className="px-4 py-3 text-[var(--color-text)]">
-                          {formatCellValue(teacher.id)}
-                        </td>
-                        <td className="px-4 py-3 font-medium text-[var(--color-text)]">
-                          {getPersonName(teacher)}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--color-text)]">
-                          {renderRelation(teacher.department_id, departmentNameById)}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--color-text)]">
-                          {renderRelation(teacher.status_id, teacherStatusNameById)}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--color-text-muted)]">
-                          {formatCellValue(teacher.email)}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--color-text-muted)]">
-                          {formatCellValue(teacher.phone)}
-                        </td>
-                        <td className="max-w-72 px-4 py-3 text-[var(--color-text-muted)]">
-                          <span className="line-clamp-2">
-                            {formatCellValue(teacher.teaching_subjects)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-[var(--color-text-muted)]">
-                          {formatCellValue(teacher.hire_date)}
-                        </td>
-                        <td className="max-w-72 px-4 py-3 text-[var(--color-text-muted)]">
-                          <span className="line-clamp-2">{formatCellValue(teacher.note)}</span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            disabled={isAssigning}
-                            onClick={() => void handleAssignTeacher(teacher)}
-                          >
-                            Назначить
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                        Подходящие преподаватели не найдены.
+                      </td>
+                    </tr>
+                  ) : null}
 
-                    {!isLoadingTeachers && teacherCandidates.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={10}
-                          className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
-                        >
-                          Подходящие преподаватели не найдены.
-                        </td>
-                      </tr>
-                    ) : null}
-
-                    {isLoadingTeachers ? (
-                      <tr>
-                        <td
-                          colSpan={10}
-                          className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
-                        >
-                          Загружаем преподавателей...
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
+                  {isLoadingTeachers ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-4 py-10 text-center text-sm text-[var(--color-text-muted)]"
+                      >
+                        Загружаем преподавателей...
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -886,7 +733,7 @@ async function loadTeacherCandidates(
     const departments = await window.api.adminCrud.list({
       entity: 'departments',
       page: 1,
-      pageSize: 500,
+      pageSize: 100,
       filters: { faculty_id: facultyId },
       orderBy: 'name',
       orderDirection: 'asc'
@@ -939,7 +786,7 @@ async function loadTeachersByDepartment(departmentId: number): Promise<AdminCrud
   const teachers = await window.api.adminCrud.list({
     entity: 'teachers',
     page: 1,
-    pageSize: 500,
+    pageSize: 100,
     filters: { department_id: departmentId },
     orderBy: 'last_name',
     orderDirection: 'asc'
@@ -962,14 +809,6 @@ function filterTeacherCandidates(
     const subjects = normalizeSearchQuery(String(teacher.teaching_subjects ?? ''))
 
     if (nameQuery && !fullName.includes(nameQuery)) {
-      return false
-    }
-
-    if (search.department_id && String(teacher.department_id ?? '') !== search.department_id) {
-      return false
-    }
-
-    if (search.status_id && String(teacher.status_id ?? '') !== search.status_id) {
       return false
     }
 
@@ -1037,20 +876,6 @@ function createPersonOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] 
   }))
 }
 
-function createNamedOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
-  return items.map((item) => ({
-    value: String(item.id),
-    label: String(item.name ?? item.short_name ?? `#${item.id}`)
-  }))
-}
-
-function createDictionaryOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
-  return items.map((item) => ({
-    value: String(item.id),
-    label: String(item.name ?? item.item_key ?? `#${item.id}`)
-  }))
-}
-
 function createOptionsMap(options: AdminCrudSelectOption[]): Map<number, string> {
   return new Map(options.map((option) => [Number(option.value), option.label]))
 }
@@ -1080,12 +905,4 @@ function renderRelation(value: unknown, labelsById: Map<number, string>): string
   }
 
   return labelsById.get(id) ?? `#${id}`
-}
-
-function formatCellValue(value: unknown): string {
-  if (value === null || value === undefined || value === '') {
-    return '—'
-  }
-
-  return String(value)
 }
