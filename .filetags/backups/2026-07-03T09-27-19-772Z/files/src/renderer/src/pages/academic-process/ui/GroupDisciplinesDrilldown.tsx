@@ -302,7 +302,14 @@ function createTeacherOptions(
       }
     }
   })
-
+}`,
+      meta: {
+        subject_department_id: departmentId === null ? null : String(departmentId),
+        subject_faculty_id: facultyId === null ? null : String(facultyId)
+      }
+    }
+  })
+}
 
 function createSubjectIdByDepartmentAndName(subjects: AdminCrudRecord[]): Map<string, number> {
   const result = new Map<string, number>()
