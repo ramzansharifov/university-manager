@@ -1,0 +1,38 @@
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+      <ConfirmDialog
+        open={Boolean(archiveRecord)}
+        title="Архивировать запись?"
+        description={`Запись "${archiveRecord ? getRecordName(archiveRecord) : ''}" будет скрыта из основного списка. Данные не будут удалены физически и останутся в базе.`}
+        confirmText="Архивировать"
+        cancelText="Отмена"
+        danger
+        isLoading={isSubmitting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveRecord(null)
+          }
+        }}
+        onConfirm={confirmArchive}
+      />
+@endfind
+@content
+
+      <ConfirmDialog
+        open={Boolean(deleteRecord)}
+        title="Удалить запись безвозвратно?"
+        description={createPermanentDeleteDescription(deleteRecord, deleteError)}
+        confirmText="Удалить безвозвратно"
+        cancelText="Отмена"
+        danger
+        isLoading={isSubmitting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteRecord(null)
+            setDeleteError(null)
+          }
+        }}
+        onConfirm={confirmDelete}
+      />
+@endcontent
+@end

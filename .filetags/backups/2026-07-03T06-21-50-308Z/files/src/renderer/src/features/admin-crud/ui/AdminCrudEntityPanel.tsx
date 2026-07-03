@@ -819,22 +819,6 @@ export function AdminCrudEntityPanel({
         }}
         onConfirm={confirmArchive}
       />
-      <ConfirmDialog
-        open={Boolean(deleteRecord)}
-        title="Удалить запись безвозвратно?"
-        description={createPermanentDeleteDescription(deleteRecord, deleteError)}
-        confirmText="Удалить безвозвратно"
-        cancelText="Отмена"
-        danger
-        isLoading={isSubmitting}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteRecord(null)
-            setDeleteError(null)
-          }
-        }}
-        onConfirm={confirmDelete}
-      />
     </Card>
   )
 }
