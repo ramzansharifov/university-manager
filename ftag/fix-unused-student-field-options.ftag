@@ -1,0 +1,8 @@
+@replace-first src/renderer/src/pages/people/config/peopleCrudConfig.ts
+@find
+export function createStudentFields(options: PeopleFieldOptions): AdminCrudFieldConfig[] {
+@endfind
+@with
+export function createStudentFields(_options: PeopleFieldOptions): AdminCrudFieldConfig[] {
+@endwith
+@end
