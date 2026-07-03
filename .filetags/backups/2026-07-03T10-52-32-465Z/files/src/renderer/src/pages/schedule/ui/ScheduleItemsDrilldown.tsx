@@ -73,7 +73,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const [subjects, setSubjects] = useState<AdminCrudRecord[]>([])
   const [disciplines, setDisciplines] = useState<AdminCrudRecord[]>([])
   const [weeks, setWeeks] = useState<AdminCrudRecord[]>([])
-  const [semesters, setSemesters] = useState<AdminCrudRecord[]>([])
   const [lessonPeriods, setLessonPeriods] = useState<AdminCrudRecord[]>([])
   const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
   const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
@@ -208,7 +207,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
     setGradeItems(gradeItemsResult.items)
 
     setSemesterOptions(createOptions(semestersResult.items, getSemesterName))
-    setSemesters(semestersResult.items)
 
     setWeeks(weeksResult.items)
     setWeekOptions(createWeekOptions(weeksResult.items))

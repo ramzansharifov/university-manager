@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-07-03T10:52:32.489Z",
+  "backupPath": ".filetags/backups/2026-07-03T10-52-32-465Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Insert after: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1354 line(s)\n   new: 1355 line(s)",
+    "Insert after: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1355 line(s)\n   new: 1356 line(s)"
+  ]
+}
