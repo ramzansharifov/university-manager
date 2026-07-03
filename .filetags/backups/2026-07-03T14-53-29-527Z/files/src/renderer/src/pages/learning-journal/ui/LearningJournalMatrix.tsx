@@ -691,7 +691,7 @@ export function LearningJournalMatrix(): ReactElement {
                     <thead>
                       <tr className="bg-[var(--color-surface-muted)]">
                         <th
-                          rowSpan={2}
+                          rowSpan={3}
                           className="sticky left-0 z-30 whitespace-nowrap border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left font-semibold text-[var(--color-text-muted)]"
                         >
                           Студент
@@ -725,7 +725,17 @@ export function LearningJournalMatrix(): ReactElement {
                         ))}
                       </tr>
 
-                      {/* Сокращения предметов вынесены в нижнюю строку таблицы. */}
+                      <tr className="bg-[var(--color-surface)]">
+                        {journalColumns.map((column) => (
+                          <th
+                            key={`${column.id}-subject`}
+                            className="h-7 border-b border-r border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
+                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет пары'}
+                          >
+                            {column.kind === 'schedule' ? column.disciplineShortName : ''}
+                          </th>
+                        ))}
+                      </tr>
                     </thead>
 
                     <tbody>
@@ -768,23 +778,6 @@ export function LearningJournalMatrix(): ReactElement {
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot>
-                      <tr className="bg-[var(--color-surface-muted)]">
-                        <th className="sticky left-0 z-20 whitespace-nowrap border-r border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left text-[10px] font-semibold text-[var(--color-text-muted)]">
-                          Предмет
-                        </th>
-
-                        {journalColumns.map((column) => (
-                          <th
-                            key={`${column.id}-footer-subject`}
-                            className="h-7 border-r border-t border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
-                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет пары'}
-                          >
-                            {column.kind === 'schedule' ? column.disciplineShortName : ''}
-                          </th>
-                        ))}
-                      </tr>
-                    </tfoot>
                   </table>
                 </div>
 

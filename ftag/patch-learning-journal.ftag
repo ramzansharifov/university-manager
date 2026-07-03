@@ -1,0 +1,53 @@
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+rowSpan={3}
+@endfind
+@with
+rowSpan={2}
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                      <tr className="bg-[var(--color-surface)]">
+                        {journalColumns.map((column) => (
+                          <th
+                            key={`${column.id}-subject`}
+                            className="h-7 border-b border-r border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
+                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет пары'}
+                          >
+                            {column.kind === 'schedule' ? column.disciplineShortName : ''}
+                          </th>
+                        ))}
+                      </tr>
+@endfind
+@with
+                      {/* Сокращения предметов вынесены в нижнюю строку таблицы. */}
+@endwith
+@end
+
+@insert-before-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                  </table>
+@endfind
+@content
+                    <tfoot>
+                      <tr className="bg-[var(--color-surface-muted)]">
+                        <th className="sticky left-0 z-20 whitespace-nowrap border-r border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left text-[10px] font-semibold text-[var(--color-text-muted)]">
+                          Предмет
+                        </th>
+
+                        {journalColumns.map((column) => (
+                          <th
+                            key={`${column.id}-footer-subject`}
+                            className="h-7 border-r border-t border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
+                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет пары'}
+                          >
+                            {column.kind === 'schedule' ? column.disciplineShortName : ''}
+                          </th>
+                        ))}
+                      </tr>
+                    </tfoot>
+
+@endcontent
+@end

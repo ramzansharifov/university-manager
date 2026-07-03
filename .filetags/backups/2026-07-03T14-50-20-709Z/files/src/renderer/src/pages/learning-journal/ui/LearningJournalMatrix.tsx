@@ -19,7 +19,6 @@ import {
 import { formatDateForDisplay, formatDateRangeForDisplay } from '../../../shared/lib/date'
 
 const emptySelectValue = '__empty__'
-const lessonNumbers = [1, 2, 3, 4, 5]
 
 const weekDayLabels = [
   { value: 1, shortLabel: 'Пн', label: 'Понедельник' },
@@ -40,18 +39,18 @@ type ScheduleJournalColumn = {
   id: string
   kind: 'schedule'
   dayOfWeek: number
-  lessonNumber: number
   date: string
   scheduleItem: AdminCrudRecord
   disciplineName: string
   disciplineShortName: string
+  lessonPeriodLabel: string
+  lessonPeriodNumber: number | null
 }
 
 type EmptyJournalColumn = {
   id: string
   kind: 'empty'
   dayOfWeek: number
-  lessonNumber: number
   date: string
 }
 
@@ -381,34 +380,28 @@ export function LearningJournalMatrix(): ReactElement {
       const date = getDateOfWeekDay(selectedWeek, day.value)
       const dayScheduleItems = selectedWeekScheduleItems
         .filter((scheduleItem) => normalizeDayOfWeek(scheduleItem.day_of_week) === day.value)
-        .sort((firstItem, secondItem) =>
-          compareScheduleItemsByLessonNumber(firstItem, secondItem, lessonPeriodById)
-        )
+        .sort(compareScheduleItemsForJournal)
 
-      const columns = lessonNumbers.map<JournalColumn>((lessonNumber) => {
-        const scheduleItem = dayScheduleItems.find(
-          (item) => getScheduleItemLessonNumber(item, lessonPeriodById) === lessonNumber
-        )
-
-        if (!scheduleItem) {
-          return {
-            id: `empty:${day.value}:${lessonNumber}`,
-            kind: 'empty',
-            dayOfWeek: day.value,
-            lessonNumber,
-            date
-          }
-        }
-
-        return createScheduleJournalColumn({
-          scheduleItem,
-          dayOfWeek: day.value,
-          lessonNumber,
-          date,
-          disciplineById,
-          subjectNameById
-        })
-      })
+      const columns =
+        dayScheduleItems.length > 0
+          ? dayScheduleItems.map((scheduleItem) =>
+              createScheduleJournalColumn({
+                scheduleItem,
+                dayOfWeek: day.value,
+                date,
+                disciplineById,
+                subjectNameById,
+                lessonPeriodById
+              })
+            )
+          : [
+              {
+                id: `empty:${day.value}`,
+                kind: 'empty' as const,
+                dayOfWeek: day.value,
+                date
+              }
+            ]
 
       return {
         dayOfWeek: day.value,
@@ -552,8 +545,8 @@ export function LearningJournalMatrix(): ReactElement {
             <div>
               <CardTitle>Фильтры журнала</CardTitle>
               <CardDescription>
-                Выбери факультет, специальность, группу и семестр. Журнал показывает фиксированную
-                неделю: 7 дней и 5 пар на каждый день.
+                Выбери факультет, специальность, группу и семестр. Недели переключаются внутри
+                выбранного семестра.
               </CardDescription>
             </div>
 
@@ -630,7 +623,8 @@ export function LearningJournalMatrix(): ReactElement {
               Выбери группу и семестр, чтобы открыть журнал.
             </p>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              После выбора семестра журнал автоматически откроет первую неделю.
+              После выбора семестра журнал автоматически откроет первую неделю, а дальше можно
+              листать недели кнопками.
             </p>
           </CardContent>
         </Card>
@@ -677,21 +671,25 @@ export function LearningJournalMatrix(): ReactElement {
               <EmptyState text="В этой группе пока нет студентов." />
             ) : null}
 
-            {groupStudents.length > 0 ? (
+            {groupStudents.length > 0 && journalColumns.length === 0 ? (
+              <EmptyState text="Для этой недели пока нет колонок журнала." />
+            ) : null}
+
+            {groupStudents.length > 0 && journalColumns.length > 0 ? (
               <div className="grid gap-4">
                 <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-                  <table className="w-full table-fixed border-collapse text-[11px]">
+                  <table className="w-full table-fixed border-collapse text-xs">
                     <colgroup>
                       <col style={{ width: studentColumnWidth }} />
                       {journalColumns.map((column) => (
-                        <col key={column.id} style={{ width: '2.35rem' }} />
+                        <col key={column.id} style={{ width: '4.75rem' }} />
                       ))}
                     </colgroup>
 
                     <thead>
                       <tr className="bg-[var(--color-surface-muted)]">
                         <th
-                          rowSpan={2}
+                          rowSpan={3}
                           className="sticky left-0 z-30 whitespace-nowrap border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left font-semibold text-[var(--color-text-muted)]"
                         >
                           Студент
@@ -700,8 +698,8 @@ export function LearningJournalMatrix(): ReactElement {
                         {journalDayGroups.map((dayGroup) => (
                           <th
                             key={dayGroup.dayOfWeek}
-                            colSpan={lessonNumbers.length}
-                            className="border-b border-r border-[var(--color-border)] px-1 py-2 text-center last:border-r-0"
+                            colSpan={dayGroup.columns.length}
+                            className="border-b border-r border-[var(--color-border)] px-2 py-2 text-center last:border-r-0"
                             title={dayGroup.fullDayLabel}
                           >
                             <span className="block font-semibold text-[var(--color-text)]">
@@ -717,15 +715,25 @@ export function LearningJournalMatrix(): ReactElement {
                       <tr className="bg-[var(--color-surface-muted)]">
                         {journalColumns.map((column) => (
                           <th
-                            key={`${column.id}-lesson`}
-                            className="h-7 border-b border-r border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text-muted)] last:border-r-0"
+                            key={`${column.id}-period`}
+                            className="border-b border-r border-[var(--color-border)] px-1 py-2 text-center text-[10px] font-medium text-[var(--color-text-muted)] last:border-r-0"
                           >
-                            {column.lessonNumber}
+                            {column.kind === 'schedule' ? column.lessonPeriodLabel : '—'}
                           </th>
                         ))}
                       </tr>
 
-                      {/* Сокращения предметов вынесены в нижнюю строку таблицы. */}
+                      <tr className="bg-[var(--color-surface)]">
+                        {journalColumns.map((column) => (
+                          <th
+                            key={`${column.id}-subject`}
+                            className="border-b border-r border-[var(--color-border)] px-1 py-2 text-center text-[11px] font-semibold text-[var(--color-text)] last:border-r-0"
+                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет занятий'}
+                          >
+                            {column.kind === 'schedule' ? column.disciplineShortName : '—'}
+                          </th>
+                        ))}
+                      </tr>
                     </thead>
 
                     <tbody>
@@ -735,7 +743,7 @@ export function LearningJournalMatrix(): ReactElement {
                           className="border-b border-[var(--color-border)] last:border-b-0"
                         >
                           <td
-                            className="sticky left-0 z-20 truncate whitespace-nowrap border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-text)]"
+                            className="sticky left-0 z-20 truncate whitespace-nowrap border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]"
                             title={getPersonFullName(student)}
                           >
                             {getPersonFullName(student)}
@@ -746,9 +754,11 @@ export function LearningJournalMatrix(): ReactElement {
                               return (
                                 <td
                                   key={`${student.id}-${column.id}`}
-                                  className="h-8 border-r border-[var(--color-border)] bg-[var(--color-surface)] px-0 text-center align-middle last:border-r-0"
-                                  title="Пары нет"
-                                />
+                                  className="h-10 border-r border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 px-1 text-center align-middle last:border-r-0"
+                                  title="В этот день занятий нет"
+                                >
+                                  <span className="text-[var(--color-text-muted)] opacity-40">—</span>
+                                </td>
                               )
                             }
 
@@ -761,36 +771,20 @@ export function LearningJournalMatrix(): ReactElement {
                                 className={getJournalCellClassName(statusKey)}
                                 title={createJournalCellTitle(student, column, statusKey)}
                               >
-                                {value}
+                                {value || (
+                                  <span className="text-[var(--color-text-muted)] opacity-40">·</span>
+                                )}
                               </td>
                             )
                           })}
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot>
-                      <tr className="bg-[var(--color-surface-muted)]">
-                        <th className="sticky left-0 z-20 whitespace-nowrap border-r border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left text-[10px] font-semibold text-[var(--color-text-muted)]">
-                          Предмет
-                        </th>
-
-                        {journalColumns.map((column) => (
-                          <th
-                            key={`${column.id}-footer-subject`}
-                            className="h-7 border-r border-t border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
-                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет пары'}
-                          >
-                            {column.kind === 'schedule' ? column.disciplineShortName : ''}
-                          </th>
-                        ))}
-                      </tr>
-                    </tfoot>
                   </table>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="muted">Студентов: {groupStudents.length}</Badge>
-                  <Badge variant="muted">Колонок: 35</Badge>
                   <Badge variant="muted">П = присутствовал</Badge>
                   <Badge variant="muted">Н = отсутствовал</Badge>
                   <Badge variant="muted">УП = уважительная причина</Badge>
@@ -859,31 +853,35 @@ function EmptyState({ text }: { text: string }): ReactElement {
 function createScheduleJournalColumn({
   scheduleItem,
   dayOfWeek,
-  lessonNumber,
   date,
   disciplineById,
-  subjectNameById
+  subjectNameById,
+  lessonPeriodById
 }: {
   scheduleItem: AdminCrudRecord
   dayOfWeek: number
-  lessonNumber: number
   date: string
   disciplineById: Map<number, AdminCrudRecord>
   subjectNameById: Map<number, string>
+  lessonPeriodById: Map<number, AdminCrudRecord>
 }): ScheduleJournalColumn {
   const disciplineId = toNumberOrNull(scheduleItem.discipline_id)
   const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
+  const lessonPeriodId = toNumberOrNull(scheduleItem.lesson_period_id)
+  const lessonPeriod = lessonPeriodId === null ? null : (lessonPeriodById.get(lessonPeriodId) ?? null)
   const disciplineName = discipline ? getDisciplineName(discipline, subjectNameById) : 'Дисциплина'
+  const lessonPeriodNumber = toNumberOrNull(lessonPeriod?.number)
 
   return {
-    id: `schedule:${String(scheduleItem.id)}:${dayOfWeek}:${lessonNumber}`,
+    id: `schedule:${String(scheduleItem.id)}`,
     kind: 'schedule',
     dayOfWeek,
-    lessonNumber,
     date,
     scheduleItem,
     disciplineName,
-    disciplineShortName: getDisciplineShortName(disciplineName)
+    disciplineShortName: getDisciplineShortName(disciplineName),
+    lessonPeriodLabel: lessonPeriodNumber === null ? 'пара' : `${lessonPeriodNumber} пара`,
+    lessonPeriodNumber
   }
 }
 
@@ -1011,22 +1009,6 @@ function normalizeDayOfWeek(value: unknown): number {
   return 1
 }
 
-function getScheduleItemLessonNumber(
-  scheduleItem: AdminCrudRecord,
-  lessonPeriodById: Map<number, AdminCrudRecord>
-): number | null {
-  const lessonPeriodId = toNumberOrNull(scheduleItem.lesson_period_id)
-
-  if (lessonPeriodId === null) {
-    return null
-  }
-
-  const lessonPeriod = lessonPeriodById.get(lessonPeriodId)
-  const lessonNumber = toNumberOrNull(lessonPeriod?.number)
-
-  return lessonNumber ?? lessonPeriodId
-}
-
 function createJournalCellTitle(
   student: AdminCrudRecord,
   column: ScheduleJournalColumn,
@@ -1037,7 +1019,7 @@ function createJournalCellTitle(
   return [
     getPersonFullName(student),
     column.disciplineName,
-    `${formatJournalDate(column.date)} · ${column.lessonNumber} пара`,
+    `${formatJournalDate(column.date)} · ${column.lessonPeriodLabel}`,
     statusLabel
   ].join('\n')
 }
@@ -1057,14 +1039,14 @@ function getAttendanceStatusLabel(statusKey: string): string {
 
 function getJournalCellClassName(statusKey: string): string {
   const baseClassName =
-    'h-8 border-r border-[var(--color-border)] px-0 text-center align-middle text-[11px] font-semibold last:border-r-0'
+    'h-10 border-r border-[var(--color-border)] px-1 text-center align-middle text-xs font-semibold last:border-r-0'
 
   if (statusKey === 'present') {
     return `${baseClassName} bg-[var(--color-primary)]/10 text-[var(--color-primary)]`
   }
 
   if (statusKey === 'absent') {
-    return `${baseClassName} bg-red-50 text-red-600`
+    return `${baseClassName} bg-[var(--color-danger)]/10 text-[var(--color-danger)]`
   }
 
   if (statusKey === 'excused') {
@@ -1111,16 +1093,15 @@ function compareWeeks(firstWeek: AdminCrudRecord, secondWeek: AdminCrudRecord): 
   return Number(firstWeek.id ?? 0) - Number(secondWeek.id ?? 0)
 }
 
-function compareScheduleItemsByLessonNumber(
+function compareScheduleItemsForJournal(
   firstItem: AdminCrudRecord,
-  secondItem: AdminCrudRecord,
-  lessonPeriodById: Map<number, AdminCrudRecord>
+  secondItem: AdminCrudRecord
 ): number {
-  const firstLessonNumber = getScheduleItemLessonNumber(firstItem, lessonPeriodById) ?? 0
-  const secondLessonNumber = getScheduleItemLessonNumber(secondItem, lessonPeriodById) ?? 0
+  const firstPeriodNumber = toNumberOrNull(firstItem.lesson_period_id) ?? 0
+  const secondPeriodNumber = toNumberOrNull(secondItem.lesson_period_id) ?? 0
 
-  if (firstLessonNumber !== secondLessonNumber) {
-    return firstLessonNumber - secondLessonNumber
+  if (firstPeriodNumber !== secondPeriodNumber) {
+    return firstPeriodNumber - secondPeriodNumber
   }
 
   return Number(firstItem.id ?? 0) - Number(secondItem.id ?? 0)
