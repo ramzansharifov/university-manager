@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
-import { FiArchive, FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiUser } from 'react-icons/fi'
+import { FiArchive, FiClock, FiEdit2, FiMapPin, FiRefreshCcw, FiUser } from 'react-icons/fi'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import {
@@ -831,10 +831,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
               lessonTypeNameById={lessonTypeNameById}
               gradeItems={selectedWeekGradeItems}
               gradeElementTypeNameById={gradeElementTypeNameById}
-           canCreate={canCreate}
-           onCreate={onCreateDay}
-              canCreate={canCreateScheduleItem}
-              onCreateDay={(dayNumber) => openCreateDialog({ day_of_week: dayNumber })}
               onEdit={openEditDialog}
               onArchive={requestArchive}
             />
@@ -1017,8 +1013,6 @@ function ScheduleWeekBoard({
   lessonTypeNameById,
   gradeItems,
   gradeElementTypeNameById,
-  canCreate,
-  onCreateDay,
   onEdit,
   onArchive
 }: {
@@ -1035,8 +1029,6 @@ function ScheduleWeekBoard({
   lessonTypeNameById: Map<number, string>
   gradeItems: AdminCrudRecord[]
   gradeElementTypeNameById: Map<number, string>
-  canCreate: boolean
-  onCreateDay: (dayNumber: number) => void
   onEdit: (record: AdminCrudRecord) => void
   onArchive: (record: AdminCrudRecord) => void
 }): ReactElement {
@@ -1104,8 +1096,6 @@ function ScheduleDayCard({
   lessonTypeNameById,
   gradeItems,
   gradeElementTypeNameById,
-  canCreate,
-  onCreate,
   onEdit,
   onArchive
 }: {
@@ -1122,8 +1112,6 @@ function ScheduleDayCard({
   lessonTypeNameById: Map<number, string>
   gradeItems: AdminCrudRecord[]
   gradeElementTypeNameById: Map<number, string>
-  canCreate: boolean
-  onCreate: (dayNumber: number) => void
   onEdit: (record: AdminCrudRecord) => void
   onArchive: (record: AdminCrudRecord) => void
 }): ReactElement {
@@ -1132,23 +1120,9 @@ function ScheduleDayCard({
       <CardHeader className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-base">{getDayName(dayNumber)}</CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant={items.length > 0 ? 'default' : 'muted'}>
-              {items.length} {getLessonCountText(items.length)}
-            </Badge>
-
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={!canCreate}
-              title={`Добавить занятие на ${getDayName(dayNumber).toLowerCase()}`}
-              aria-label={`Добавить занятие на ${getDayName(dayNumber).toLowerCase()}`}
-              onClick={() => onCreate(dayNumber)}
-            >
-              <FiPlus />
-            </Button>
-          </div>
+          <Badge variant={items.length > 0 ? 'default' : 'muted'}>
+            {items.length} {getLessonCountText(items.length)}
+          </Badge>
         </div>
       </CardHeader>
 

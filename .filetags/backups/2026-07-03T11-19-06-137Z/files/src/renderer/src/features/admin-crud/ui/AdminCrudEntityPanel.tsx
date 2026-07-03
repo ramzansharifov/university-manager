@@ -107,7 +107,6 @@ interface AdminCrudRenderItemsParams {
   canArchive: boolean
   canDelete: boolean
   extraRowActions?: (record: AdminCrudRecord) => ReactNode
-  openCreateDialog: (initialData?: AdminCrudRecord) => void
   openEditDialog: (record: AdminCrudRecord) => void
   requestArchive: (record: AdminCrudRecord) => void
   requestDelete: (record: AdminCrudRecord) => void
@@ -321,25 +320,12 @@ export function AdminCrudEntityPanel({
     void loadItems()
   }, [loadItems])
 
-  function openCreateDialog(initialData?: AdminCrudRecord) {
+  function openCreateDialog() {
     setDialogMode('create')
     setSelectedRecord(null)
     setFormError(null)
     form.clearErrors()
-
-    const nextFormData = createEmptyFormData(fields)
-
-    if (initialData) {
-      Object.entries(initialData).forEach(([key, value]) => {
-        if (!(key in nextFormData)) {
-          return
-        }
-
-        nextFormData[key] = value === null || value === undefined ? '' : String(value)
-      })
-    }
-
-    form.reset(nextFormData)
+    form.reset(createEmptyFormData(fields))
     setDialogOpen(true)
   }
 
@@ -558,7 +544,6 @@ export function AdminCrudEntityPanel({
               canArchive,
               canDelete: canDeleteRecord,
               extraRowActions,
-              openCreateDialog,
               openEditDialog,
               requestArchive,
               requestDelete,

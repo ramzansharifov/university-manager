@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import type { ReactElement } from 'react'
-import { FiChevronLeft, FiChevronRight, FiLogOut, FiShield, FiUser } from 'react-icons/fi'
+import { FiLogOut, FiShield, FiUser } from 'react-icons/fi'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/providers/AuthProvider'
 import {
@@ -22,15 +21,10 @@ import {
 
 type ProfileType = 'system' | 'student' | 'teacher' | 'employee'
 
-const sidebarCollapsedStorageKey = 'university-manager.sidebar-collapsed'
-
 export function AppSidebar(): ReactElement {
   const location = useLocation()
   const navigate = useNavigate()
   const auth = useAuth()
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    return window.localStorage.getItem(sidebarCollapsedStorageKey) === 'true'
-  })
 
   const visibleMainItems = mainNavigationItems.filter((item) =>
     canAccessNavigationItem(auth.user, item)
@@ -39,48 +33,16 @@ export function AppSidebar(): ReactElement {
   const visibleSystemItems = systemNavigationItems.filter((item) =>
     canAccessNavigationItem(auth.user, item)
   )
-  function toggleSidebar(): void {
-    setIsSidebarCollapsed((currentValue) => {
-      const nextValue = !currentValue
-
-      window.localStorage.setItem(sidebarCollapsedStorageKey, String(nextValue))
-
-      return nextValue
-    })
-  }
 
   return (
-    <Sidebar
-      className={[
-        'group relative transition-[width] duration-200 ease-out',
-        isSidebarCollapsed ? 'w-16' : 'w-72'
-      ].join(' ')}
-    >
-      <button
-        type="button"
-        className="absolute -right-3 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] opacity-0 shadow-md transition hover:text-[var(--color-primary)] focus:opacity-100 focus:outline-none group-hover:opacity-100"
-        title={isSidebarCollapsed ? 'Раскрыть меню' : 'Скрыть меню'}
-        aria-label={isSidebarCollapsed ? 'Раскрыть боковое меню' : 'Скрыть боковое меню'}
-        aria-expanded={!isSidebarCollapsed}
-        onClick={toggleSidebar}
-      >
-        {isSidebarCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
-      </button>
-
-      <SidebarHeader className={isSidebarCollapsed ? 'px-2 py-3' : undefined}>
-        <p
-          className={[
-            'text-center font-bold text-[var(--color-primary)] transition-all',
-            isSidebarCollapsed ? 'text-sm' : 'text-xl'
-          ].join(' ')}
-        >
-          {isSidebarCollapsed ? 'U' : 'UGER'}
-        </p>
+    <Sidebar>
+      <SidebarHeader>
+        <p className="text-center text-xl font-bold text-[var(--color-primary)]">UGER</p>
       </SidebarHeader>
 
-      <SidebarContent className={isSidebarCollapsed ? 'px-2 py-3' : undefined}>
+      <SidebarContent>
         <SidebarSection>
-          {!isSidebarCollapsed ? <SidebarSectionTitle>Основное</SidebarSectionTitle> : null}
+          <SidebarSectionTitle>Основное</SidebarSectionTitle>
 
           <div className="grid gap-1">
             {visibleMainItems.map((item) => (
@@ -88,19 +50,16 @@ export function AppSidebar(): ReactElement {
                 key={item.path}
                 icon={item.icon}
                 active={location.pathname === item.path}
-                title={item.title}
-                aria-label={item.title}
-                className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
                 onClick={() => navigate(item.path)}
               >
-                {isSidebarCollapsed ? '' : item.title}
+                {item.title}
               </SidebarItemButton>
             ))}
           </div>
         </SidebarSection>
 
         <SidebarSection>
-          {!isSidebarCollapsed ? <SidebarSectionTitle>Система</SidebarSectionTitle> : null}
+          <SidebarSectionTitle>Система</SidebarSectionTitle>
 
           <div className="grid gap-1">
             {visibleSystemItems.map((item) => (
@@ -108,29 +67,24 @@ export function AppSidebar(): ReactElement {
                 key={item.path}
                 icon={item.icon}
                 active={location.pathname === item.path}
-                title={item.title}
-                aria-label={item.title}
-                className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
                 onClick={() => navigate(item.path)}
               >
-                {isSidebarCollapsed ? '' : item.title}
+                {item.title}
               </SidebarItemButton>
             ))}
           </div>
         </SidebarSection>
       </SidebarContent>
 
-      {!isSidebarCollapsed ? (
-        <SidebarFooter>
-          <SidebarAccountCard
-            username={auth.user?.username ?? 'Пользователь'}
-            roleName={auth.user?.roleName ?? 'Роль не определена'}
-            profileType={auth.user?.profileType ?? 'system'}
-            isActive={Boolean(auth.user?.isActive)}
-            onLogout={() => void auth.logout()}
-          />
-        </SidebarFooter>
-      ) : null}
+      <SidebarFooter>
+        <SidebarAccountCard
+          username={auth.user?.username ?? 'Пользователь'}
+          roleName={auth.user?.roleName ?? 'Роль не определена'}
+          profileType={auth.user?.profileType ?? 'system'}
+          isActive={Boolean(auth.user?.isActive)}
+          onLogout={() => void auth.logout()}
+        />
+      </SidebarFooter>
     </Sidebar>
   )
 }

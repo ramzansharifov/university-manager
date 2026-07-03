@@ -1,0 +1,192 @@
+@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  openEditDialog: (record: AdminCrudRecord) => void
+@endfind
+@with
+  openCreateDialog: (initialData?: AdminCrudRecord) => void
+  openEditDialog: (record: AdminCrudRecord) => void
+@endwith
+@end
+
+@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  function openCreateDialog() {
+    setDialogMode('create')
+    setSelectedRecord(null)
+    setFormError(null)
+    form.clearErrors()
+    form.reset(createEmptyFormData(fields))
+    setDialogOpen(true)
+  }
+@endfind
+@with
+  function openCreateDialog(initialData?: AdminCrudRecord) {
+    setDialogMode('create')
+    setSelectedRecord(null)
+    setFormError(null)
+    form.clearErrors()
+
+    const nextFormData = createEmptyFormData(fields)
+
+    if (initialData) {
+      Object.entries(initialData).forEach(([key, value]) => {
+        if (!(key in nextFormData)) {
+          return
+        }
+
+        nextFormData[key] = value === null || value === undefined ? '' : String(value)
+      })
+    }
+
+    form.reset(nextFormData)
+    setDialogOpen(true)
+  }
+@endwith
+@end
+
+@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+              extraRowActions,
+@endfind
+@content
+              openCreateDialog,
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+import { FiArchive, FiClock, FiEdit2, FiMapPin, FiRefreshCcw, FiUser } from 'react-icons/fi'
+@endfind
+@with
+import { FiArchive, FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiUser } from 'react-icons/fi'
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+             canArchive,
+             openEditDialog,
+             requestArchive
+@endfind
+@with
+             canArchive,
+             openCreateDialog,
+             openEditDialog,
+             requestArchive
+@endwith
+@end
+
+@insert-after-once src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+              gradeElementTypeNameById={gradeElementTypeNameById}
+@endfind
+@content
+              canCreate={canCreateScheduleItem}
+              onCreateDay={(dayNumber) => openCreateDialog({ day_of_week: dayNumber })}
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+  gradeItems,
+  gradeElementTypeNameById,
+  onEdit,
+  onArchive
+@endfind
+@with
+  gradeItems,
+  gradeElementTypeNameById,
+  canCreate,
+  onCreateDay,
+  onEdit,
+  onArchive
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+  gradeItems: AdminCrudRecord[]
+  gradeElementTypeNameById: Map<number, string>
+  onEdit: (record: AdminCrudRecord) => void
+  onArchive: (record: AdminCrudRecord) => void
+@endfind
+@with
+  gradeItems: AdminCrudRecord[]
+  gradeElementTypeNameById: Map<number, string>
+  canCreate: boolean
+  onCreateDay: (dayNumber: number) => void
+  onEdit: (record: AdminCrudRecord) => void
+  onArchive: (record: AdminCrudRecord) => void
+@endwith
+@end
+
+@insert-after-once src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+           gradeElementTypeNameById={gradeElementTypeNameById}
+@endfind
+@content
+           canCreate={canCreate}
+           onCreate={onCreateDay}
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+  gradeItems,
+  gradeElementTypeNameById,
+  onEdit,
+  onArchive
+@endfind
+@with
+  gradeItems,
+  gradeElementTypeNameById,
+  canCreate,
+  onCreate,
+  onEdit,
+  onArchive
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+  gradeItems: AdminCrudRecord[]
+  gradeElementTypeNameById: Map<number, string>
+  onEdit: (record: AdminCrudRecord) => void
+  onArchive: (record: AdminCrudRecord) => void
+@endfind
+@with
+  gradeItems: AdminCrudRecord[]
+  gradeElementTypeNameById: Map<number, string>
+  canCreate: boolean
+  onCreate: (dayNumber: number) => void
+  onEdit: (record: AdminCrudRecord) => void
+  onArchive: (record: AdminCrudRecord) => void
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@find
+          <Badge variant={items.length > 0 ? 'default' : 'muted'}>
+            {items.length} {getLessonCountText(items.length)}
+          </Badge>
+@endfind
+@with
+          <div className="flex items-center gap-2">
+            <Badge variant={items.length > 0 ? 'default' : 'muted'}>
+              {items.length} {getLessonCountText(items.length)}
+            </Badge>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={!canCreate}
+              title={`Добавить занятие на ${getDayName(dayNumber).toLowerCase()}`}
+              aria-label={`Добавить занятие на ${getDayName(dayNumber).toLowerCase()}`}
+              onClick={() => onCreate(dayNumber)}
+            >
+              <FiPlus />
+            </Button>
+          </div>
+@endwith
+@end

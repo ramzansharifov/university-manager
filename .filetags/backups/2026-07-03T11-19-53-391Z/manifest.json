@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-07-03T11:19:53.414Z",
+  "backupPath": ".filetags/backups/2026-07-03T11-19-53-391Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/widgets/app-sidebar/AppSidebar.tsx",
+      "backupRelativePath": "files/src/renderer/src/widgets/app-sidebar/AppSidebar.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/widgets/app-sidebar/AppSidebar.tsx\n   found: yes\n   old: 185 line(s)\n   new: 186 line(s)",
+    "Replace file: src/renderer/src/widgets/app-sidebar/AppSidebar.tsx\n   found: yes\n   old: 186 line(s)\n   new: 186 line(s)",
+    "Insert after: src/renderer/src/widgets/app-sidebar/AppSidebar.tsx\n   found: yes\n   old: 186 line(s)\n   new: 188 line(s)",
+    "Insert after: src/renderer/src/widgets/app-sidebar/AppSidebar.tsx\n   found: yes\n   old: 188 line(s)\n   new: 191 line(s)",
+    "Insert after: src/renderer/src/widgets/app-sidebar/AppSidebar.tsx\n   found: yes\n   old: 191 line(s)\n   new: 200 line(s)",
+    "Replace file: src/renderer/src/widgets/app-sidebar/AppSidebar.tsx\n   found: yes\n   old: 200 line(s)\n   new: 231 line(s)"
+  ]
+}
