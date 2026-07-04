@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-07-04T19:26:24.507Z",
+  "backupPath": ".filetags/backups/2026-07-04T19-26-24-487Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1456 line(s)\n   new: 1456 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1456 line(s)\n   new: 1479 line(s)"
+  ]
+}

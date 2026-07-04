@@ -1,19 +1,47 @@
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-                                >
-                                  {value}
-                                </button>
+                            {getPersonFullName(student)}
 @endfind
 @with
-                                >
-                                  {value === '·' ? (
-                                    <span
-                                      aria-label="Точка"
-                                      className="block h-4 w-4 rounded-full bg-current"
-                                    />
-                                  ) : (
-                                    value
-                                  )}
-                                </button>
+                            {getPersonShortName(student)}
 @endwith
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+function getPersonFullName(record: AdminCrudRecord): string {
+  const fullName = [record.last_name, record.first_name, record.middle_name]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)
+    .join(' ')
+
+  return fullName || getRecordName(record)
+}
+@endfind
+@content
+
+function getPersonShortName(record: AdminCrudRecord): string {
+  const lastName = String(record.last_name ?? '').trim()
+  const initials = [record.first_name, record.middle_name]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)
+    .map((value) => {
+      const firstLetter = Array.from(value)[0]?.toLocaleUpperCase('ru-RU') ?? ''
+
+      return firstLetter ? `${firstLetter}.` : ''
+    })
+    .filter(Boolean)
+    .join(' ')
+
+  if (lastName && initials) {
+    return `${lastName} ${initials}`
+  }
+
+  if (lastName) {
+    return lastName
+  }
+
+  return getPersonFullName(record)
+}
+@endcontent
 @end

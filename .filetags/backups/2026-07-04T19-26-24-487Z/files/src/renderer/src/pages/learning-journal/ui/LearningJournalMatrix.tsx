@@ -937,7 +937,7 @@ export function LearningJournalMatrix(): ReactElement {
                             className="sticky left-0 z-20 truncate whitespace-nowrap border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-text)]"
                             title={getPersonFullName(student)}
                           >
-                            {getPersonShortName(student)}
+                            {getPersonFullName(student)}
                           </td>
 
                           {journalColumns.map((column) => {
@@ -1275,29 +1275,6 @@ function getPersonFullName(record: AdminCrudRecord): string {
     .join(' ')
 
   return fullName || getRecordName(record)
-}
-function getPersonShortName(record: AdminCrudRecord): string {
-  const lastName = String(record.last_name ?? '').trim()
-  const initials = [record.first_name, record.middle_name]
-    .map((value) => String(value ?? '').trim())
-    .filter(Boolean)
-    .map((value) => {
-      const firstLetter = Array.from(value)[0]?.toLocaleUpperCase('ru-RU') ?? ''
-
-      return firstLetter ? `${firstLetter}.` : ''
-    })
-    .filter(Boolean)
-    .join(' ')
-
-  if (lastName && initials) {
-    return `${lastName} ${initials}`
-  }
-
-  if (lastName) {
-    return lastName
-  }
-
-  return getPersonFullName(record)
 }
 
 function getWeekLabel(week: AdminCrudRecord): string {
