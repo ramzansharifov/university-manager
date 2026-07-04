@@ -14,8 +14,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-  Textarea
+  SelectValue
 } from '../../../shared/ui'
 import { formatDateForDisplay, formatDateRangeForDisplay } from '../../../shared/lib/date'
 
@@ -87,11 +86,6 @@ export function LearningJournalMatrix(): ReactElement {
   const [selectedGroupId, setSelectedGroupId] = useState('')
   const [selectedSemesterId, setSelectedSemesterId] = useState('')
   const [selectedWeekId, setSelectedWeekId] = useState('')
-
-  const [activeTopicColumnId, setActiveTopicColumnId] = useState('')
-  const [topicDraft, setTopicDraft] = useState('')
-  const [isSavingTopic, setIsSavingTopic] = useState(false)
-  const [topicError, setTopicError] = useState<string | null>(null)
 
   const loadData = useCallback(async (): Promise<void> => {
     const [
@@ -430,26 +424,6 @@ export function LearningJournalMatrix(): ReactElement {
     () => journalDayGroups.flatMap((dayGroup) => dayGroup.columns),
     [journalDayGroups]
   )
-  const activeTopicColumn = useMemo(
-    () =>
-      journalColumns.find(
-        (column): column is ScheduleJournalColumn =>
-          column.kind === 'schedule' && column.id === activeTopicColumnId
-      ) ?? null,
-    [activeTopicColumnId, journalColumns]
-  )
-
-  useEffect(() => {
-    if (!activeTopicColumnId) {
-      return
-    }
-
-    if (!activeTopicColumn) {
-      setActiveTopicColumnId('')
-      setTopicDraft('')
-      setTopicError(null)
-    }
-  }, [activeTopicColumn, activeTopicColumnId])
 
   const studentColumnWidth = useMemo(() => {
     const longestNameLength = groupStudents.reduce(
@@ -568,63 +542,6 @@ export function LearningJournalMatrix(): ReactElement {
     }
 
     return labels[statusKey] ?? statusKey.slice(0, 2).toUpperCase()
-  }
-  function getLessonTopic(column: ScheduleJournalColumn): string {
-    const session = getLessonSession(column)
-
-    return String(session?.topic ?? '').trim()
-  }
-
-  function openTopicEditor(column: ScheduleJournalColumn): void {
-    setActiveTopicColumnId(column.id)
-    setTopicDraft(getLessonTopic(column))
-    setTopicError(null)
-  }
-
-  async function saveTopic(): Promise<void> {
-    if (!activeTopicColumn) {
-      return
-    }
-
-    setIsSavingTopic(true)
-    setTopicError(null)
-
-    try {
-      const topic = topicDraft.trim() || null
-      const existingSession = getLessonSession(activeTopicColumn)
-
-      if (existingSession?.id) {
-        await window.api.adminCrud.update({
-          entity: 'lesson_sessions',
-          id: Number(existingSession.id),
-          data: {
-            topic
-          }
-        })
-      } else {
-        const result = await window.api.adminCrud.create({
-          entity: 'lesson_sessions',
-          data: {
-            schedule_item_id: Number(activeTopicColumn.scheduleItem.id),
-            week_id: toNumberOrNull(selectedWeek?.id),
-            lesson_date: activeTopicColumn.date,
-            topic,
-            status: 'planned',
-            teacher_id: toNumberOrNull(activeTopicColumn.scheduleItem.teacher_id)
-          }
-        })
-
-        if (!result.item) {
-          throw new Error('Не удалось создать занятие для темы')
-        }
-      }
-
-      await loadData()
-    } catch (error) {
-      setTopicError(error instanceof Error ? error.message : 'Не удалось сохранить тему занятия')
-    } finally {
-      setIsSavingTopic(false)
-    }
   }
 
   return (
@@ -842,15 +759,9 @@ export function LearningJournalMatrix(): ReactElement {
                               <td
                                 key={`${student.id}-${column.id}`}
                                 className={getJournalCellClassName(statusKey)}
+                                title={createJournalCellTitle(student, column, statusKey)}
                               >
-                                <button
-                                  type="button"
-                                  className="flex h-full min-h-8 w-full items-center justify-center transition-colors hover:bg-[var(--color-primary)]/10 focus:bg-[var(--color-primary)]/10 focus:outline-none"
-                                  title={createJournalCellTitle(student, column, statusKey)}
-                                  onClick={() => openTopicEditor(column)}
-                                >
-                                  {value}
-                                </button>
+                                {value}
                               </td>
                             )
                           })}
@@ -863,31 +774,15 @@ export function LearningJournalMatrix(): ReactElement {
                           Предмет
                         </th>
 
-                        {journalColumns.map((column) => {
-                          const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
-
-                          return (
-                            <th
-                              key={`${column.id}-footer-subject`}
-                              className="h-7 border-r border-t border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
-                              title={
-                                column.kind === 'schedule'
-                                  ? createTopicColumnTitle(column, topic)
-                                  : 'Нет пары'
-                              }
-                            >
-                              {column.kind === 'schedule' ? (
-                                <button
-                                  type="button"
-                                  className="h-full w-full transition-colors hover:bg-[var(--color-primary)]/10 focus:bg-[var(--color-primary)]/10 focus:outline-none"
-                                  onClick={() => openTopicEditor(column)}
-                                >
-                                  {column.disciplineShortName}
-                                </button>
-                              ) : null}
-                            </th>
-                          )
-                        })}
+                        {journalColumns.map((column) => (
+                          <th
+                            key={`${column.id}-footer-subject`}
+                            className="h-7 border-r border-t border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
+                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет пары'}
+                          >
+                            {column.kind === 'schedule' ? column.disciplineShortName : ''}
+                          </th>
+                        ))}
                       </tr>
                     </tfoot>
                   </table>
@@ -903,63 +798,6 @@ export function LearningJournalMatrix(): ReactElement {
                   <Badge variant="muted">О = опоздал</Badge>
                   <Badge variant="muted">Д = дистанционно</Badge>
                 </div>
-
-                {activeTopicColumn ? (
-                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--color-text)]">
-                          Тема занятия
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          {getJournalPairLabel(activeTopicColumn)}
-                        </p>
-                      </div>
-
-                      <Badge>{activeTopicColumn.disciplineShortName}</Badge>
-                    </div>
-
-                    {topicError ? (
-                      <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                        {topicError}
-                      </div>
-                    ) : null}
-
-                    <label className="mt-4 grid gap-2">
-                      <span className="text-sm font-medium text-[var(--color-text)]">
-                        Текст темы
-                      </span>
-                      <Textarea
-                        value={topicDraft}
-                        placeholder="Например: Производные и правила дифференцирования"
-                        onChange={(event) => setTopicDraft(event.target.value)}
-                      />
-                    </label>
-
-                    <div className="mt-4 flex flex-wrap justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => {
-                          setActiveTopicColumnId('')
-                          setTopicDraft('')
-                          setTopicError(null)
-                        }}
-                      >
-                        Закрыть
-                      </Button>
-
-                      <Button type="button" disabled={isSavingTopic} onClick={() => void saveTopic()}>
-                        {isSavingTopic ? 'Сохранение...' : 'Сохранить тему'}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
-                    Нажми на клетку существующей пары или на сокращение предмета в нижней строке,
-                    чтобы указать тему занятия.
-                  </div>
-                )}
               </div>
             ) : null}
           </CardContent>
@@ -1201,16 +1039,6 @@ function createJournalCellTitle(
     column.disciplineName,
     `${formatJournalDate(column.date)} · ${column.lessonNumber} пара`,
     statusLabel
-  ].join('\n')
-}
-function getJournalPairLabel(column: ScheduleJournalColumn): string {
-  return `${formatJournalDate(column.date)} · ${column.lessonNumber} пара · ${column.disciplineName}`
-}
-
-function createTopicColumnTitle(column: ScheduleJournalColumn, topic: string): string {
-  return [
-    getJournalPairLabel(column),
-    topic ? `Тема: ${topic}` : 'Тема не указана'
   ].join('\n')
 }
 

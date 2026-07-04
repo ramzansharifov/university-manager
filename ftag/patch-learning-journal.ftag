@@ -1,42 +1,176 @@
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-rowSpan={3}
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '../../../shared/ui'
 @endfind
 @with
-rowSpan={2}
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea
+} from '../../../shared/ui'
+@endwith
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  const [selectedWeekId, setSelectedWeekId] = useState('')
+@endfind
+@content
+
+  const [activeTopicColumnId, setActiveTopicColumnId] = useState('')
+  const [topicDraft, setTopicDraft] = useState('')
+  const [isSavingTopic, setIsSavingTopic] = useState(false)
+  const [topicError, setTopicError] = useState<string | null>(null)
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  const journalColumns = useMemo(
+    () => journalDayGroups.flatMap((dayGroup) => dayGroup.columns),
+    [journalDayGroups]
+  )
+@endfind
+@content
+
+  const activeTopicColumn = useMemo(
+    () =>
+      journalColumns.find(
+        (column): column is ScheduleJournalColumn =>
+          column.kind === 'schedule' && column.id === activeTopicColumnId
+      ) ?? null,
+    [activeTopicColumnId, journalColumns]
+  )
+
+  useEffect(() => {
+    if (!activeTopicColumnId) {
+      return
+    }
+
+    if (!activeTopicColumn) {
+      setActiveTopicColumnId('')
+      setTopicDraft('')
+      setTopicError(null)
+    }
+  }, [activeTopicColumn, activeTopicColumnId])
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  function renderJournalCellValue(student: AdminCrudRecord, column: ScheduleJournalColumn): string {
+    const statusKey = getAttendanceStatusKey(student, column)
+
+    if (!statusKey) {
+      return ''
+    }
+
+    const labels: Record<string, string> = {
+      present: 'П',
+      absent: 'Н',
+      excused: 'УП',
+      not_held: 'НБ',
+      late: 'О',
+      online: 'Д'
+    }
+
+    return labels[statusKey] ?? statusKey.slice(0, 2).toUpperCase()
+  }
+@endfind
+@content
+
+  function getLessonTopic(column: ScheduleJournalColumn): string {
+    const session = getLessonSession(column)
+
+    return String(session?.topic ?? '').trim()
+  }
+
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    setActiveTopicColumnId(column.id)
+    setTopicDraft(getLessonTopic(column))
+    setTopicError(null)
+  }
+
+  async function saveTopic(): Promise<void> {
+    if (!activeTopicColumn) {
+      return
+    }
+
+    setIsSavingTopic(true)
+    setTopicError(null)
+
+    try {
+      const topic = topicDraft.trim() || null
+      const existingSession = getLessonSession(activeTopicColumn)
+
+      if (existingSession?.id) {
+        await window.api.adminCrud.update({
+          entity: 'lesson_sessions',
+          id: Number(existingSession.id),
+          data: {
+            topic
+          }
+        })
+      } else {
+        const result = await window.api.adminCrud.create({
+          entity: 'lesson_sessions',
+          data: {
+            schedule_item_id: Number(activeTopicColumn.scheduleItem.id),
+            week_id: toNumberOrNull(selectedWeek?.id),
+            lesson_date: activeTopicColumn.date,
+            topic,
+            status: 'planned',
+            teacher_id: toNumberOrNull(activeTopicColumn.scheduleItem.teacher_id)
+          }
+        })
+
+        if (!result.item) {
+          throw new Error('Не удалось создать занятие для темы')
+        }
+      }
+
+      await loadData()
+    } catch (error) {
+      setTopicError(error instanceof Error ? error.message : 'Не удалось сохранить тему занятия')
+    } finally {
+      setIsSavingTopic(false)
+    }
+  }
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                              <td
+                                key={`${student.id}-${column.id}`}
+                                className={getJournalCellClassName(statusKey)}
+                                title={createJournalCellTitle(student, column, statusKey)}
+                              >
+                                {value}
+                              </td>
+@endfind
+@with
+                              <td
+                                key={`${student.id}-${column.id}`}
+                                className={getJournalCellClassName(statusKey)}
+                              >
+                                <button
+                                  type="button"
+                                  className="flex h-full min-h-8 w-full items-center justify-center transition-colors hover:bg-[var(--color-primary)]/10 focus:bg-[var(--color-primary)]/10 focus:outline-none"
+                                  title={createJournalCellTitle(student, column, statusKey)}
+                                  onClick={() => openTopicEditor(column)}
+                                >
+                                  {value}
+                                </button>
+                              </td>
 @endwith
 @end
 
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-                      <tr className="bg-[var(--color-surface)]">
-                        {journalColumns.map((column) => (
-                          <th
-                            key={`${column.id}-subject`}
-                            className="h-7 border-b border-r border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
-                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет пары'}
-                          >
-                            {column.kind === 'schedule' ? column.disciplineShortName : ''}
-                          </th>
-                        ))}
-                      </tr>
-@endfind
-@with
-                      {/* Сокращения предметов вынесены в нижнюю строку таблицы. */}
-@endwith
-@end
-
-@insert-before-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                  </table>
-@endfind
-@content
-                    <tfoot>
-                      <tr className="bg-[var(--color-surface-muted)]">
-                        <th className="sticky left-0 z-20 whitespace-nowrap border-r border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left text-[10px] font-semibold text-[var(--color-text-muted)]">
-                          Предмет
-                        </th>
-
                         {journalColumns.map((column) => (
                           <th
                             key={`${column.id}-footer-subject`}
@@ -46,8 +180,148 @@ rowSpan={2}
                             {column.kind === 'schedule' ? column.disciplineShortName : ''}
                           </th>
                         ))}
-                      </tr>
-                    </tfoot>
+@endfind
+@with
+                        {journalColumns.map((column) => {
+                          const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
 
+                          return (
+                            <th
+                              key={`${column.id}-footer-subject`}
+                              className="h-7 border-r border-t border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
+                              title={
+                                column.kind === 'schedule'
+                                  ? createTopicColumnTitle(column, topic)
+                                  : 'Нет пары'
+                              }
+                            >
+                              {column.kind === 'schedule' ? (
+                                <button
+                                  type="button"
+                                  className="h-full w-full transition-colors hover:bg-[var(--color-primary)]/10 focus:bg-[var(--color-primary)]/10 focus:outline-none"
+                                  onClick={() => openTopicEditor(column)}
+                                >
+                                  {column.disciplineShortName}
+                                </button>
+                              ) : null}
+                            </th>
+                          )
+                        })}
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="muted">Студентов: {groupStudents.length}</Badge>
+                  <Badge variant="muted">Колонок: 35</Badge>
+                  <Badge variant="muted">П = присутствовал</Badge>
+                  <Badge variant="muted">Н = отсутствовал</Badge>
+                  <Badge variant="muted">УП = уважительная причина</Badge>
+                  <Badge variant="muted">НБ = не было</Badge>
+                  <Badge variant="muted">О = опоздал</Badge>
+                  <Badge variant="muted">Д = дистанционно</Badge>
+                </div>
+@endfind
+@with
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="muted">Студентов: {groupStudents.length}</Badge>
+                  <Badge variant="muted">Колонок: 35</Badge>
+                  <Badge variant="muted">П = присутствовал</Badge>
+                  <Badge variant="muted">Н = отсутствовал</Badge>
+                  <Badge variant="muted">УП = уважительная причина</Badge>
+                  <Badge variant="muted">НБ = не было</Badge>
+                  <Badge variant="muted">О = опоздал</Badge>
+                  <Badge variant="muted">Д = дистанционно</Badge>
+                </div>
+
+                {activeTopicColumn ? (
+                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--color-text)]">
+                          Тема занятия
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                          {getJournalPairLabel(activeTopicColumn)}
+                        </p>
+                      </div>
+
+                      <Badge>{activeTopicColumn.disciplineShortName}</Badge>
+                    </div>
+
+                    {topicError ? (
+                      <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                        {topicError}
+                      </div>
+                    ) : null}
+
+                    <label className="mt-4 grid gap-2">
+                      <span className="text-sm font-medium text-[var(--color-text)]">
+                        Текст темы
+                      </span>
+                      <Textarea
+                        value={topicDraft}
+                        placeholder="Например: Производные и правила дифференцирования"
+                        onChange={(event) => setTopicDraft(event.target.value)}
+                      />
+                    </label>
+
+                    <div className="mt-4 flex flex-wrap justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          setActiveTopicColumnId('')
+                          setTopicDraft('')
+                          setTopicError(null)
+                        }}
+                      >
+                        Закрыть
+                      </Button>
+
+                      <Button type="button" disabled={isSavingTopic} onClick={() => void saveTopic()}>
+                        {isSavingTopic ? 'Сохранение...' : 'Сохранить тему'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
+                    Нажми на клетку существующей пары или на сокращение предмета в нижней строке,
+                    чтобы указать тему занятия.
+                  </div>
+                )}
+@endwith
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+function createJournalCellTitle(
+  student: AdminCrudRecord,
+  column: ScheduleJournalColumn,
+  statusKey: string
+): string {
+  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Пусто'
+
+  return [
+    getPersonFullName(student),
+    column.disciplineName,
+    `${formatJournalDate(column.date)} · ${column.lessonNumber} пара`,
+    statusLabel
+  ].join('\n')
+}
+@endfind
+@content
+
+function getJournalPairLabel(column: ScheduleJournalColumn): string {
+  return `${formatJournalDate(column.date)} · ${column.lessonNumber} пара · ${column.disciplineName}`
+}
+
+function createTopicColumnTitle(column: ScheduleJournalColumn, topic: string): string {
+  return [
+    getJournalPairLabel(column),
+    topic ? `Тема: ${topic}` : 'Тема не указана'
+  ].join('\n')
+}
 @endcontent
 @end
