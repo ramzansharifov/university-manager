@@ -82,7 +82,6 @@ export function LearningJournalMatrix(): ReactElement {
   const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
   const [attendanceRecords, setAttendanceRecords] = useState<AdminCrudRecord[]>([])
   const [attendanceStatuses, setAttendanceStatuses] = useState<AdminCrudRecord[]>([])
-  const [teachers, setTeachers] = useState<AdminCrudRecord[]>([])
 
   const [selectedFacultyId, setSelectedFacultyId] = useState('')
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
@@ -106,7 +105,6 @@ export function LearningJournalMatrix(): ReactElement {
       studentsResult,
       subjectsResult,
       disciplinesResult,
-      teachersResult,
       academicYearsResult,
       semestersResult,
       weeksResult,
@@ -156,13 +154,6 @@ export function LearningJournalMatrix(): ReactElement {
         page: 1,
         pageSize: 3000,
         orderBy: 'id',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'teachers',
-        page: 1,
-        pageSize: 3000,
-        orderBy: 'last_name',
         orderDirection: 'asc'
       }),
       window.api.adminCrud.list({
@@ -230,7 +221,6 @@ export function LearningJournalMatrix(): ReactElement {
     setStudents(studentsResult.items)
     setSubjects(subjectsResult.items)
     setDisciplines(disciplinesResult.items)
-    setTeachers(teachersResult.items)
     setAcademicYears(academicYearsResult.items)
     setSemesters(semestersResult.items)
     setWeeks(weeksResult.items)
@@ -335,7 +325,6 @@ export function LearningJournalMatrix(): ReactElement {
   const disciplineById = useMemo(() => createRecordMap(disciplines), [disciplines])
   const subjectNameById = useMemo(() => createRecordNameMap(subjects), [subjects])
   const lessonPeriodById = useMemo(() => createRecordMap(lessonPeriods), [lessonPeriods])
-  const teacherById = useMemo(() => createRecordMap(teachers), [teachers])
 
   const selectedSemester = useMemo(
     () => filteredSemesters.find((semester) => String(semester.id) === selectedSemesterId) ?? null,
@@ -708,19 +697,6 @@ export function LearningJournalMatrix(): ReactElement {
 
     return String(session?.comment ?? '').trim()
   }
-  function getLessonTeacherName(column: ScheduleJournalColumn): string {
-    const session = getLessonSession(column)
-    const teacherId =
-      toNumberOrNull(session?.teacher_id) ?? toNumberOrNull(column.scheduleItem.teacher_id)
-
-    if (teacherId === null) {
-      return 'Преподаватель не указан'
-    }
-
-    const teacher = teacherById.get(teacherId)
-
-    return teacher ? getPersonFullName(teacher) : `Преподаватель #${teacherId}`
-  }
 
   function openTopicEditor(column: ScheduleJournalColumn): void {
     setActiveTopicColumnId(column.id)
@@ -1025,8 +1001,6 @@ export function LearningJournalMatrix(): ReactElement {
                         {journalColumns.map((column) => {
                           const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
                           const note = column.kind === 'schedule' ? getLessonNote(column) : ''
-                          const teacherName =
-                            column.kind === 'schedule' ? getLessonTeacherName(column) : ''
 
                           return (
                             <th
@@ -1034,7 +1008,7 @@ export function LearningJournalMatrix(): ReactElement {
                               className="h-7 border-r border-t border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
                               title={
                                 column.kind === 'schedule'
-                                  ? createTopicColumnTitle(column, topic, note, teacherName)
+                                  ? createTopicColumnTitle(column, topic, note)
                                   : 'Нет пары'
                               }
                             >
@@ -1080,9 +1054,6 @@ export function LearningJournalMatrix(): ReactElement {
                         </p>
                         <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                           {getJournalPairLabel(activeTopicColumn)}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          Преподаватель: {getLessonTeacherName(activeTopicColumn)}
                         </p>
                       </div>
 
@@ -1428,18 +1399,8 @@ function getJournalPairLabel(column: ScheduleJournalColumn): string {
   return `${formatJournalDate(column.date)} · ${column.lessonNumber} пара · ${column.disciplineName}`
 }
 
-function createTopicColumnTitle(
-  column: ScheduleJournalColumn,
-  topic: string,
-  note: string,
-  teacherName: string
-): string {
-  return [
-    getJournalPairLabel(column),
-    teacherName ? `Преподаватель: ${teacherName}` : 'Преподаватель не указан',
-    topic ? `Тема: ${topic}` : 'Тема не указана',
-    note ? `Заметки: ${note}` : 'Заметки не указаны'
-  ].join('\n')
+function createTopicColumnTitle(column: ScheduleJournalColumn, topic: string): string {
+  return [getJournalPairLabel(column), topic ? `Тема: ${topic}` : 'Тема не указана'].join('\n')
 }
 
 function getAttendanceStatusLabel(statusKey: string): string {

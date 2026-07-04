@@ -1,223 +1,148 @@
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-  CardHeader,
-  CardTitle,
-  Select,
-@endfind
-@with
-  CardHeader,
-  CardTitle,
-  Input,
-  Select,
-@endwith
-@end
-
 @insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-  const [topicDraft, setTopicDraft] = useState('')
+  const [attendanceStatuses, setAttendanceStatuses] = useState<AdminCrudRecord[]>([])
 @endfind
 @content
-  const [lessonNoteDraft, setLessonNoteDraft] = useState('')
+  const [teachers, setTeachers] = useState<AdminCrudRecord[]>([])
 @endcontent
 @end
 
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-      setActiveTopicColumnId('')
-      setTopicDraft('')
-      setTopicError(null)
+      disciplinesResult,
+      academicYearsResult,
 @endfind
 @with
-      setActiveTopicColumnId('')
-      setTopicDraft('')
-      setLessonNoteDraft('')
-      setTopicError(null)
+      disciplinesResult,
+      teachersResult,
+      academicYearsResult,
 @endwith
 @end
 
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-  function getLessonTopic(column: ScheduleJournalColumn): string {
-    const session = getLessonSession(column)
-
-    return String(session?.topic ?? '').trim()
-  }
-
-  function openTopicEditor(column: ScheduleJournalColumn): void {
-    setActiveTopicColumnId(column.id)
-    setTopicDraft(getLessonTopic(column))
-    setTopicError(null)
-  }
+      window.api.adminCrud.list({
+        entity: 'disciplines',
+        page: 1,
+        pageSize: 3000,
+        orderBy: 'id',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
 @endfind
 @with
-  function getLessonTopic(column: ScheduleJournalColumn): string {
-    const session = getLessonSession(column)
+      window.api.adminCrud.list({
+        entity: 'disciplines',
+        page: 1,
+        pageSize: 3000,
+        orderBy: 'id',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'teachers',
+        page: 1,
+        pageSize: 3000,
+        orderBy: 'last_name',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'academic_years',
+@endwith
+@end
 
-    return String(session?.topic ?? '').trim()
-  }
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+    setDisciplines(disciplinesResult.items)
+@endfind
+@content
+    setTeachers(teachersResult.items)
+@endcontent
+@end
 
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  const lessonPeriodById = useMemo(() => createRecordMap(lessonPeriods), [lessonPeriods])
+@endfind
+@content
+  const teacherById = useMemo(() => createRecordMap(teachers), [teachers])
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
   function getLessonNote(column: ScheduleJournalColumn): string {
     const session = getLessonSession(column)
 
     return String(session?.comment ?? '').trim()
   }
+@endfind
+@content
 
-  function openTopicEditor(column: ScheduleJournalColumn): void {
-    setActiveTopicColumnId(column.id)
-    setTopicDraft(getLessonTopic(column))
-    setLessonNoteDraft(getLessonNote(column))
-    setTopicError(null)
+  function getLessonTeacherName(column: ScheduleJournalColumn): string {
+    const session = getLessonSession(column)
+    const teacherId =
+      toNumberOrNull(session?.teacher_id) ?? toNumberOrNull(column.scheduleItem.teacher_id)
+
+    if (teacherId === null) {
+      return 'Преподаватель не указан'
+    }
+
+    const teacher = teacherById.get(teacherId)
+
+    return teacher ? getPersonFullName(teacher) : `Преподаватель #${teacherId}`
   }
-@endwith
+@endcontent
 @end
 
 @insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-      const topic = topicDraft.trim() || null
+                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                          {getJournalPairLabel(activeTopicColumn)}
+                        </p>
 @endfind
 @content
-      const comment = lessonNoteDraft.trim() || null
+                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                          Преподаватель: {getLessonTeacherName(activeTopicColumn)}
+                        </p>
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                          const note = column.kind === 'schedule' ? getLessonNote(column) : ''
+@endfind
+@content
+                          const teacherName =
+                            column.kind === 'schedule' ? getLessonTeacherName(column) : ''
 @endcontent
 @end
 
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-          data: {
-            topic
-          }
-@endfind
-@with
-          data: {
-            topic,
-            comment
-          }
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-            topic,
-            status: 'planned',
-@endfind
-@with
-            topic,
-            comment,
-            status: 'planned',
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                          const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
-@endfind
-@with
-                          const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
-                          const note = column.kind === 'schedule' ? getLessonNote(column) : ''
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                                  ? createTopicColumnTitle(column, topic)
-@endfind
-@with
                                   ? createTopicColumnTitle(column, topic, note)
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                        <p className="text-sm font-semibold text-[var(--color-text)]">
-                          Тема занятия
-                        </p>
 @endfind
 @with
-                        <p className="text-sm font-semibold text-[var(--color-text)]">
-                          Данные занятия
-                        </p>
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                    <label className="mt-4 grid gap-2">
-                      <span className="text-sm font-medium text-[var(--color-text)]">
-                        Текст темы
-                      </span>
-                      <Textarea
-                        value={topicDraft}
-                        placeholder="Например: Производные и правила дифференцирования"
-                        onChange={(event) => setTopicDraft(event.target.value)}
-                      />
-                    </label>
-@endfind
-@with
-                    <div className="mt-4 grid gap-4">
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium text-[var(--color-text)]">
-                          Тема занятия
-                        </span>
-                        <Input
-                          value={topicDraft}
-                          placeholder="Например: Производные и правила дифференцирования"
-                          onChange={(event) => setTopicDraft(event.target.value)}
-                        />
-                      </label>
-
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium text-[var(--color-text)]">
-                          Заметки
-                        </span>
-                        <Textarea
-                          value={lessonNoteDraft}
-                          placeholder="Например: что объяснили, что задали, что нужно повторить"
-                          onChange={(event) => setLessonNoteDraft(event.target.value)}
-                        />
-                      </label>
-                    </div>
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                          setActiveTopicColumnId('')
-                          setTopicDraft('')
-                          setTopicError(null)
-@endfind
-@with
-                          setActiveTopicColumnId('')
-                          setTopicDraft('')
-                          setLessonNoteDraft('')
-                          setTopicError(null)
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                        {isSavingTopic ? 'Сохранение...' : 'Сохранить тему'}
-@endfind
-@with
-                        {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
+                                  ? createTopicColumnTitle(column, topic, note, teacherName)
 @endwith
 @end
 
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
 function createTopicColumnTitle(column: ScheduleJournalColumn, topic: string): string {
-  return [
-    getJournalPairLabel(column),
-    topic ? `Тема: ${topic}` : 'Тема не указана'
-  ].join('\n')
+  return [getJournalPairLabel(column), topic ? `Тема: ${topic}` : 'Тема не указана'].join('\n')
 }
 @endfind
 @with
 function createTopicColumnTitle(
   column: ScheduleJournalColumn,
   topic: string,
-  note: string
+  note: string,
+  teacherName: string
 ): string {
   return [
     getJournalPairLabel(column),
+    teacherName ? `Преподаватель: ${teacherName}` : 'Преподаватель не указан',
     topic ? `Тема: ${topic}` : 'Тема не указана',
     note ? `Заметки: ${note}` : 'Заметки не указаны'
   ].join('\n')
