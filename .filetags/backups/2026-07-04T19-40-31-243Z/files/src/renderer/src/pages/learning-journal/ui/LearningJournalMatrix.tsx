@@ -10,7 +10,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -91,7 +90,6 @@ export function LearningJournalMatrix(): ReactElement {
 
   const [activeTopicColumnId, setActiveTopicColumnId] = useState('')
   const [topicDraft, setTopicDraft] = useState('')
-  const [lessonNoteDraft, setLessonNoteDraft] = useState('')
   const [isSavingTopic, setIsSavingTopic] = useState(false)
   const [topicError, setTopicError] = useState<string | null>(null)
   const [isSavingAttendance, setIsSavingAttendance] = useState(false)
@@ -458,7 +456,6 @@ export function LearningJournalMatrix(): ReactElement {
     if (!activeTopicColumn) {
       setActiveTopicColumnId('')
       setTopicDraft('')
-      setLessonNoteDraft('')
       setTopicError(null)
     }
   }, [activeTopicColumn, activeTopicColumnId])
@@ -692,16 +689,9 @@ export function LearningJournalMatrix(): ReactElement {
     return String(session?.topic ?? '').trim()
   }
 
-  function getLessonNote(column: ScheduleJournalColumn): string {
-    const session = getLessonSession(column)
-
-    return String(session?.comment ?? '').trim()
-  }
-
   function openTopicEditor(column: ScheduleJournalColumn): void {
     setActiveTopicColumnId(column.id)
     setTopicDraft(getLessonTopic(column))
-    setLessonNoteDraft(getLessonNote(column))
     setTopicError(null)
   }
 
@@ -715,7 +705,6 @@ export function LearningJournalMatrix(): ReactElement {
 
     try {
       const topic = topicDraft.trim() || null
-      const comment = lessonNoteDraft.trim() || null
       const existingSession = getLessonSession(activeTopicColumn)
 
       if (existingSession?.id) {
@@ -723,8 +712,7 @@ export function LearningJournalMatrix(): ReactElement {
           entity: 'lesson_sessions',
           id: Number(existingSession.id),
           data: {
-            topic,
-            comment
+            topic
           }
         })
       } else {
@@ -735,7 +723,6 @@ export function LearningJournalMatrix(): ReactElement {
             week_id: toNumberOrNull(selectedWeek?.id),
             lesson_date: activeTopicColumn.date,
             topic,
-            comment,
             status: 'planned',
             teacher_id: toNumberOrNull(activeTopicColumn.scheduleItem.teacher_id)
           }
@@ -1000,7 +987,6 @@ export function LearningJournalMatrix(): ReactElement {
 
                         {journalColumns.map((column) => {
                           const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
-                          const note = column.kind === 'schedule' ? getLessonNote(column) : ''
 
                           return (
                             <th
@@ -1008,7 +994,7 @@ export function LearningJournalMatrix(): ReactElement {
                               className="h-7 border-r border-t border-[var(--color-border)] px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
                               title={
                                 column.kind === 'schedule'
-                                  ? createTopicColumnTitle(column, topic, note)
+                                  ? createTopicColumnTitle(column, topic)
                                   : 'Нет пары'
                               }
                             >
@@ -1050,7 +1036,7 @@ export function LearningJournalMatrix(): ReactElement {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-[var(--color-text)]">
-                          Данные занятия
+                          Тема занятия
                         </p>
                         <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                           {getJournalPairLabel(activeTopicColumn)}
@@ -1066,29 +1052,16 @@ export function LearningJournalMatrix(): ReactElement {
                       </div>
                     ) : null}
 
-                    <div className="mt-4 grid gap-4">
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium text-[var(--color-text)]">
-                          Тема занятия
-                        </span>
-                        <Input
-                          value={topicDraft}
-                          placeholder="Например: Производные и правила дифференцирования"
-                          onChange={(event) => setTopicDraft(event.target.value)}
-                        />
-                      </label>
-
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium text-[var(--color-text)]">
-                          Заметки
-                        </span>
-                        <Textarea
-                          value={lessonNoteDraft}
-                          placeholder="Например: что объяснили, что задали, что нужно повторить"
-                          onChange={(event) => setLessonNoteDraft(event.target.value)}
-                        />
-                      </label>
-                    </div>
+                    <label className="mt-4 grid gap-2">
+                      <span className="text-sm font-medium text-[var(--color-text)]">
+                        Текст темы
+                      </span>
+                      <Textarea
+                        value={topicDraft}
+                        placeholder="Например: Производные и правила дифференцирования"
+                        onChange={(event) => setTopicDraft(event.target.value)}
+                      />
+                    </label>
 
                     <div className="mt-4 flex flex-wrap justify-end gap-2">
                       <Button
@@ -1097,7 +1070,6 @@ export function LearningJournalMatrix(): ReactElement {
                         onClick={() => {
                           setActiveTopicColumnId('')
                           setTopicDraft('')
-                          setLessonNoteDraft('')
                           setTopicError(null)
                         }}
                       >
@@ -1109,7 +1081,7 @@ export function LearningJournalMatrix(): ReactElement {
                         disabled={isSavingTopic}
                         onClick={() => void saveTopic()}
                       >
-                        {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
+                        {isSavingTopic ? 'Сохранение...' : 'Сохранить тему'}
                       </Button>
                     </div>
                   </div>

@@ -1,47 +1,226 @@
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-                            {getPersonFullName(student)}
+  CardHeader,
+  CardTitle,
+  Select,
 @endfind
 @with
-                            {getPersonShortName(student)}
+  CardHeader,
+  CardTitle,
+  Input,
+  Select,
 @endwith
 @end
 
 @insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-function getPersonFullName(record: AdminCrudRecord): string {
-  const fullName = [record.last_name, record.first_name, record.middle_name]
-    .map((value) => String(value ?? '').trim())
-    .filter(Boolean)
-    .join(' ')
-
-  return fullName || getRecordName(record)
-}
+  const [topicDraft, setTopicDraft] = useState('')
 @endfind
 @content
-
-function getPersonShortName(record: AdminCrudRecord): string {
-  const lastName = String(record.last_name ?? '').trim()
-  const initials = [record.first_name, record.middle_name]
-    .map((value) => String(value ?? '').trim())
-    .filter(Boolean)
-    .map((value) => {
-      const firstLetter = Array.from(value)[0]?.toLocaleUpperCase('ru-RU') ?? ''
-
-      return firstLetter ? `${firstLetter}.` : ''
-    })
-    .filter(Boolean)
-    .join(' ')
-
-  if (lastName && initials) {
-    return `${lastName} ${initials}`
-  }
-
-  if (lastName) {
-    return lastName
-  }
-
-  return getPersonFullName(record)
-}
+  const [lessonNoteDraft, setLessonNoteDraft] = useState('')
 @endcontent
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+      setActiveTopicColumnId('')
+      setTopicDraft('')
+      setTopicError(null)
+@endfind
+@with
+      setActiveTopicColumnId('')
+      setTopicDraft('')
+      setLessonNoteDraft('')
+      setTopicError(null)
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  function getLessonTopic(column: ScheduleJournalColumn): string {
+    const session = getLessonSession(column)
+
+    return String(session?.topic ?? '').trim()
+  }
+
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    setActiveTopicColumnId(column.id)
+    setTopicDraft(getLessonTopic(column))
+    setTopicError(null)
+  }
+@endfind
+@with
+  function getLessonTopic(column: ScheduleJournalColumn): string {
+    const session = getLessonSession(column)
+
+    return String(session?.topic ?? '').trim()
+  }
+
+  function getLessonNote(column: ScheduleJournalColumn): string {
+    const session = getLessonSession(column)
+
+    return String(session?.comment ?? '').trim()
+  }
+
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    setActiveTopicColumnId(column.id)
+    setTopicDraft(getLessonTopic(column))
+    setLessonNoteDraft(getLessonNote(column))
+    setTopicError(null)
+  }
+@endwith
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+      const topic = topicDraft.trim() || null
+@endfind
+@content
+      const comment = lessonNoteDraft.trim() || null
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+          data: {
+            topic
+          }
+@endfind
+@with
+          data: {
+            topic,
+            comment
+          }
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+            topic,
+            status: 'planned',
+@endfind
+@with
+            topic,
+            comment,
+            status: 'planned',
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                          const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
+@endfind
+@with
+                          const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
+                          const note = column.kind === 'schedule' ? getLessonNote(column) : ''
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                                  ? createTopicColumnTitle(column, topic)
+@endfind
+@with
+                                  ? createTopicColumnTitle(column, topic, note)
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                        <p className="text-sm font-semibold text-[var(--color-text)]">
+                          Тема занятия
+                        </p>
+@endfind
+@with
+                        <p className="text-sm font-semibold text-[var(--color-text)]">
+                          Данные занятия
+                        </p>
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                    <label className="mt-4 grid gap-2">
+                      <span className="text-sm font-medium text-[var(--color-text)]">
+                        Текст темы
+                      </span>
+                      <Textarea
+                        value={topicDraft}
+                        placeholder="Например: Производные и правила дифференцирования"
+                        onChange={(event) => setTopicDraft(event.target.value)}
+                      />
+                    </label>
+@endfind
+@with
+                    <div className="mt-4 grid gap-4">
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          Тема занятия
+                        </span>
+                        <Input
+                          value={topicDraft}
+                          placeholder="Например: Производные и правила дифференцирования"
+                          onChange={(event) => setTopicDraft(event.target.value)}
+                        />
+                      </label>
+
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          Заметки
+                        </span>
+                        <Textarea
+                          value={lessonNoteDraft}
+                          placeholder="Например: что объяснили, что задали, что нужно повторить"
+                          onChange={(event) => setLessonNoteDraft(event.target.value)}
+                        />
+                      </label>
+                    </div>
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                          setActiveTopicColumnId('')
+                          setTopicDraft('')
+                          setTopicError(null)
+@endfind
+@with
+                          setActiveTopicColumnId('')
+                          setTopicDraft('')
+                          setLessonNoteDraft('')
+                          setTopicError(null)
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                        {isSavingTopic ? 'Сохранение...' : 'Сохранить тему'}
+@endfind
+@with
+                        {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+function createTopicColumnTitle(column: ScheduleJournalColumn, topic: string): string {
+  return [
+    getJournalPairLabel(column),
+    topic ? `Тема: ${topic}` : 'Тема не указана'
+  ].join('\n')
+}
+@endfind
+@with
+function createTopicColumnTitle(
+  column: ScheduleJournalColumn,
+  topic: string,
+  note: string
+): string {
+  return [
+    getJournalPairLabel(column),
+    topic ? `Тема: ${topic}` : 'Тема не указана',
+    note ? `Заметки: ${note}` : 'Заметки не указаны'
+  ].join('\n')
+}
+@endwith
 @end
