@@ -1,35 +1,9 @@
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-  const [topicDraft, setTopicDraft] = useState('')
-  const [isSavingTopic, setIsSavingTopic] = useState(false)
-  const [topicError, setTopicError] = useState<string | null>(null)
-@endfind
-@content
-
-  const [isSavingAttendance, setIsSavingAttendance] = useState(false)
-  const [attendanceError, setAttendanceError] = useState<string | null>(null)
-@endcontent
-@end
-
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
   function renderJournalCellValue(student: AdminCrudRecord, column: ScheduleJournalColumn): string {
     const statusKey = getAttendanceStatusKey(student, column)
 
-    if (!statusKey) {
-      return ''
-    }
-
-    const labels: Record<string, string> = {
-      present: 'П',
-      absent: 'Н',
-      excused: 'УП',
-      not_held: 'НБ',
-      late: 'О',
-      online: 'Д'
-    }
-
-    return labels[statusKey] ?? statusKey.slice(0, 2).toUpperCase()
+    return statusKey === 'absent' ? 'Н' : '·'
   }
 @endfind
 @with
@@ -57,37 +31,70 @@
 
     return labels[statusKey] ?? statusKey.slice(0, 2).toUpperCase()
   }
+@endwith
+@end
 
-  function getAttendanceStatusByKey(statusKey: string): AdminCrudRecord | null {
-    return attendanceStatuses.find((status) => String(status.item_key) === statusKey) ?? null
-  }
-
-  async function ensureLessonSession(column: ScheduleJournalColumn): Promise<AdminCrudRecord> {
-    const existingSession = getLessonSession(column)
-
-    if (existingSession) {
-      return existingSession
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  async function toggleAttendanceMark(
+    student: AdminCrudRecord,
+    column: ScheduleJournalColumn
+  ): Promise<void> {
+    if (isSavingAttendance) {
+      return
     }
 
-    const result = await window.api.adminCrud.create({
-      entity: 'lesson_sessions',
-      data: {
-        schedule_item_id: Number(column.scheduleItem.id),
-        week_id: toNumberOrNull(selectedWeek?.id),
-        lesson_date: column.date,
-        topic: null,
-        status: 'planned',
-        teacher_id: toNumberOrNull(column.scheduleItem.teacher_id)
+    const currentStatusKey = getAttendanceStatusKey(student, column)
+    const nextStatusKey = currentStatusKey === 'absent' ? 'present' : 'absent'
+    const nextStatus = getAttendanceStatusByKey(nextStatusKey)
+
+    if (!nextStatus?.id) {
+      setAttendanceError(
+        nextStatusKey === 'absent'
+          ? 'Статус отсутствия не найден в справочнике'
+          : 'Статус присутствия не найден в справочнике'
+      )
+      return
+    }
+
+    setIsSavingAttendance(true)
+    setAttendanceError(null)
+
+    try {
+      const lessonSession = await ensureLessonSession(column)
+      const existingRecord = getAttendanceRecord(student, column)
+
+      if (existingRecord?.id) {
+        await window.api.adminCrud.update({
+          entity: 'attendance_records',
+          id: Number(existingRecord.id),
+          data: {
+            attendance_status_id: Number(nextStatus.id)
+          }
+        })
+      } else {
+        await window.api.adminCrud.create({
+          entity: 'attendance_records',
+          data: {
+            lesson_session_id: Number(lessonSession.id),
+            student_id: Number(student.id),
+            attendance_status_id: Number(nextStatus.id),
+            comment: null
+          }
+        })
       }
-    })
 
-    if (!result.item) {
-      throw new Error('Не удалось создать занятие для отметки')
+      await loadData()
+    } catch (error) {
+      setAttendanceError(
+        error instanceof Error ? error.message : 'Не удалось сохранить отметку посещаемости'
+      )
+    } finally {
+      setIsSavingAttendance(false)
     }
-
-    return result.item
   }
-
+@endfind
+@with
   async function toggleAttendanceMark(
     student: AdminCrudRecord,
     column: ScheduleJournalColumn
@@ -122,8 +129,8 @@
       if (!nextStatus?.id) {
         throw new Error(
           nextStatusKey === 'absent'
-            ? 'Статус absent не найден в справочнике посещаемости'
-            : 'Статус present не найден в справочнике посещаемости'
+            ? 'Статус отсутствия не найден в справочнике'
+            : 'Статус присутствия не найден в справочнике'
         )
       }
 
@@ -163,76 +170,20 @@
 
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-                                <button
-                                  type="button"
-                                  className="flex h-full min-h-8 w-full items-center justify-center transition-colors hover:bg-[var(--color-primary)]/10 focus:bg-[var(--color-primary)]/10 focus:outline-none"
-                                  title={createJournalCellTitle(student, column, statusKey)}
-                                  onClick={() => openTopicEditor(column)}
-                                >
-                                  {value}
-                                </button>
-@endfind
-@with
-                                <button
-                                  type="button"
-                                  disabled={isSavingAttendance}
-                                  className="flex h-full min-h-8 w-full items-center justify-center transition-colors hover:bg-emerald-100 focus:bg-emerald-100 focus:outline-none disabled:cursor-wait"
-                                  title={createJournalCellTitle(student, column, statusKey)}
-                                  onClick={() => void toggleAttendanceMark(student, column)}
-                                >
-                                  {value}
-                                </button>
-@endwith
-@end
-
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="muted">Студентов: {groupStudents.length}</Badge>
-                  <Badge variant="muted">Колонок: 35</Badge>
-                  <Badge variant="muted">П = присутствовал</Badge>
-                  <Badge variant="muted">Н = отсутствовал</Badge>
-                  <Badge variant="muted">УП = уважительная причина</Badge>
-                  <Badge variant="muted">НБ = не было</Badge>
-                  <Badge variant="muted">О = опоздал</Badge>
-                  <Badge variant="muted">Д = дистанционно</Badge>
-                </div>
-@endfind
-@content
-
-                {attendanceError ? (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                    {attendanceError}
-                  </div>
-                ) : null}
-@endcontent
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                    Нажми на клетку существующей пары или на сокращение предмета в нижней строке,
-                    чтобы указать тему занятия.
-@endfind
-@with
-                    Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто.
-                    Тема занятия редактируется через сокращение предмета в нижней строке.
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
 function createJournalCellTitle(
   student: AdminCrudRecord,
   column: ScheduleJournalColumn,
   statusKey: string
 ): string {
-  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Пусто'
+  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Точка / присутствовал'
+  const actionLabel = statusKey === 'absent' ? 'Нажми, чтобы поставить точку' : 'Нажми, чтобы поставить Н'
 
   return [
     getPersonFullName(student),
     column.disciplineName,
     `${formatJournalDate(column.date)} · ${column.lessonNumber} пара`,
-    statusLabel
+    statusLabel,
+    actionLabel
   ].join('\n')
 }
 @endfind
@@ -243,9 +194,9 @@ function createJournalCellTitle(
   statusKey: string
 ): string {
   const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Пусто'
-  const nextLabel =
+  const actionLabel =
     statusKey === 'absent'
-      ? 'Следующий клик: ·'
+      ? 'Следующий клик: точка'
       : statusKey === 'present'
         ? 'Следующий клик: пусто'
         : 'Следующий клик: Н'
@@ -255,7 +206,7 @@ function createJournalCellTitle(
     column.disciplineName,
     `${formatJournalDate(column.date)} · ${column.lessonNumber} пара`,
     statusLabel,
-    nextLabel
+    actionLabel
   ].join('\n')
 }
 @endwith
@@ -265,8 +216,8 @@ function createJournalCellTitle(
 @find
 function getAttendanceStatusLabel(statusKey: string): string {
   const labels: Record<string, string> = {
-    present: 'Присутствовал',
-    absent: 'Отсутствовал',
+    present: 'Точка / присутствовал',
+    absent: 'Н / отсутствовал',
     excused: 'Уважительная причина',
     not_held: 'Не было',
     late: 'Опоздал',
@@ -279,7 +230,7 @@ function getAttendanceStatusLabel(statusKey: string): string {
 @with
 function getAttendanceStatusLabel(statusKey: string): string {
   const labels: Record<string, string> = {
-    present: '· / присутствовал',
+    present: 'Точка / присутствовал',
     absent: 'Н / отсутствовал',
     excused: 'Уважительная причина',
     not_held: 'Не было',
@@ -298,27 +249,11 @@ function getJournalCellClassName(statusKey: string): string {
   const baseClassName =
     'h-8 border-r border-[var(--color-border)] px-0 text-center align-middle text-[11px] font-semibold last:border-r-0'
 
-  if (statusKey === 'present') {
-    return `${baseClassName} bg-[var(--color-primary)]/10 text-[var(--color-primary)]`
-  }
-
   if (statusKey === 'absent') {
     return `${baseClassName} bg-red-50 text-red-600`
   }
 
-  if (statusKey === 'excused') {
-    return `${baseClassName} bg-[var(--color-primary)]/5 text-[var(--color-text)]`
-  }
-
-  if (statusKey === 'not_held') {
-    return `${baseClassName} bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]`
-  }
-
-  if (statusKey === 'late' || statusKey === 'online') {
-    return `${baseClassName} bg-[var(--color-primary)]/5 text-[var(--color-primary)]`
-  }
-
-  return `${baseClassName} bg-[var(--color-surface)] text-[var(--color-text)]`
+  return `${baseClassName} bg-emerald-50 text-emerald-700`
 }
 @endfind
 @with
@@ -328,6 +263,10 @@ function getJournalCellClassName(statusKey: string): string {
 
   if (statusKey === 'absent') {
     return `${baseClassName} bg-red-50 text-red-600`
+  }
+
+  if (statusKey === 'present') {
+    return `${baseClassName} bg-blue-50 text-blue-700`
   }
 
   return `${baseClassName} bg-emerald-50 text-emerald-700`

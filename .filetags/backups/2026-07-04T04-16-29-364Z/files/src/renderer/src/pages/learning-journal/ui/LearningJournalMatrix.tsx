@@ -556,26 +556,7 @@ export function LearningJournalMatrix(): ReactElement {
   function renderJournalCellValue(student: AdminCrudRecord, column: ScheduleJournalColumn): string {
     const statusKey = getAttendanceStatusKey(student, column)
 
-    if (statusKey === 'absent') {
-      return 'Н'
-    }
-
-    if (statusKey === 'present') {
-      return '·'
-    }
-
-    if (!statusKey) {
-      return ''
-    }
-
-    const labels: Record<string, string> = {
-      excused: 'УП',
-      not_held: 'НБ',
-      late: 'О',
-      online: 'Д'
-    }
-
-    return labels[statusKey] ?? statusKey.slice(0, 2).toUpperCase()
+    return statusKey === 'absent' ? 'Н' : '·'
   }
 
   function getAttendanceStatusByKey(statusKey: string): AdminCrudRecord | null {
@@ -616,36 +597,25 @@ export function LearningJournalMatrix(): ReactElement {
       return
     }
 
-    const existingRecord = getAttendanceRecord(student, column)
     const currentStatusKey = getAttendanceStatusKey(student, column)
-    const nextStatusKey =
-      currentStatusKey === 'absent' ? 'present' : currentStatusKey === 'present' ? null : 'absent'
+    const nextStatusKey = currentStatusKey === 'absent' ? 'present' : 'absent'
+    const nextStatus = getAttendanceStatusByKey(nextStatusKey)
+
+    if (!nextStatus?.id) {
+      setAttendanceError(
+        nextStatusKey === 'absent'
+          ? 'Статус отсутствия не найден в справочнике'
+          : 'Статус присутствия не найден в справочнике'
+      )
+      return
+    }
 
     setIsSavingAttendance(true)
     setAttendanceError(null)
 
     try {
-      if (nextStatusKey === null) {
-        if (existingRecord?.id) {
-          await window.api.adminCrud.delete({
-            entity: 'attendance_records',
-            id: Number(existingRecord.id)
-          })
-        }
-
-        await loadData()
-        return
-      }
-
-      const nextStatus = getAttendanceStatusByKey(nextStatusKey)
-
-      if (!nextStatus?.id) {
-        throw new Error(
-          nextStatusKey === 'absent'
-            ? 'Статус отсутствия не найден в справочнике'
-            : 'Статус присутствия не найден в справочнике'
-        )
-      }
+      const lessonSession = await ensureLessonSession(column)
+      const existingRecord = getAttendanceRecord(student, column)
 
       if (existingRecord?.id) {
         await window.api.adminCrud.update({
@@ -656,8 +626,6 @@ export function LearningJournalMatrix(): ReactElement {
           }
         })
       } else {
-        const lessonSession = await ensureLessonSession(column)
-
         await window.api.adminCrud.create({
           entity: 'attendance_records',
           data: {
@@ -1309,13 +1277,8 @@ function createJournalCellTitle(
   column: ScheduleJournalColumn,
   statusKey: string
 ): string {
-  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Пусто'
-  const actionLabel =
-    statusKey === 'absent'
-      ? 'Следующий клик: точка'
-      : statusKey === 'present'
-        ? 'Следующий клик: пусто'
-        : 'Следующий клик: Н'
+  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Точка / присутствовал'
+  const actionLabel = statusKey === 'absent' ? 'Нажми, чтобы поставить точку' : 'Нажми, чтобы поставить Н'
 
   return [
     getPersonFullName(student),
@@ -1355,10 +1318,6 @@ function getJournalCellClassName(statusKey: string): string {
 
   if (statusKey === 'absent') {
     return `${baseClassName} bg-red-50 text-red-600`
-  }
-
-  if (statusKey === 'present') {
-    return `${baseClassName} bg-blue-50 text-blue-700`
   }
 
   return `${baseClassName} bg-emerald-50 text-emerald-700`
