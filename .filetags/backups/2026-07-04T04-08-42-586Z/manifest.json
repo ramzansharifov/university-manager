@@ -1,0 +1,20 @@
+{
+  "createdAt": "2026-07-04T04:08:42.613Z",
+  "backupPath": ".filetags/backups/2026-07-04T04-08-42-586Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1327 line(s)\n   new: 1329 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1329 line(s)\n   new: 1404 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1404 line(s)\n   new: 1405 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1405 line(s)\n   new: 1410 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1410 line(s)\n   new: 1412 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1412 line(s)\n   new: 1412 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 1412 line(s)\n   new: 1396 line(s)"
+  ]
+}

@@ -92,8 +92,6 @@ export function LearningJournalMatrix(): ReactElement {
   const [topicDraft, setTopicDraft] = useState('')
   const [isSavingTopic, setIsSavingTopic] = useState(false)
   const [topicError, setTopicError] = useState<string | null>(null)
-  const [isSavingAttendance, setIsSavingAttendance] = useState(false)
-  const [attendanceError, setAttendanceError] = useState<string | null>(null)
 
   const loadData = useCallback(async (): Promise<void> => {
     const [
@@ -556,95 +554,20 @@ export function LearningJournalMatrix(): ReactElement {
   function renderJournalCellValue(student: AdminCrudRecord, column: ScheduleJournalColumn): string {
     const statusKey = getAttendanceStatusKey(student, column)
 
-    return statusKey === 'absent' ? 'Н' : '·'
-  }
-
-  function getAttendanceStatusByKey(statusKey: string): AdminCrudRecord | null {
-    return attendanceStatuses.find((status) => String(status.item_key) === statusKey) ?? null
-  }
-
-  async function ensureLessonSession(column: ScheduleJournalColumn): Promise<AdminCrudRecord> {
-    const existingSession = getLessonSession(column)
-
-    if (existingSession) {
-      return existingSession
+    if (!statusKey) {
+      return ''
     }
 
-    const result = await window.api.adminCrud.create({
-      entity: 'lesson_sessions',
-      data: {
-        schedule_item_id: Number(column.scheduleItem.id),
-        week_id: toNumberOrNull(selectedWeek?.id),
-        lesson_date: column.date,
-        topic: null,
-        status: 'planned',
-        teacher_id: toNumberOrNull(column.scheduleItem.teacher_id)
-      }
-    })
-
-    if (!result.item) {
-      throw new Error('Не удалось создать занятие для отметки')
+    const labels: Record<string, string> = {
+      present: 'П',
+      absent: 'Н',
+      excused: 'УП',
+      not_held: 'НБ',
+      late: 'О',
+      online: 'Д'
     }
 
-    return result.item
-  }
-
-  async function toggleAttendanceMark(
-    student: AdminCrudRecord,
-    column: ScheduleJournalColumn
-  ): Promise<void> {
-    if (isSavingAttendance) {
-      return
-    }
-
-    const currentStatusKey = getAttendanceStatusKey(student, column)
-    const nextStatusKey = currentStatusKey === 'absent' ? 'present' : 'absent'
-    const nextStatus = getAttendanceStatusByKey(nextStatusKey)
-
-    if (!nextStatus?.id) {
-      setAttendanceError(
-        nextStatusKey === 'absent'
-          ? 'Статус отсутствия не найден в справочнике'
-          : 'Статус присутствия не найден в справочнике'
-      )
-      return
-    }
-
-    setIsSavingAttendance(true)
-    setAttendanceError(null)
-
-    try {
-      const lessonSession = await ensureLessonSession(column)
-      const existingRecord = getAttendanceRecord(student, column)
-
-      if (existingRecord?.id) {
-        await window.api.adminCrud.update({
-          entity: 'attendance_records',
-          id: Number(existingRecord.id),
-          data: {
-            attendance_status_id: Number(nextStatus.id)
-          }
-        })
-      } else {
-        await window.api.adminCrud.create({
-          entity: 'attendance_records',
-          data: {
-            lesson_session_id: Number(lessonSession.id),
-            student_id: Number(student.id),
-            attendance_status_id: Number(nextStatus.id),
-            comment: null
-          }
-        })
-      }
-
-      await loadData()
-    } catch (error) {
-      setAttendanceError(
-        error instanceof Error ? error.message : 'Не удалось сохранить отметку посещаемости'
-      )
-    } finally {
-      setIsSavingAttendance(false)
-    }
+    return labels[statusKey] ?? statusKey.slice(0, 2).toUpperCase()
   }
   function getLessonTopic(column: ScheduleJournalColumn): string {
     const session = getLessonSession(column)
@@ -922,10 +845,9 @@ export function LearningJournalMatrix(): ReactElement {
                               >
                                 <button
                                   type="button"
-                                  disabled={isSavingAttendance}
-                                  className="flex h-full min-h-8 w-full items-center justify-center transition-colors hover:bg-[var(--color-primary)]/10 focus:bg-[var(--color-primary)]/10 focus:outline-none disabled:cursor-wait"
+                                  className="flex h-full min-h-8 w-full items-center justify-center transition-colors hover:bg-[var(--color-primary)]/10 focus:bg-[var(--color-primary)]/10 focus:outline-none"
                                   title={createJournalCellTitle(student, column, statusKey)}
-                                  onClick={() => void toggleAttendanceMark(student, column)}
+                                  onClick={() => openTopicEditor(column)}
                                 >
                                   {value}
                                 </button>
@@ -981,11 +903,6 @@ export function LearningJournalMatrix(): ReactElement {
                   <Badge variant="muted">О = опоздал</Badge>
                   <Badge variant="muted">Д = дистанционно</Badge>
                 </div>
-                {attendanceError ? (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                    {attendanceError}
-                  </div>
-                ) : null}
 
                 {activeTopicColumn ? (
                   <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
@@ -1277,15 +1194,13 @@ function createJournalCellTitle(
   column: ScheduleJournalColumn,
   statusKey: string
 ): string {
-  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Точка / присутствовал'
-  const actionLabel = statusKey === 'absent' ? 'Нажми, чтобы поставить точку' : 'Нажми, чтобы поставить Н'
+  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Пусто'
 
   return [
     getPersonFullName(student),
     column.disciplineName,
     `${formatJournalDate(column.date)} · ${column.lessonNumber} пара`,
-    statusLabel,
-    actionLabel
+    statusLabel
   ].join('\n')
 }
 function getJournalPairLabel(column: ScheduleJournalColumn): string {
@@ -1301,8 +1216,8 @@ function createTopicColumnTitle(column: ScheduleJournalColumn, topic: string): s
 
 function getAttendanceStatusLabel(statusKey: string): string {
   const labels: Record<string, string> = {
-    present: 'Точка / присутствовал',
-    absent: 'Н / отсутствовал',
+    present: 'Присутствовал',
+    absent: 'Отсутствовал',
     excused: 'Уважительная причина',
     not_held: 'Не было',
     late: 'Опоздал',
@@ -1316,11 +1231,27 @@ function getJournalCellClassName(statusKey: string): string {
   const baseClassName =
     'h-8 border-r border-[var(--color-border)] px-0 text-center align-middle text-[11px] font-semibold last:border-r-0'
 
+  if (statusKey === 'present') {
+    return `${baseClassName} bg-[var(--color-primary)]/10 text-[var(--color-primary)]`
+  }
+
   if (statusKey === 'absent') {
     return `${baseClassName} bg-red-50 text-red-600`
   }
 
-  return `${baseClassName} bg-emerald-50 text-emerald-700`
+  if (statusKey === 'excused') {
+    return `${baseClassName} bg-[var(--color-primary)]/5 text-[var(--color-text)]`
+  }
+
+  if (statusKey === 'not_held') {
+    return `${baseClassName} bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]`
+  }
+
+  if (statusKey === 'late' || statusKey === 'online') {
+    return `${baseClassName} bg-[var(--color-primary)]/5 text-[var(--color-primary)]`
+  }
+
+  return `${baseClassName} bg-[var(--color-surface)] text-[var(--color-text)]`
 }
 
 function compareSemesters(firstSemester: AdminCrudRecord, secondSemester: AdminCrudRecord): number {
