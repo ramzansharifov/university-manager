@@ -462,12 +462,10 @@ export function LearningJournalMatrix(): ReactElement {
 
   const studentColumnWidth = useMemo(() => {
     const longestNameLength = groupStudents.reduce(
-      (length, student) => Math.max(length, getPersonFullName(student).length),
-      0
+      (length, student) => Math.max(length, Array.from(getPersonShortName(student)).length),
+      Array.from('Студент').length
     )
-    const widthInCharacters = Math.min(Math.max(longestNameLength + 2, 18), 38)
-
-    return `${widthInCharacters}ch`
+    return `calc(${longestNameLength}ch + 2rem)`
   }, [groupStudents])
 
   const hasCompleteSelection = Boolean(selectedGroup && selectedSemester && selectedWeek)
@@ -891,9 +889,9 @@ export function LearningJournalMatrix(): ReactElement {
                       <tr className="bg-[var(--color-surface-muted)]">
                         <th
                           rowSpan={2}
-                          className="sticky left-0 z-30 whitespace-nowrap border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left font-semibold text-[var(--color-text-muted)]"
+                          className="sticky left-0 z-30 whitespace-nowrap border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-center font-semibold text-[var(--color-text-muted)]"
                         >
-                          Студент
+                          СТУДЕНТЫ
                         </th>
 
                         {journalDayGroups.map((dayGroup) => (
@@ -928,7 +926,7 @@ export function LearningJournalMatrix(): ReactElement {
                     </thead>
 
                     <tbody>
-                      {groupStudents.map((student) => (
+                      {groupStudents.map((student, index) => (
                         <tr
                           key={String(student.id)}
                           className="border-b border-[var(--color-border)] last:border-b-0"
@@ -937,7 +935,7 @@ export function LearningJournalMatrix(): ReactElement {
                             className="sticky left-0 z-20 truncate whitespace-nowrap border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-text)]"
                             title={getPersonFullName(student)}
                           >
-                            {getPersonShortName(student)}
+                            {index + 1}) {getPersonShortName(student)}
                           </td>
 
                           {journalColumns.map((column) => {
@@ -983,8 +981,8 @@ export function LearningJournalMatrix(): ReactElement {
                     </tbody>
                     <tfoot>
                       <tr className="bg-[var(--color-surface-muted)]">
-                        <th className="sticky left-0 z-20 whitespace-nowrap border-r border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left text-[10px] font-semibold text-[var(--color-text-muted)]">
-                          Предмет
+                        <th className="sticky left-0 z-20 whitespace-nowrap border-r border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-center text-[10px] font-semibold text-[var(--color-text-muted)]">
+                          ПРЕДМЕТЫ
                         </th>
 
                         {journalColumns.map((column) => {
