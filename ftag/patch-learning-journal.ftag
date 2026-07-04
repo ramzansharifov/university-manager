@@ -36,7 +36,26 @@
   function renderJournalCellValue(student: AdminCrudRecord, column: ScheduleJournalColumn): string {
     const statusKey = getAttendanceStatusKey(student, column)
 
-    return statusKey === 'absent' ? 'Н' : '·'
+    if (statusKey === 'absent') {
+      return 'Н'
+    }
+
+    if (statusKey === 'present') {
+      return '·'
+    }
+
+    if (!statusKey) {
+      return ''
+    }
+
+    const labels: Record<string, string> = {
+      excused: 'УП',
+      not_held: 'НБ',
+      late: 'О',
+      online: 'Д'
+    }
+
+    return labels[statusKey] ?? statusKey.slice(0, 2).toUpperCase()
   }
 
   function getAttendanceStatusByKey(statusKey: string): AdminCrudRecord | null {
@@ -77,25 +96,36 @@
       return
     }
 
+    const existingRecord = getAttendanceRecord(student, column)
     const currentStatusKey = getAttendanceStatusKey(student, column)
-    const nextStatusKey = currentStatusKey === 'absent' ? 'present' : 'absent'
-    const nextStatus = getAttendanceStatusByKey(nextStatusKey)
-
-    if (!nextStatus?.id) {
-      setAttendanceError(
-        nextStatusKey === 'absent'
-          ? 'Статус отсутствия не найден в справочнике'
-          : 'Статус присутствия не найден в справочнике'
-      )
-      return
-    }
+    const nextStatusKey =
+      currentStatusKey === 'absent' ? 'present' : currentStatusKey === 'present' ? null : 'absent'
 
     setIsSavingAttendance(true)
     setAttendanceError(null)
 
     try {
-      const lessonSession = await ensureLessonSession(column)
-      const existingRecord = getAttendanceRecord(student, column)
+      if (nextStatusKey === null) {
+        if (existingRecord?.id) {
+          await window.api.adminCrud.delete({
+            entity: 'attendance_records',
+            id: Number(existingRecord.id)
+          })
+        }
+
+        await loadData()
+        return
+      }
+
+      const nextStatus = getAttendanceStatusByKey(nextStatusKey)
+
+      if (!nextStatus?.id) {
+        throw new Error(
+          nextStatusKey === 'absent'
+            ? 'Статус absent не найден в справочнике посещаемости'
+            : 'Статус present не найден в справочнике посещаемости'
+        )
+      }
 
       if (existingRecord?.id) {
         await window.api.adminCrud.update({
@@ -106,6 +136,8 @@
           }
         })
       } else {
+        const lessonSession = await ensureLessonSession(column)
+
         await window.api.adminCrud.create({
           entity: 'attendance_records',
           data: {
@@ -144,7 +176,7 @@
                                 <button
                                   type="button"
                                   disabled={isSavingAttendance}
-                                  className="flex h-full min-h-8 w-full items-center justify-center transition-colors hover:bg-[var(--color-primary)]/10 focus:bg-[var(--color-primary)]/10 focus:outline-none disabled:cursor-wait"
+                                  className="flex h-full min-h-8 w-full items-center justify-center transition-colors hover:bg-emerald-100 focus:bg-emerald-100 focus:outline-none disabled:cursor-wait"
                                   title={createJournalCellTitle(student, column, statusKey)}
                                   onClick={() => void toggleAttendanceMark(student, column)}
                                 >
@@ -178,6 +210,17 @@
 
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
+                    Нажми на клетку существующей пары или на сокращение предмета в нижней строке,
+                    чтобы указать тему занятия.
+@endfind
+@with
+                    Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто.
+                    Тема занятия редактируется через сокращение предмета в нижней строке.
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
 function createJournalCellTitle(
   student: AdminCrudRecord,
   column: ScheduleJournalColumn,
@@ -199,15 +242,20 @@ function createJournalCellTitle(
   column: ScheduleJournalColumn,
   statusKey: string
 ): string {
-  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Точка / присутствовал'
-  const actionLabel = statusKey === 'absent' ? 'Нажми, чтобы поставить точку' : 'Нажми, чтобы поставить Н'
+  const statusLabel = statusKey ? getAttendanceStatusLabel(statusKey) : 'Пусто'
+  const nextLabel =
+    statusKey === 'absent'
+      ? 'Следующий клик: ·'
+      : statusKey === 'present'
+        ? 'Следующий клик: пусто'
+        : 'Следующий клик: Н'
 
   return [
     getPersonFullName(student),
     column.disciplineName,
     `${formatJournalDate(column.date)} · ${column.lessonNumber} пара`,
     statusLabel,
-    actionLabel
+    nextLabel
   ].join('\n')
 }
 @endwith
@@ -231,7 +279,7 @@ function getAttendanceStatusLabel(statusKey: string): string {
 @with
 function getAttendanceStatusLabel(statusKey: string): string {
   const labels: Record<string, string> = {
-    present: 'Точка / присутствовал',
+    present: '· / присутствовал',
     absent: 'Н / отсутствовал',
     excused: 'Уважительная причина',
     not_held: 'Не было',

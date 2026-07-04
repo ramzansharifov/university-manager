@@ -1039,8 +1039,8 @@ export function LearningJournalMatrix(): ReactElement {
                   </div>
                 ) : (
                   <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
-                    Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто.
-                    Тема занятия редактируется через сокращение предмета в нижней строке.
+                    Нажми на клетку существующей пары или на сокращение предмета в нижней строке,
+                    чтобы указать тему занятия.
                   </div>
                 )}
               </div>
