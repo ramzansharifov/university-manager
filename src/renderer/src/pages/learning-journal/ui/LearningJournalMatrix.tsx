@@ -80,6 +80,7 @@ export function LearningJournalMatrix(): ReactElement {
   const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
   const [lessonPeriods, setLessonPeriods] = useState<AdminCrudRecord[]>([])
   const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
+  const [lessonCompletionRecords, setLessonCompletionRecords] = useState<AdminCrudRecord[]>([])
   const [attendanceRecords, setAttendanceRecords] = useState<AdminCrudRecord[]>([])
   const [attendanceStatuses, setAttendanceStatuses] = useState<AdminCrudRecord[]>([])
   const [teachers, setTeachers] = useState<AdminCrudRecord[]>([])
@@ -94,6 +95,7 @@ export function LearningJournalMatrix(): ReactElement {
   const [topicDraft, setTopicDraft] = useState('')
   const [lessonNoteDraft, setLessonNoteDraft] = useState('')
   const [isSavingTopic, setIsSavingTopic] = useState(false)
+  const [isSavingCompletion, setIsSavingCompletion] = useState(false)
   const [topicError, setTopicError] = useState<string | null>(null)
   const [isSavingAttendance, setIsSavingAttendance] = useState(false)
   const [attendanceError, setAttendanceError] = useState<string | null>(null)
@@ -113,6 +115,7 @@ export function LearningJournalMatrix(): ReactElement {
       scheduleItemsResult,
       lessonPeriodsResult,
       lessonSessionsResult,
+      lessonCompletionRecordsResult,
       attendanceRecordsResult,
       attendanceStatusesResult
     ] = await Promise.all([
@@ -208,6 +211,13 @@ export function LearningJournalMatrix(): ReactElement {
         orderDirection: 'asc'
       }),
       window.api.adminCrud.list({
+        entity: 'lesson_completion_records',
+        page: 1,
+        pageSize: 10000,
+        orderBy: 'id',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
         entity: 'attendance_records',
         page: 1,
         pageSize: 15000,
@@ -237,6 +247,7 @@ export function LearningJournalMatrix(): ReactElement {
     setScheduleItems(scheduleItemsResult.items)
     setLessonPeriods(lessonPeriodsResult.items)
     setLessonSessions(lessonSessionsResult.items)
+    setLessonCompletionRecords(lessonCompletionRecordsResult.items)
     setAttendanceRecords(attendanceRecordsResult.items)
     setAttendanceStatuses(attendanceStatusesResult.items)
   }, [])
@@ -474,6 +485,10 @@ export function LearningJournalMatrix(): ReactElement {
     }
   }, [activeTopicColumn, activeTopicColumnId])
 
+  const activeLessonCompleted = activeTopicColumn
+    ? isLessonCompleted(activeTopicColumn)
+    : false
+
   const studentColumnWidth = useMemo(() => {
     const longestNameLength = groupStudents.reduce(
       (length, student) => Math.max(length, Array.from(getPersonShortName(student)).length),
@@ -536,6 +551,24 @@ export function LearningJournalMatrix(): ReactElement {
         Number(session.schedule_item_id) === Number(column.scheduleItem.id) &&
         Number(session.week_id) === Number(selectedWeek?.id)
     )
+  }
+
+  function getLessonCompletionRecord(
+    column: ScheduleJournalColumn
+  ): AdminCrudRecord | undefined {
+    const session = getLessonSession(column)
+
+    if (!session?.id) {
+      return undefined
+    }
+
+    return lessonCompletionRecords.find(
+      (record) => Number(record.lesson_session_id) === Number(session.id)
+    )
+  }
+
+  function isLessonCompleted(column: ScheduleJournalColumn): boolean {
+    return String(getLessonCompletionRecord(column)?.status ?? '') === 'completed'
   }
 
   function getAttendanceRecord(
@@ -729,6 +762,151 @@ export function LearningJournalMatrix(): ReactElement {
     setTopicError(null)
   }
 
+  async function ensureLessonSessionForTopic(
+    column: ScheduleJournalColumn
+  ): Promise<AdminCrudRecord> {
+    const topic = topicDraft.trim()
+
+    if (!topic) {
+      throw new Error('Сначала укажите тему занятия')
+    }
+
+    const comment = lessonNoteDraft.trim() || null
+    const existingSession = getLessonSession(column)
+
+    if (existingSession?.id) {
+      const result = await window.api.adminCrud.update({
+        entity: 'lesson_sessions',
+        id: Number(existingSession.id),
+        data: {
+          topic,
+          comment,
+          status: 'held'
+        }
+      })
+
+      return result.item ?? {
+        ...existingSession,
+        topic,
+        comment,
+        status: 'held'
+      }
+    }
+
+    const weekId = toNumberOrNull(selectedWeek?.id)
+
+    if (weekId === null) {
+      throw new Error('Не удалось определить выбранную неделю')
+    }
+
+    const result = await window.api.adminCrud.create({
+      entity: 'lesson_sessions',
+      data: {
+        schedule_item_id: Number(column.scheduleItem.id),
+        week_id: weekId,
+        lesson_date: column.date,
+        topic,
+        comment,
+        status: 'held',
+        teacher_id: toNumberOrNull(column.scheduleItem.teacher_id)
+      }
+    })
+
+    if (!result.item?.id) {
+      throw new Error('Не удалось создать занятие')
+    }
+
+    return result.item
+  }
+
+  async function completeLesson(): Promise<void> {
+    if (!activeTopicColumn || isSavingCompletion) {
+      return
+    }
+
+    if (!topicDraft.trim()) {
+      setTopicError('Сначала укажите тему занятия')
+      return
+    }
+
+    setIsSavingCompletion(true)
+    setTopicError(null)
+
+    try {
+      const existingCompletionRecord = getLessonCompletionRecord(activeTopicColumn)
+      const lessonSession = await ensureLessonSessionForTopic(activeTopicColumn)
+
+      if (existingCompletionRecord?.id) {
+        await window.api.adminCrud.update({
+          entity: 'lesson_completion_records',
+          id: Number(existingCompletionRecord.id),
+          data: {
+            status: 'completed',
+            topic_completed: 1,
+            comment: null
+          }
+        })
+      } else {
+        await window.api.adminCrud.create({
+          entity: 'lesson_completion_records',
+          data: {
+            lesson_session_id: Number(lessonSession.id),
+            status: 'completed',
+            topic_completed: 1,
+            comment: null
+          }
+        })
+      }
+
+      await loadData()
+    } catch (error) {
+      setTopicError(getUserFacingError(error, 'Не удалось провести занятие'))
+    } finally {
+      setIsSavingCompletion(false)
+    }
+  }
+
+  async function cancelLessonCompletion(): Promise<void> {
+    if (!activeTopicColumn || isSavingCompletion) {
+      return
+    }
+
+    const lessonSession = getLessonSession(activeTopicColumn)
+    const completionRecord = getLessonCompletionRecord(activeTopicColumn)
+
+    setIsSavingCompletion(true)
+    setTopicError(null)
+
+    try {
+      if (completionRecord?.id) {
+        await window.api.adminCrud.update({
+          entity: 'lesson_completion_records',
+          id: Number(completionRecord.id),
+          data: {
+            status: 'not_completed',
+            topic_completed: 0
+          }
+        })
+      }
+
+      if (lessonSession?.id) {
+        await window.api.adminCrud.update({
+          entity: 'lesson_sessions',
+          id: Number(lessonSession.id),
+          data: {
+            status: 'planned'
+          }
+        })
+      }
+
+      await loadData()
+    } catch (error) {
+      setTopicError(getUserFacingError(error, 'Не удалось отменить проведение занятия'))
+    } finally {
+      setIsSavingCompletion(false)
+    }
+  }
+
   async function saveTopic(): Promise<void> {
     if (!activeTopicColumn) {
       return
@@ -772,7 +950,7 @@ export function LearningJournalMatrix(): ReactElement {
 
       await loadData()
     } catch (error) {
-      setTopicError(error instanceof Error ? error.message : 'Не удалось сохранить тему занятия')
+      setTopicError(getUserFacingError(error, 'Не удалось сохранить тему занятия'))
     } finally {
       setIsSavingTopic(false)
     }
@@ -1086,7 +1264,12 @@ export function LearningJournalMatrix(): ReactElement {
                         </p>
                       </div>
 
-                      <Badge>{activeTopicColumn.disciplineShortName}</Badge>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={activeLessonCompleted ? 'success' : 'warning'}>
+                          {activeLessonCompleted ? 'Проведено' : 'Не проведено'}
+                        </Badge>
+                        <Badge>{activeTopicColumn.disciplineShortName}</Badge>
+                      </div>
                     </div>
 
                     {topicError ? (
@@ -1103,7 +1286,10 @@ export function LearningJournalMatrix(): ReactElement {
                         <Input
                           value={topicDraft}
                           placeholder="Например: Производные и правила дифференцирования"
-                          onChange={(event) => setTopicDraft(event.target.value)}
+                          onChange={(event) => {
+                            setTopicDraft(event.target.value)
+                            setTopicError(null)
+                          }}
                         />
                       </label>
 
@@ -1135,7 +1321,24 @@ export function LearningJournalMatrix(): ReactElement {
 
                       <Button
                         type="button"
-                        disabled={isSavingTopic}
+                        variant={activeLessonCompleted ? 'secondary' : 'primary'}
+                        disabled={isSavingTopic || isSavingCompletion}
+                        onClick={() =>
+                          void (activeLessonCompleted
+                            ? cancelLessonCompletion()
+                            : completeLesson())
+                        }
+                      >
+                        {isSavingCompletion
+                          ? 'Сохранение...'
+                          : activeLessonCompleted
+                            ? 'Отменить проведение'
+                            : 'Провести занятие'}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        disabled={isSavingTopic || isSavingCompletion}
                         onClick={() => void saveTopic()}
                       >
                         {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
@@ -1540,4 +1743,21 @@ function toNumberOrNull(value: unknown): number | null {
   const numberValue = Number(value)
 
   return Number.isFinite(numberValue) ? numberValue : null
+}
+
+function getUserFacingError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) {
+    return fallback
+  }
+
+  const message = error.message
+    .replace(/^Error invoking remote method '[^']+':\s*/i, '')
+    .replace(/^SqliteError:\s*/i, '')
+    .trim()
+
+  if (!message || /constraint failed|SQLITE_CONSTRAINT/i.test(message)) {
+    return `${fallback}. Обновите данные и повторите попытку`
+  }
+
+  return message
 }
