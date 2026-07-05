@@ -1,71 +1,52 @@
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-  const [attendanceStatuses, setAttendanceStatuses] = useState<AdminCrudRecord[]>([])
-@endfind
-@content
-  const [teachers, setTeachers] = useState<AdminCrudRecord[]>([])
-@endcontent
-@end
-
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-      disciplinesResult,
-      academicYearsResult,
+import { FiChevronLeft, FiChevronRight, FiRefreshCcw } from 'react-icons/fi'
 @endfind
 @with
-      disciplinesResult,
-      teachersResult,
-      academicYearsResult,
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-      window.api.adminCrud.list({
-        entity: 'disciplines',
-        page: 1,
-        pageSize: 3000,
-        orderBy: 'id',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'academic_years',
-@endfind
-@with
-      window.api.adminCrud.list({
-        entity: 'disciplines',
-        page: 1,
-        pageSize: 3000,
-        orderBy: 'id',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'teachers',
-        page: 1,
-        pageSize: 3000,
-        orderBy: 'last_name',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'academic_years',
+import { FiChevronLeft, FiChevronRight, FiEdit2, FiRefreshCcw } from 'react-icons/fi'
 @endwith
 @end
 
 @insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-    setDisciplines(disciplinesResult.items)
+  const [lessonNoteDraft, setLessonNoteDraft] = useState('')
 @endfind
 @content
-    setTeachers(teachersResult.items)
+  const [isLessonEditorEditing, setIsLessonEditorEditing] = useState(false)
 @endcontent
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+      setActiveTopicColumnId('')
+      setTopicDraft('')
+      setLessonNoteDraft('')
+      setTopicError(null)
+@endfind
+@with
+      setActiveTopicColumnId('')
+      setTopicDraft('')
+      setLessonNoteDraft('')
+      setIsLessonEditorEditing(false)
+      setTopicError(null)
+@endwith
 @end
 
 @insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-  const lessonPeriodById = useMemo(() => createRecordMap(lessonPeriods), [lessonPeriods])
+  const activeLessonCompleted = activeTopicColumn
+    ? isLessonCompleted(activeTopicColumn)
+    : false
 @endfind
 @content
-  const teacherById = useMemo(() => createRecordMap(teachers), [teachers])
+
+  const activeLessonHasSavedDetails = activeTopicColumn
+    ? hasSavedLessonDetails(activeTopicColumn)
+    : false
+
+  const shouldShowLessonDetailsCard = Boolean(
+    activeTopicColumn && activeLessonHasSavedDetails && !isLessonEditorEditing
+  )
 @endcontent
 @end
 
@@ -79,73 +60,260 @@
 @endfind
 @content
 
-  function getLessonTeacherName(column: ScheduleJournalColumn): string {
+  function hasSavedLessonDetails(column: ScheduleJournalColumn): boolean {
     const session = getLessonSession(column)
-    const teacherId =
-      toNumberOrNull(session?.teacher_id) ?? toNumberOrNull(column.scheduleItem.teacher_id)
 
-    if (teacherId === null) {
-      return 'Преподаватель не указан'
+    if (!session?.id) {
+      return false
     }
 
-    const teacher = teacherById.get(teacherId)
-
-    return teacher ? getPersonFullName(teacher) : `Преподаватель #${teacherId}`
+    return Boolean(
+      String(session.topic ?? '').trim() || String(session.comment ?? '').trim()
+    )
   }
 @endcontent
 @end
 
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          {getJournalPairLabel(activeTopicColumn)}
-                        </p>
-@endfind
-@content
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          Преподаватель: {getLessonTeacherName(activeTopicColumn)}
-                        </p>
-@endcontent
-@end
-
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                          const note = column.kind === 'schedule' ? getLessonNote(column) : ''
-@endfind
-@content
-                          const teacherName =
-                            column.kind === 'schedule' ? getLessonTeacherName(column) : ''
-@endcontent
-@end
-
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-                                  ? createTopicColumnTitle(column, topic, note)
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    setActiveTopicColumnId(column.id)
+    setTopicDraft(getLessonTopic(column))
+    setLessonNoteDraft(getLessonNote(column))
+    setTopicError(null)
+  }
 @endfind
 @with
-                                  ? createTopicColumnTitle(column, topic, note, teacherName)
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    const hasSavedDetails = hasSavedLessonDetails(column)
+
+    setActiveTopicColumnId(column.id)
+    setTopicDraft(getLessonTopic(column))
+    setLessonNoteDraft(getLessonNote(column))
+    setIsLessonEditorEditing(!hasSavedDetails)
+    setTopicError(null)
+  }
 @endwith
 @end
 
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+      await loadData()
+@endfind
+@content
+      setIsLessonEditorEditing(false)
+@endcontent
+@end
+
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-function createTopicColumnTitle(column: ScheduleJournalColumn, topic: string): string {
-  return [getJournalPairLabel(column), topic ? `Тема: ${topic}` : 'Тема не указана'].join('\n')
-}
+                    <div className="mt-4 grid gap-4">
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          Тема занятия
+                        </span>
+                        <Input
+                          value={topicDraft}
+                          placeholder="Например: Производные и правила дифференцирования"
+                          onChange={(event) => {
+                            setTopicDraft(event.target.value)
+                            setTopicError(null)
+                          }}
+                        />
+                      </label>
+
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          Заметки
+                        </span>
+                        <Textarea
+                          value={lessonNoteDraft}
+                          placeholder="Например: что объяснили, что задали, что нужно повторить"
+                          onChange={(event) => setLessonNoteDraft(event.target.value)}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          setActiveTopicColumnId('')
+                          setTopicDraft('')
+                          setLessonNoteDraft('')
+                          setTopicError(null)
+                        }}
+                      >
+                        Закрыть
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant={activeLessonCompleted ? 'secondary' : 'primary'}
+                        disabled={isSavingTopic || isSavingCompletion}
+                        onClick={() =>
+                          void (activeLessonCompleted
+                            ? cancelLessonCompletion()
+                            : completeLesson())
+                        }
+                      >
+                        {isSavingCompletion
+                          ? 'Сохранение...'
+                          : activeLessonCompleted
+                            ? 'Отменить проведение'
+                            : 'Провести занятие'}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        disabled={isSavingTopic || isSavingCompletion}
+                        onClick={() => void saveTopic()}
+                      >
+                        {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
+                      </Button>
+                    </div>
 @endfind
 @with
-function createTopicColumnTitle(
-  column: ScheduleJournalColumn,
-  topic: string,
-  note: string,
-  teacherName: string
-): string {
-  return [
-    getJournalPairLabel(column),
-    teacherName ? `Преподаватель: ${teacherName}` : 'Преподаватель не указан',
-    topic ? `Тема: ${topic}` : 'Тема не указана',
-    note ? `Заметки: ${note}` : 'Заметки не указаны'
-  ].join('\n')
-}
+                    {shouldShowLessonDetailsCard ? (
+                      <div className="mt-4 grid gap-4">
+                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 p-4">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="grid flex-1 gap-4">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                                  Тема занятия
+                                </p>
+                                <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[var(--color-text)]">
+                                  {getLessonTopic(activeTopicColumn) || 'Тема не указана'}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                                  Заметки
+                                </p>
+                                <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">
+                                  {getLessonNote(activeTopicColumn) || 'Заметки не указаны'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setIsLessonEditorEditing(true)}
+                            >
+                              <FiEdit2 />
+                              Редактировать
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => {
+                              setActiveTopicColumnId('')
+                              setTopicDraft('')
+                              setLessonNoteDraft('')
+                              setIsLessonEditorEditing(false)
+                              setTopicError(null)
+                            }}
+                          >
+                            Закрыть
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant={activeLessonCompleted ? 'secondary' : 'primary'}
+                            disabled={isSavingTopic || isSavingCompletion}
+                            onClick={() =>
+                              void (activeLessonCompleted
+                                ? cancelLessonCompletion()
+                                : completeLesson())
+                            }
+                          >
+                            {isSavingCompletion
+                              ? 'Сохранение...'
+                              : activeLessonCompleted
+                                ? 'Отменить проведение'
+                                : 'Провести занятие'}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mt-4 grid gap-4">
+                          <label className="grid gap-2">
+                            <span className="text-sm font-medium text-[var(--color-text)]">
+                              Тема занятия
+                            </span>
+                            <Input
+                              value={topicDraft}
+                              placeholder="Например: Производные и правила дифференцирования"
+                              onChange={(event) => {
+                                setTopicDraft(event.target.value)
+                                setTopicError(null)
+                              }}
+                            />
+                          </label>
+
+                          <label className="grid gap-2">
+                            <span className="text-sm font-medium text-[var(--color-text)]">
+                              Заметки
+                            </span>
+                            <Textarea
+                              value={lessonNoteDraft}
+                              placeholder="Например: что объяснили, что задали, что нужно повторить"
+                              onChange={(event) => setLessonNoteDraft(event.target.value)}
+                            />
+                          </label>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => {
+                              setActiveTopicColumnId('')
+                              setTopicDraft('')
+                              setLessonNoteDraft('')
+                              setIsLessonEditorEditing(false)
+                              setTopicError(null)
+                            }}
+                          >
+                            Закрыть
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant={activeLessonCompleted ? 'secondary' : 'primary'}
+                            disabled={isSavingTopic || isSavingCompletion}
+                            onClick={() =>
+                              void (activeLessonCompleted
+                                ? cancelLessonCompletion()
+                                : completeLesson())
+                            }
+                          >
+                            {isSavingCompletion
+                              ? 'Сохранение...'
+                              : activeLessonCompleted
+                                ? 'Отменить проведение'
+                                : 'Провести занятие'}
+                          </Button>
+
+                          <Button
+                            type="button"
+                            disabled={isSavingTopic || isSavingCompletion}
+                            onClick={() => void saveTopic()}
+                          >
+                            {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
+                          </Button>
+                        </div>
+                      </>
+                    )}
 @endwith
 @end

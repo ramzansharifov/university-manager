@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
-import { FiChevronLeft, FiChevronRight, FiEdit2, FiRefreshCcw } from 'react-icons/fi'
+import { FiChevronLeft, FiChevronRight, FiRefreshCcw } from 'react-icons/fi'
 import type { AdminCrudRecord } from '../../../features/admin-crud'
 import {
   Badge,
@@ -94,7 +94,6 @@ export function LearningJournalMatrix(): ReactElement {
   const [activeTopicColumnId, setActiveTopicColumnId] = useState('')
   const [topicDraft, setTopicDraft] = useState('')
   const [lessonNoteDraft, setLessonNoteDraft] = useState('')
-  const [isLessonEditorEditing, setIsLessonEditorEditing] = useState(false)
   const [isSavingTopic, setIsSavingTopic] = useState(false)
   const [isSavingCompletion, setIsSavingCompletion] = useState(false)
   const [topicError, setTopicError] = useState<string | null>(null)
@@ -482,7 +481,6 @@ export function LearningJournalMatrix(): ReactElement {
       setActiveTopicColumnId('')
       setTopicDraft('')
       setLessonNoteDraft('')
-      setIsLessonEditorEditing(false)
       setTopicError(null)
     }
   }, [activeTopicColumn, activeTopicColumnId])
@@ -490,13 +488,6 @@ export function LearningJournalMatrix(): ReactElement {
   const activeLessonCompleted = activeTopicColumn
     ? isLessonCompleted(activeTopicColumn)
     : false
-  const activeLessonHasSavedDetails = activeTopicColumn
-    ? hasSavedLessonDetails(activeTopicColumn)
-    : false
-
-  const shouldShowLessonDetailsCard = Boolean(
-    activeTopicColumn && activeLessonHasSavedDetails && !isLessonEditorEditing
-  )
 
   const studentColumnWidth = useMemo(() => {
     const longestNameLength = groupStudents.reduce(
@@ -750,17 +741,6 @@ export function LearningJournalMatrix(): ReactElement {
 
     return String(session?.comment ?? '').trim()
   }
-  function hasSavedLessonDetails(column: ScheduleJournalColumn): boolean {
-    const session = getLessonSession(column)
-
-    if (!session?.id) {
-      return false
-    }
-
-    return Boolean(
-      String(session.topic ?? '').trim() || String(session.comment ?? '').trim()
-    )
-  }
   function getLessonTeacherName(column: ScheduleJournalColumn): string {
     const session = getLessonSession(column)
     const teacherId =
@@ -776,12 +756,9 @@ export function LearningJournalMatrix(): ReactElement {
   }
 
   function openTopicEditor(column: ScheduleJournalColumn): void {
-    const hasSavedDetails = hasSavedLessonDetails(column)
-
     setActiveTopicColumnId(column.id)
     setTopicDraft(getLessonTopic(column))
     setLessonNoteDraft(getLessonNote(column))
-    setIsLessonEditorEditing(!hasSavedDetails)
     setTopicError(null)
   }
 
@@ -1301,146 +1278,72 @@ export function LearningJournalMatrix(): ReactElement {
                       </div>
                     ) : null}
 
-                    {shouldShowLessonDetailsCard ? (
-                      <div className="mt-4 grid gap-4">
-                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 p-4">
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="grid flex-1 gap-4">
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                                  Тема занятия
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[var(--color-text)]">
-                                  {getLessonTopic(activeTopicColumn) || 'Тема не указана'}
-                                </p>
-                              </div>
+                    <div className="mt-4 grid gap-4">
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          Тема занятия
+                        </span>
+                        <Input
+                          value={topicDraft}
+                          placeholder="Например: Производные и правила дифференцирования"
+                          onChange={(event) => {
+                            setTopicDraft(event.target.value)
+                            setTopicError(null)
+                          }}
+                        />
+                      </label>
 
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                                  Заметки
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">
-                                  {getLessonNote(activeTopicColumn) || 'Заметки не указаны'}
-                                </p>
-                              </div>
-                            </div>
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          Заметки
+                        </span>
+                        <Textarea
+                          value={lessonNoteDraft}
+                          placeholder="Например: что объяснили, что задали, что нужно повторить"
+                          onChange={(event) => setLessonNoteDraft(event.target.value)}
+                        />
+                      </label>
+                    </div>
 
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setIsLessonEditorEditing(true)}
-                            >
-                              <FiEdit2 />
-                              Редактировать
-                            </Button>
-                          </div>
-                        </div>
+                    <div className="mt-4 flex flex-wrap justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          setActiveTopicColumnId('')
+                          setTopicDraft('')
+                          setLessonNoteDraft('')
+                          setTopicError(null)
+                        }}
+                      >
+                        Закрыть
+                      </Button>
 
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => {
-                              setActiveTopicColumnId('')
-                              setTopicDraft('')
-                              setLessonNoteDraft('')
-                              setIsLessonEditorEditing(false)
-                              setTopicError(null)
-                            }}
-                          >
-                            Закрыть
-                          </Button>
+                      <Button
+                        type="button"
+                        variant={activeLessonCompleted ? 'secondary' : 'primary'}
+                        disabled={isSavingTopic || isSavingCompletion}
+                        onClick={() =>
+                          void (activeLessonCompleted
+                            ? cancelLessonCompletion()
+                            : completeLesson())
+                        }
+                      >
+                        {isSavingCompletion
+                          ? 'Сохранение...'
+                          : activeLessonCompleted
+                            ? 'Отменить проведение'
+                            : 'Провести занятие'}
+                      </Button>
 
-                          <Button
-                            type="button"
-                            variant={activeLessonCompleted ? 'secondary' : 'primary'}
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() =>
-                              void (activeLessonCompleted
-                                ? cancelLessonCompletion()
-                                : completeLesson())
-                            }
-                          >
-                            {isSavingCompletion
-                              ? 'Сохранение...'
-                              : activeLessonCompleted
-                                ? 'Отменить проведение'
-                                : 'Провести занятие'}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="mt-4 grid gap-4">
-                          <label className="grid gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text)]">
-                              Тема занятия
-                            </span>
-                            <Input
-                              value={topicDraft}
-                              placeholder="Например: Производные и правила дифференцирования"
-                              onChange={(event) => {
-                                setTopicDraft(event.target.value)
-                                setTopicError(null)
-                              }}
-                            />
-                          </label>
-
-                          <label className="grid gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text)]">
-                              Заметки
-                            </span>
-                            <Textarea
-                              value={lessonNoteDraft}
-                              placeholder="Например: что объяснили, что задали, что нужно повторить"
-                              onChange={(event) => setLessonNoteDraft(event.target.value)}
-                            />
-                          </label>
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => {
-                              setActiveTopicColumnId('')
-                              setTopicDraft('')
-                              setLessonNoteDraft('')
-                              setIsLessonEditorEditing(false)
-                              setTopicError(null)
-                            }}
-                          >
-                            Закрыть
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant={activeLessonCompleted ? 'secondary' : 'primary'}
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() =>
-                              void (activeLessonCompleted
-                                ? cancelLessonCompletion()
-                                : completeLesson())
-                            }
-                          >
-                            {isSavingCompletion
-                              ? 'Сохранение...'
-                              : activeLessonCompleted
-                                ? 'Отменить проведение'
-                                : 'Провести занятие'}
-                          </Button>
-
-                          <Button
-                            type="button"
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() => void saveTopic()}
-                          >
-                            {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
-                          </Button>
-                        </div>
-                      </>
-                    )}
+                      <Button
+                        type="button"
+                        disabled={isSavingTopic || isSavingCompletion}
+                        onClick={() => void saveTopic()}
+                      >
+                        {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
