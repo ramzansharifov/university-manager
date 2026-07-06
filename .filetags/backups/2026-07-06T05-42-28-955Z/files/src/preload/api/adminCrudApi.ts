@@ -1,6 +1,6 @@
 import { ipcRenderer } from 'electron'
 import type {
-
+  AdminCrudArchiveParams,
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,
@@ -8,7 +8,6 @@ import type {
   AdminCrudListResult,
   AdminCrudOperationResult,
   AdminCrudRecord,
-  SaveDepartmentWithFacultiesParams,
   AdminCrudUpdateParams
 } from '../../shared/types/adminCrud'
 
@@ -28,13 +27,10 @@ export const adminCrudApi = {
   update(params: AdminCrudUpdateParams): Promise<AdminCrudOperationResult> {
     return ipcRenderer.invoke('adminCrud:update', params)
   },
-  saveDepartmentWithFaculties(
-    params: SaveDepartmentWithFacultiesParams
-  ): Promise<AdminCrudOperationResult> {
-    return ipcRenderer.invoke('adminCrud:saveDepartmentWithFaculties', params)
+
+  archive(params: AdminCrudArchiveParams): Promise<AdminCrudOperationResult> {
+    return ipcRenderer.invoke('adminCrud:archive', params)
   },
-
-
 
   delete(params: AdminCrudDeleteParams): Promise<AdminCrudOperationResult> {
     return ipcRenderer.invoke('adminCrud:delete', params)

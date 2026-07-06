@@ -13,7 +13,7 @@ import type {
   LogoutResult
 } from '../../shared/types/auth'
 import type {
-
+  AdminCrudArchiveParams,
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,
@@ -21,7 +21,6 @@ import type {
   AdminCrudListResult,
   AdminCrudOperationResult,
   AdminCrudRecord,
-  SaveDepartmentWithFacultiesParams,
   AdminCrudUpdateParams
 } from '../../shared/types/adminCrud'
 import type {
@@ -55,10 +54,7 @@ declare global {
         getById(params: AdminCrudGetByIdParams): Promise<AdminCrudRecord | null>
         create(params: AdminCrudCreateParams): Promise<AdminCrudOperationResult>
         update(params: AdminCrudUpdateParams): Promise<AdminCrudOperationResult>
-        saveDepartmentWithFaculties(
-          params: SaveDepartmentWithFacultiesParams
-        ): Promise<AdminCrudOperationResult>
-
+        archive(params: AdminCrudArchiveParams): Promise<AdminCrudOperationResult>
         delete(params: AdminCrudDeleteParams): Promise<AdminCrudOperationResult>
       }
 

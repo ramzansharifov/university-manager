@@ -1,5 +1,5 @@
 import type {
-
+  AdminCrudArchiveParams,
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,
@@ -7,7 +7,6 @@ import type {
   AdminCrudListResult,
   AdminCrudOperationResult,
   AdminCrudRecord,
-  SaveDepartmentWithFacultiesParams,
   AdminCrudUpdateParams,
   AdminEntityKey
 } from '../../shared/types/adminCrud'
@@ -34,6 +33,10 @@ export class AdminCrudService {
   }
 
   create(params: AdminCrudCreateParams): AdminCrudOperationResult {
+    if (params.entity === 'department_faculties') {
+      return this.createOrRestoreDepartmentFacultyLink(params.data)
+    }
+
     const config = getAdminCrudEntityConfig(params.entity)
     const preparedData = this.prepareDataForSave(params.entity, params.data)
     const created = this.repository.create(config, preparedData)
@@ -54,135 +57,85 @@ export class AdminCrudService {
     }
   }
 
-  saveDepartmentWithFaculties(
-    params: SaveDepartmentWithFacultiesParams
-  ): AdminCrudOperationResult {
-    const departmentConfig = getAdminCrudEntityConfig('departments')
-    const linkConfig = getAdminCrudEntityConfig('department_faculties')
+  private createOrRestoreDepartmentFacultyLink(data: AdminCrudRecord): AdminCrudOperationResult {
+    const departmentId = normalizeNullableNumber(data.department_id)
+    const facultyId = normalizeNullableNumber(data.faculty_id)
 
-    return this.repository.transaction(() => {
-      const before =
-        params.id === undefined ? null : this.repository.getById(departmentConfig, params.id)
+    if (departmentId === null || facultyId === null) {
+      throw new Error('Для связи кафедры с факультетом необходимо указать оба значения')
+    }
 
-      if (params.id !== undefined && !before) {
-        throw new Error('Кафедра для редактирования не найдена')
+    this.ensureActiveRelatedRecord(
+      'departments',
+      departmentId,
+      'Выбранная кафедра не найдена или архивирована'
+    )
+    this.ensureActiveRelatedRecord(
+      'faculties',
+      facultyId,
+      'Выбранный факультет не найден или архивирован'
+    )
+
+    const config = getAdminCrudEntityConfig('department_faculties')
+    const existingRecords = this.repository.list(config, {
+      entity: 'department_faculties',
+      page: 1,
+      pageSize: 50000,
+      includeArchived: true,
+      orderBy: 'id',
+      orderDirection: 'asc',
+      filters: {
+        department_id: departmentId,
+        faculty_id: facultyId
       }
+    }).items
+    const active = existingRecords.find((record) => Number(record.is_archived) !== 1)
 
-      const preparedData = this.prepareDataForSave(
-        'departments',
-        params.data,
-        before ?? undefined
-      )
-
-      const savedDepartment =
-        params.id === undefined
-          ? this.repository.create(departmentConfig, preparedData)
-          : this.repository.update(departmentConfig, params.id, preparedData)
-
-      const departmentId = normalizeNullableNumber(savedDepartment.id)
-
-      if (departmentId === null) {
-        throw new Error('Не удалось определить ID сохранённой кафедры')
+    if (active) {
+      return {
+        success: true,
+        item: active
       }
+    }
 
-      const appliesToAll = normalizeNullableNumber(savedDepartment.applies_to_all_faculties) === 1
-      const facultyIds = [
-        ...new Set(
-          params.facultyIds
-            .map((facultyId) => Number(facultyId))
-            .filter((facultyId) => Number.isInteger(facultyId) && facultyId > 0)
-        )
-      ]
+    const archived = existingRecords[0]
 
-      if (!appliesToAll && facultyIds.length === 0) {
-        throw new Error('Выбери хотя бы один факультет или отметь «Для всех факультетов»')
-      }
-
-      facultyIds.forEach((facultyId) => {
-        this.ensureActiveRelatedRecord(
-          'faculties',
-          facultyId,
-          `Факультет #${facultyId} не найден`
-        )
-      })
-
-      const existingLinks = this.repository.list(linkConfig, {
-        entity: 'department_faculties',
-        page: 1,
-        pageSize: 50000,
-        orderBy: 'id',
-        orderDirection: 'asc',
-        filters: {
-          department_id: departmentId
-        }
-      }).items
-
-      const selectedFacultyIds = new Set(facultyIds)
-      const existingFacultyIds = new Set<number>()
-
-      existingLinks.forEach((link) => {
-        const linkId = normalizeNullableNumber(link.id)
-        const linkFacultyId = normalizeNullableNumber(link.faculty_id)
-
-        if (linkFacultyId !== null) {
-          existingFacultyIds.add(linkFacultyId)
-        }
-
-        if (
-          linkId !== null &&
-          (appliesToAll || linkFacultyId === null || !selectedFacultyIds.has(linkFacultyId))
-        ) {
-          this.repository.delete(linkConfig, linkId)
-
-          this.auditService.write({
-            action: 'delete',
-            module: 'admin_crud',
-            entityName: 'department_faculties',
-            entityId: linkId,
-            before: link,
-            after: null
-          })
-        }
-      })
-
-      if (!appliesToAll) {
-        facultyIds.forEach((facultyId) => {
-          if (existingFacultyIds.has(facultyId)) {
-            return
-          }
-
-          const createdLink = this.repository.create(linkConfig, {
-            department_id: departmentId,
-            faculty_id: facultyId
-          })
-
-          this.auditService.write({
-            action: 'create',
-            module: 'admin_crud',
-            entityName: 'department_faculties',
-            entityId: Number(createdLink.id),
-            before: null,
-            after: createdLink
-          })
-        })
-      }
-
-      const finalDepartment = this.repository.getById(departmentConfig, departmentId) ?? savedDepartment
+    if (archived) {
+      const restored = this.repository.restore(config, Number(archived.id))
 
       this.auditService.write({
-        action: params.id === undefined ? 'create' : 'update',
+        action: 'restore',
         module: 'admin_crud',
-        entityName: 'departments',
-        entityId: departmentId,
-        before,
-        after: finalDepartment
+        entityName: 'department_faculties',
+        entityId: Number(restored.id),
+        before: archived,
+        after: restored
       })
 
       return {
         success: true,
-        item: finalDepartment
+        item: restored
       }
+    }
+
+    const created = this.repository.create(config, {
+      department_id: departmentId,
+      faculty_id: facultyId
     })
+
+    this.auditService.write({
+      action: 'create',
+      module: 'admin_crud',
+      entityName: 'department_faculties',
+      entityId: Number(created.id),
+      before: null,
+      after: created
+    })
+
+    return {
+      success: true,
+      item: created
+    }
   }
 
   update(params: AdminCrudUpdateParams): AdminCrudOperationResult {
@@ -199,6 +152,44 @@ export class AdminCrudService {
 
     this.auditService.write({
       action: 'update',
+      module: 'admin_crud',
+      entityName: params.entity,
+      entityId: params.id,
+      before,
+      after: finalItem
+    })
+
+    return {
+      success: true,
+      item: finalItem
+    }
+  }
+
+  archive(params: AdminCrudArchiveParams): AdminCrudOperationResult {
+    const config = getAdminCrudEntityConfig(params.entity)
+    const before = this.repository.getById(config, params.id)
+
+    if (!before) {
+      throw new Error('Record not found')
+    }
+
+    const archived = this.repository.archive(config, params.id)
+    let finalItem = archived
+
+    if (params.entity === 'lesson_periods') {
+      finalItem = this.renumberLessonPeriods(Number(archived.id))
+    }
+
+    if (params.entity === 'academic_vacations') {
+      const academicYearId = normalizeNullableNumber(before.academic_year_id)
+
+      if (academicYearId !== null) {
+        this.syncAcademicYearStructure(academicYearId)
+      }
+    }
+
+    this.auditService.write({
+      action: 'archive',
       module: 'admin_crud',
       entityName: params.entity,
       entityId: params.id,

@@ -1,319 +1,689 @@
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@write src/main/migrations/009_remove_admin_archive_api.sql
+-- Historical compatibility marker.
+--
+-- The active admin CRUD model no longer exposes soft archive/restore.
+-- Legacy is_archived columns may remain in existing SQLite databases for compatibility,
+-- but the app no longer exposes archive actions through admin CRUD.
+SELECT 1;
+@end
+
+@replace-all src/shared/types/adminCrud.ts
 @find
-import { FiChevronLeft, FiChevronRight, FiRefreshCcw } from 'react-icons/fi'
+  includeArchived?: boolean
+
 @endfind
 @with
-import { FiChevronLeft, FiChevronRight, FiEdit2, FiRefreshCcw } from 'react-icons/fi'
 @endwith
 @end
 
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@replace-all src/shared/types/adminCrud.ts
 @find
-  const [lessonNoteDraft, setLessonNoteDraft] = useState('')
+export interface AdminCrudArchiveParams {
+  entity: AdminEntityKey
+  id: number
+}
+
+@endfind
+@with
+@endwith
+@end
+
+@insert-after-once src/shared/types/adminCrud.ts
+@find
+export interface AdminCrudUpdateParams {
+  entity: AdminEntityKey
+  id: number
+  data: AdminCrudRecord
+}
 @endfind
 @content
-  const [isLessonEditorEditing, setIsLessonEditorEditing] = useState(false)
+
+export interface SaveDepartmentWithFacultiesParams {
+  id?: number
+  data: AdminCrudRecord
+  facultyIds: number[]
+}
 @endcontent
 @end
 
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@replace-all src/preload/api/adminCrudApi.ts
 @find
-      setActiveTopicColumnId('')
-      setTopicDraft('')
-      setLessonNoteDraft('')
-      setTopicError(null)
+  AdminCrudArchiveParams,
+
 @endfind
 @with
-      setActiveTopicColumnId('')
-      setTopicDraft('')
-      setLessonNoteDraft('')
-      setIsLessonEditorEditing(false)
-      setTopicError(null)
 @endwith
 @end
 
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@replace-all src/preload/api/adminCrudApi.ts
 @find
-  const activeLessonCompleted = activeTopicColumn
-    ? isLessonCompleted(activeTopicColumn)
-    : false
+  AdminCrudRecord,
+  AdminCrudUpdateParams
+@endfind
+@with
+  AdminCrudRecord,
+  SaveDepartmentWithFacultiesParams,
+  AdminCrudUpdateParams
+@endwith
+@end
+
+@replace-all src/preload/api/adminCrudApi.ts
+@find
+  archive(params: AdminCrudArchiveParams): Promise<AdminCrudOperationResult> {
+    return ipcRenderer.invoke('adminCrud:archive', params)
+  },
+
+@endfind
+@with
+@endwith
+@end
+
+@insert-after-once src/preload/api/adminCrudApi.ts
+@find
+  update(params: AdminCrudUpdateParams): Promise<AdminCrudOperationResult> {
+    return ipcRenderer.invoke('adminCrud:update', params)
+  },
 @endfind
 @content
 
-  const activeLessonHasSavedDetails = activeTopicColumn
-    ? hasSavedLessonDetails(activeTopicColumn)
-    : false
+  saveDepartmentWithFaculties(
+    params: SaveDepartmentWithFacultiesParams
+  ): Promise<AdminCrudOperationResult> {
+    return ipcRenderer.invoke('adminCrud:saveDepartmentWithFaculties', params)
+  },
+@endcontent
+@end
 
-  const shouldShowLessonDetailsCard = Boolean(
-    activeTopicColumn && activeLessonHasSavedDetails && !isLessonEditorEditing
+@replace-all src/renderer/src/env.d.ts
+@find
+  AdminCrudArchiveParams,
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/env.d.ts
+@find
+  AdminCrudRecord,
+  AdminCrudUpdateParams
+@endfind
+@with
+  AdminCrudRecord,
+  SaveDepartmentWithFacultiesParams,
+  AdminCrudUpdateParams
+@endwith
+@end
+
+@replace-all src/renderer/src/env.d.ts
+@find
+        archive(params: AdminCrudArchiveParams): Promise<AdminCrudOperationResult>
+
+@endfind
+@with
+@endwith
+@end
+
+@insert-after-once src/renderer/src/env.d.ts
+@find
+        update(params: AdminCrudUpdateParams): Promise<AdminCrudOperationResult>
+@endfind
+@content
+        saveDepartmentWithFaculties(
+          params: SaveDepartmentWithFacultiesParams
+        ): Promise<AdminCrudOperationResult>
+@endcontent
+@end
+
+@replace-all src/main/ipc/adminCrudIpc.ts
+@find
+  AdminCrudArchiveParams,
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/main/ipc/adminCrudIpc.ts
+@find
+  AdminCrudListParams,
+  AdminCrudUpdateParams
+@endfind
+@with
+  AdminCrudListParams,
+  SaveDepartmentWithFacultiesParams,
+  AdminCrudUpdateParams
+@endwith
+@end
+
+@replace-all src/main/ipc/adminCrudIpc.ts
+@find
+  ipcMain.handle('adminCrud:archive', (_event, params: AdminCrudArchiveParams) => {
+    return service.archive(params)
+  })
+
+@endfind
+@with
+@endwith
+@end
+
+@insert-after-once src/main/ipc/adminCrudIpc.ts
+@find
+  ipcMain.handle('adminCrud:update', (_event, params: AdminCrudUpdateParams) => {
+    return service.update(params)
+  })
+@endfind
+@content
+
+  ipcMain.handle(
+    'adminCrud:saveDepartmentWithFaculties',
+    (_event, params: SaveDepartmentWithFacultiesParams) => {
+      return service.saveDepartmentWithFaculties(params)
+    }
   )
 @endcontent
 @end
 
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@insert-after-once src/main/repositories/adminCrudRepository.ts
 @find
-  function getLessonNote(column: ScheduleJournalColumn): string {
-    const session = getLessonSession(column)
-
-    return String(session?.comment ?? '').trim()
-  }
+  constructor(private readonly database: Database.Database) {}
 @endfind
 @content
 
-  function hasSavedLessonDetails(column: ScheduleJournalColumn): boolean {
-    const session = getLessonSession(column)
+  transaction<T>(callback: () => T): T {
+    return this.database.transaction(callback)()
+  }
+@endcontent
+@end
 
-    if (!session?.id) {
-      return false
+@replace-all src/main/repositories/adminCrudRepository.ts
+@find
+    if (config.supportsArchive && !params.includeArchived) {
+      conditions.push('is_archived = 0')
     }
 
-    return Boolean(
-      String(session.topic ?? '').trim() || String(session.comment ?? '').trim()
-    )
-  }
-@endcontent
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-  function openTopicEditor(column: ScheduleJournalColumn): void {
-    setActiveTopicColumnId(column.id)
-    setTopicDraft(getLessonTopic(column))
-    setLessonNoteDraft(getLessonNote(column))
-    setTopicError(null)
-  }
 @endfind
 @with
-  function openTopicEditor(column: ScheduleJournalColumn): void {
-    const hasSavedDetails = hasSavedLessonDetails(column)
-
-    setActiveTopicColumnId(column.id)
-    setTopicDraft(getLessonTopic(column))
-    setLessonNoteDraft(getLessonNote(column))
-    setIsLessonEditorEditing(!hasSavedDetails)
-    setTopicError(null)
-  }
 @endwith
 @end
 
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@replace-block src/main/repositories/adminCrudRepository.ts
+@from
+  archive(config: AdminCrudEntityConfig, id: number): AdminCrudRecord {
+@endfrom
+@to
+  delete(config: AdminCrudEntityConfig, id: number): void {
+@endto
+@with
+  delete(config: AdminCrudEntityConfig, id: number): void {
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
 @find
-      await loadData()
+  AdminCrudArchiveParams,
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+  AdminCrudRecord,
+  AdminCrudUpdateParams,
+@endfind
+@with
+  AdminCrudRecord,
+  SaveDepartmentWithFacultiesParams,
+  AdminCrudUpdateParams,
+@endwith
+@end
+
+@replace-block src/main/services/adminCrudService.ts
+@from
+  create(params: AdminCrudCreateParams): AdminCrudOperationResult {
+@endfrom
+@to
+  update(params: AdminCrudUpdateParams): AdminCrudOperationResult {
+@endto
+@with
+  create(params: AdminCrudCreateParams): AdminCrudOperationResult {
+    const config = getAdminCrudEntityConfig(params.entity)
+    const preparedData = this.prepareDataForSave(params.entity, params.data)
+    const created = this.repository.create(config, preparedData)
+    const finalItem = this.afterDataSaved(params.entity, created)
+
+    this.auditService.write({
+      action: 'create',
+      module: 'admin_crud',
+      entityName: params.entity,
+      entityId: Number(finalItem.id),
+      before: null,
+      after: finalItem
+    })
+
+    return {
+      success: true,
+      item: finalItem
+    }
+  }
+
+  saveDepartmentWithFaculties(
+    params: SaveDepartmentWithFacultiesParams
+  ): AdminCrudOperationResult {
+    const departmentConfig = getAdminCrudEntityConfig('departments')
+    const linkConfig = getAdminCrudEntityConfig('department_faculties')
+
+    return this.repository.transaction(() => {
+      const before =
+        params.id === undefined ? null : this.repository.getById(departmentConfig, params.id)
+
+      if (params.id !== undefined && !before) {
+        throw new Error('Кафедра для редактирования не найдена')
+      }
+
+      const preparedData = this.prepareDataForSave(
+        'departments',
+        params.data,
+        before ?? undefined
+      )
+
+      const savedDepartment =
+        params.id === undefined
+          ? this.repository.create(departmentConfig, preparedData)
+          : this.repository.update(departmentConfig, params.id, preparedData)
+
+      const departmentId = normalizeNullableNumber(savedDepartment.id)
+
+      if (departmentId === null) {
+        throw new Error('Не удалось определить ID сохранённой кафедры')
+      }
+
+      const appliesToAll = normalizeNullableNumber(savedDepartment.applies_to_all_faculties) === 1
+      const facultyIds = [
+        ...new Set(
+          params.facultyIds
+            .map((facultyId) => Number(facultyId))
+            .filter((facultyId) => Number.isInteger(facultyId) && facultyId > 0)
+        )
+      ]
+
+      if (!appliesToAll && facultyIds.length === 0) {
+        throw new Error('Выбери хотя бы один факультет или отметь «Для всех факультетов»')
+      }
+
+      facultyIds.forEach((facultyId) => {
+        this.ensureActiveRelatedRecord(
+          'faculties',
+          facultyId,
+          `Факультет #${facultyId} не найден`
+        )
+      })
+
+      const existingLinks = this.repository.list(linkConfig, {
+        entity: 'department_faculties',
+        page: 1,
+        pageSize: 50000,
+        orderBy: 'id',
+        orderDirection: 'asc',
+        filters: {
+          department_id: departmentId
+        }
+      }).items
+
+      const selectedFacultyIds = new Set(facultyIds)
+      const existingFacultyIds = new Set<number>()
+
+      existingLinks.forEach((link) => {
+        const linkId = normalizeNullableNumber(link.id)
+        const linkFacultyId = normalizeNullableNumber(link.faculty_id)
+
+        if (linkFacultyId !== null) {
+          existingFacultyIds.add(linkFacultyId)
+        }
+
+        if (
+          linkId !== null &&
+          (appliesToAll || linkFacultyId === null || !selectedFacultyIds.has(linkFacultyId))
+        ) {
+          this.repository.delete(linkConfig, linkId)
+
+          this.auditService.write({
+            action: 'delete',
+            module: 'admin_crud',
+            entityName: 'department_faculties',
+            entityId: linkId,
+            before: link,
+            after: null
+          })
+        }
+      })
+
+      if (!appliesToAll) {
+        facultyIds.forEach((facultyId) => {
+          if (existingFacultyIds.has(facultyId)) {
+            return
+          }
+
+          const createdLink = this.repository.create(linkConfig, {
+            department_id: departmentId,
+            faculty_id: facultyId
+          })
+
+          this.auditService.write({
+            action: 'create',
+            module: 'admin_crud',
+            entityName: 'department_faculties',
+            entityId: Number(createdLink.id),
+            before: null,
+            after: createdLink
+          })
+        })
+      }
+
+      const finalDepartment = this.repository.getById(departmentConfig, departmentId) ?? savedDepartment
+
+      this.auditService.write({
+        action: params.id === undefined ? 'create' : 'update',
+        module: 'admin_crud',
+        entityName: 'departments',
+        entityId: departmentId,
+        before,
+        after: finalDepartment
+      })
+
+      return {
+        success: true,
+        item: finalDepartment
+      }
+    })
+  }
+
+  update(params: AdminCrudUpdateParams): AdminCrudOperationResult {
+@endwith
+@end
+
+@replace-block src/main/services/adminCrudService.ts
+@from
+  archive(params: AdminCrudArchiveParams): AdminCrudOperationResult {
+@endfrom
+@to
+  delete(params: AdminCrudDeleteParams): AdminCrudOperationResult {
+@endto
+@with
+  delete(params: AdminCrudDeleteParams): AdminCrudOperationResult {
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+FiArchive, 
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  canArchive: boolean
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  requestArchive: (record: AdminCrudRecord) => void
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  canArchive?: boolean
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  canArchive = true,
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  const [archiveRecord, setArchiveRecord] = useState<AdminCrudRecord | null>(null)
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  const canDeleteRecord = canDelete ?? canArchive
+@endfind
+@with
+  const canDeleteRecord = canDelete ?? true
+@endwith
+@end
+
+@replace-block src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@from
+  function requestArchive(record: AdminCrudRecord) {
+@endfrom
+@to
+  async function confirmDelete() {
+@endto
+@with
+  function requestDelete(record: AdminCrudRecord) {
+    setDeleteRecord(record)
+    setDeleteError(null)
+  }
+
+  async function confirmDelete() {
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+              canArchive,
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+              requestArchive,
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-block src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@from
+                            {canArchive ? (
+@endfrom
+@to
+                            {canDeleteRecord ? (
+@endto
+@with
+                            {canDeleteRecord ? (
+@endwith
+@end
+
+@replace-block src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@from
+      <ConfirmDialog
+        open={Boolean(archiveRecord)}
+@endfrom
+@to
+        onConfirm={confirmArchive}
+      />
+@endto
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+  const baseDescription = `Запись "${recordName}" будет удалена из базы данных безвозвратно. Восстановить её через архив уже не получится.`
+@endfind
+@with
+  const baseDescription = `Запись "${recordName}" будет удалена из базы данных безвозвратно. Это действие нельзя отменить.`
+@endwith
+@end
+
+@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+    return 'Эту запись нельзя удалить, потому что на неё ссылаются другие данные. Сначала удали или перенеси связанные записи, либо используй архивирование.'
+@endfind
+@with
+    return 'Эту запись нельзя удалить, потому что на неё ссылаются другие данные. Сначала удали или перенеси связанные записи.'
+@endwith
+@end
+
+@replace-all src/renderer/src/pages/university/ui/DepartmentsPanel.tsx
+@find
+  const [dfRecords, setDfRecords] = useState<AdminCrudRecord[]>([])
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/pages/university/ui/DepartmentsPanel.tsx
+@find
+    setDfRecords(dfResult.items.filter((r) => Number(r.is_archived) !== 1))
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/renderer/src/pages/university/ui/DepartmentsPanel.tsx
+@find
+
+      if (Number(df.is_archived) === 1) {
+        continue
+      }
+@endfind
+@with
+@endwith
+@end
+
+@replace-block src/renderer/src/pages/university/ui/DepartmentsPanel.tsx
+@from
+  async function handleSave(formData: Record<string, unknown>) {
+@endfrom
+@to
+  return (
+@endto
+@with
+  async function handleSave(formData: Record<string, unknown>) {
+    const name = String(formData.name ?? '').trim()
+
+    if (!name) {
+      throw new Error('Укажи название кафедры')
+    }
+
+    const appliesToAll = formData.applies_to_all_faculties === true ? 1 : 0
+    const selectedFacultyIds: string[] = Array.isArray(formData._selectedFacultyIds)
+      ? (formData._selectedFacultyIds as string[])
+      : []
+    const facultyIds = selectedFacultyIds
+      .map((facultyId) => Number(facultyId))
+      .filter((facultyId) => Number.isInteger(facultyId) && facultyId > 0)
+
+    if (appliesToAll === 0 && facultyIds.length === 0) {
+      throw new Error('Выбери хотя бы один факультет или отметь «Для всех факультетов»')
+    }
+
+    await window.api.adminCrud.saveDepartmentWithFaculties({
+      id: editMode === 'edit' && editRecord?.id ? Number(editRecord.id) : undefined,
+      data: {
+        name,
+        short_name: formData.short_name ? String(formData.short_name).trim() : null,
+        description: formData.description ? String(formData.description).trim() : null,
+        applies_to_all_faculties: appliesToAll
+      },
+      facultyIds: appliesToAll === 1 ? [] : facultyIds
+    })
+
+    setEditRecord(null)
+    await loadOptions()
+    setRefreshVersion((v) => v + 1)
+  }
+
+  return (
+@endwith
+@end
+
+@replace-block src/renderer/src/pages/university/ui/DepartmentsPanel.tsx
+@from
+function findDfRecordId(
+@endfrom
+@to
+function getPersonName(record: AdminCrudRecord): string {
+@endto
+@with
+function getPersonName(record: AdminCrudRecord): string {
+@endwith
+@end
+
+@replace-folder src/renderer/src
+@find
+canArchive={true}
+@endfind
+@with
+@endwith
+@end
+
+@replace-folder src/renderer/src
+@find
+canArchive={false}
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/main/audit/audit.types.ts
+@find
+  | 'archive'
+  | 'restore'
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all README.md
+@find
+- архивирование записей вместо удаления там, где данные ещё могут понадобиться;
+@endfind
+@with
+@endwith
+@end
+
+@insert-after-once README.md
+@find
+## Запуск и проверка backend
 @endfind
 @content
-      setIsLessonEditorEditing(false)
+
+> В active admin CRUD больше нет soft archive/restore. Пользовательские таблицы редактируются через создание, изменение и полное удаление. Legacy-колонки `is_archived` могут физически оставаться в старых базах для совместимости, но публичный admin CRUD больше не предоставляет действие «Архивировать».
 @endcontent
-@end
-
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                    <div className="mt-4 grid gap-4">
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium text-[var(--color-text)]">
-                          Тема занятия
-                        </span>
-                        <Input
-                          value={topicDraft}
-                          placeholder="Например: Производные и правила дифференцирования"
-                          onChange={(event) => {
-                            setTopicDraft(event.target.value)
-                            setTopicError(null)
-                          }}
-                        />
-                      </label>
-
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium text-[var(--color-text)]">
-                          Заметки
-                        </span>
-                        <Textarea
-                          value={lessonNoteDraft}
-                          placeholder="Например: что объяснили, что задали, что нужно повторить"
-                          onChange={(event) => setLessonNoteDraft(event.target.value)}
-                        />
-                      </label>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => {
-                          setActiveTopicColumnId('')
-                          setTopicDraft('')
-                          setLessonNoteDraft('')
-                          setTopicError(null)
-                        }}
-                      >
-                        Закрыть
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant={activeLessonCompleted ? 'secondary' : 'primary'}
-                        disabled={isSavingTopic || isSavingCompletion}
-                        onClick={() =>
-                          void (activeLessonCompleted
-                            ? cancelLessonCompletion()
-                            : completeLesson())
-                        }
-                      >
-                        {isSavingCompletion
-                          ? 'Сохранение...'
-                          : activeLessonCompleted
-                            ? 'Отменить проведение'
-                            : 'Провести занятие'}
-                      </Button>
-
-                      <Button
-                        type="button"
-                        disabled={isSavingTopic || isSavingCompletion}
-                        onClick={() => void saveTopic()}
-                      >
-                        {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
-                      </Button>
-                    </div>
-@endfind
-@with
-                    {shouldShowLessonDetailsCard ? (
-                      <div className="mt-4 grid gap-4">
-                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 p-4">
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="grid flex-1 gap-4">
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                                  Тема занятия
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[var(--color-text)]">
-                                  {getLessonTopic(activeTopicColumn) || 'Тема не указана'}
-                                </p>
-                              </div>
-
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                                  Заметки
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">
-                                  {getLessonNote(activeTopicColumn) || 'Заметки не указаны'}
-                                </p>
-                              </div>
-                            </div>
-
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setIsLessonEditorEditing(true)}
-                            >
-                              <FiEdit2 />
-                              Редактировать
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => {
-                              setActiveTopicColumnId('')
-                              setTopicDraft('')
-                              setLessonNoteDraft('')
-                              setIsLessonEditorEditing(false)
-                              setTopicError(null)
-                            }}
-                          >
-                            Закрыть
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant={activeLessonCompleted ? 'secondary' : 'primary'}
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() =>
-                              void (activeLessonCompleted
-                                ? cancelLessonCompletion()
-                                : completeLesson())
-                            }
-                          >
-                            {isSavingCompletion
-                              ? 'Сохранение...'
-                              : activeLessonCompleted
-                                ? 'Отменить проведение'
-                                : 'Провести занятие'}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="mt-4 grid gap-4">
-                          <label className="grid gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text)]">
-                              Тема занятия
-                            </span>
-                            <Input
-                              value={topicDraft}
-                              placeholder="Например: Производные и правила дифференцирования"
-                              onChange={(event) => {
-                                setTopicDraft(event.target.value)
-                                setTopicError(null)
-                              }}
-                            />
-                          </label>
-
-                          <label className="grid gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text)]">
-                              Заметки
-                            </span>
-                            <Textarea
-                              value={lessonNoteDraft}
-                              placeholder="Например: что объяснили, что задали, что нужно повторить"
-                              onChange={(event) => setLessonNoteDraft(event.target.value)}
-                            />
-                          </label>
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => {
-                              setActiveTopicColumnId('')
-                              setTopicDraft('')
-                              setLessonNoteDraft('')
-                              setIsLessonEditorEditing(false)
-                              setTopicError(null)
-                            }}
-                          >
-                            Закрыть
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant={activeLessonCompleted ? 'secondary' : 'primary'}
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() =>
-                              void (activeLessonCompleted
-                                ? cancelLessonCompletion()
-                                : completeLesson())
-                            }
-                          >
-                            {isSavingCompletion
-                              ? 'Сохранение...'
-                              : activeLessonCompleted
-                                ? 'Отменить проведение'
-                                : 'Провести занятие'}
-                          </Button>
-
-                          <Button
-                            type="button"
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() => void saveTopic()}
-                          >
-                            {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
-                          </Button>
-                        </div>
-                      </>
-                    )}
-@endwith
 @end

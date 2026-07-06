@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { Resolver, UseFormReturn } from 'react-hook-form'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { FiEdit2, FiPlus, FiRefreshCcw, FiSearch, FiTrash2 } from 'react-icons/fi'
+import { FiArchive, FiEdit2, FiPlus, FiRefreshCcw, FiSearch, FiTrash2 } from 'react-icons/fi'
 import {
   Badge,
   Button,
@@ -105,12 +105,12 @@ interface AdminCrudRenderItemsParams {
   isLoading: boolean
   emptyMessage: string
   canEdit: boolean
-
+  canArchive: boolean
   canDelete: boolean
   extraRowActions?: (record: AdminCrudRecord) => ReactNode
   openCreateDialog: (initialData?: AdminCrudRecord) => void
   openEditDialog: (record: AdminCrudRecord) => void
-
+  requestArchive: (record: AdminCrudRecord) => void
   requestDelete: (record: AdminCrudRecord) => void
   formatValue: (value: unknown, column?: AdminCrudColumnConfig) => string
 }
@@ -127,7 +127,7 @@ interface AdminCrudEntityPanelProps {
   emptyMessage?: string
   canCreate?: boolean
   canEdit?: boolean
-
+  canArchive?: boolean
   canDelete?: boolean
   orderBy?: string
   orderDirection?: AdminCrudOrderDirection
@@ -158,7 +158,7 @@ export function AdminCrudEntityPanel({
   emptyMessage = 'Записей пока нет.',
   canCreate = true,
   canEdit = true,
-
+  canArchive = true,
   canDelete,
   orderBy = 'id',
   orderDirection = 'asc',
@@ -186,7 +186,7 @@ export function AdminCrudEntityPanel({
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<DialogMode>('create')
   const [selectedRecord, setSelectedRecord] = useState<AdminCrudRecord | null>(null)
-
+  const [archiveRecord, setArchiveRecord] = useState<AdminCrudRecord | null>(null)
   const [deleteRecord, setDeleteRecord] = useState<AdminCrudRecord | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const emptyFormData = useMemo(() => createEmptyFormData(fields), [fields])
@@ -201,7 +201,7 @@ export function AdminCrudEntityPanel({
   const watchedFormValues = form.watch()
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const canDeleteRecord = canDelete ?? true
+  const canDeleteRecord = canDelete ?? canArchive
   const filtersKey = JSON.stringify(filters ?? {})
 
   useEffect(() => {
@@ -435,11 +435,37 @@ export function AdminCrudEntityPanel({
     }
   }
 
+  function requestArchive(record: AdminCrudRecord) {
+    setArchiveRecord(record)
+  }
   function requestDelete(record: AdminCrudRecord) {
     setDeleteRecord(record)
     setDeleteError(null)
   }
 
+  async function confirmArchive() {
+    if (!archiveRecord?.id) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      await window.api.adminCrud.archive({
+        entity,
+        id: Number(archiveRecord.id)
+      })
+
+      setArchiveRecord(null)
+      await loadItems()
+      await onAfterMutation?.()
+    } catch (archiveError) {
+      setError(archiveError instanceof Error ? archiveError.message : 'Не удалось архивировать')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
   async function confirmDelete() {
     if (!deleteRecord?.id) {
       return
@@ -543,12 +569,12 @@ export function AdminCrudEntityPanel({
               isLoading,
               emptyMessage,
               canEdit,
-
+              canArchive,
               canDelete: canDeleteRecord,
               extraRowActions,
               openCreateDialog,
               openEditDialog,
-
+              requestArchive,
               requestDelete,
               formatValue
             })
@@ -626,6 +652,17 @@ export function AdminCrudEntityPanel({
                               </Button>
                             ) : null}
 
+                            {canArchive ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Архивировать"
+                                aria-label="Архивировать запись"
+                                onClick={() => requestArchive(record)}
+                              >
+                                <FiArchive />
+                              </Button>
+                            ) : null}
                             {canDeleteRecord ? (
                               <Button
                                 size="sm"
@@ -798,7 +835,21 @@ export function AdminCrudEntityPanel({
           </form>
         </DialogContent>
       </Dialog>
-
+      <ConfirmDialog
+        open={Boolean(archiveRecord)}
+        title="Архивировать запись?"
+        description={`Запись "${archiveRecord ? getRecordName(archiveRecord) : ''}" будет скрыта из основного списка. Данные не будут удалены физически и останутся в базе.`}
+        confirmText="Архивировать"
+        cancelText="Отмена"
+        danger
+        isLoading={isSubmitting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveRecord(null)
+          }
+        }}
+        onConfirm={confirmArchive}
+      />
       <ConfirmDialog
         open={Boolean(deleteRecord)}
         title="Удалить запись безвозвратно?"
@@ -825,7 +876,7 @@ function createPermanentDeleteDescription(
 ): string {
   const recordName = record ? getRecordName(record) : ''
 
-  const baseDescription = `Запись "${recordName}" будет удалена из базы данных безвозвратно. Это действие нельзя отменить.`
+  const baseDescription = `Запись "${recordName}" будет удалена из базы данных безвозвратно. Восстановить её через архив уже не получится.`
 
   if (!error) {
     return baseDescription
@@ -839,7 +890,7 @@ function normalizePermanentDeleteError(message: string): string {
     message.toLowerCase().includes('foreign key') ||
     message.toLowerCase().includes('constraint')
   ) {
-    return 'Эту запись нельзя удалить, потому что на неё ссылаются другие данные. Сначала удали или перенеси связанные записи.'
+    return 'Эту запись нельзя удалить, потому что на неё ссылаются другие данные. Сначала удали или перенеси связанные записи, либо используй архивирование.'
   }
 
   return message

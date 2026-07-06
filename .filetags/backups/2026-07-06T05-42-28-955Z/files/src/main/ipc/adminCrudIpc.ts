@@ -1,11 +1,10 @@
 import { ipcMain } from 'electron'
 import type {
-
+  AdminCrudArchiveParams,
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,
   AdminCrudListParams,
-  SaveDepartmentWithFacultiesParams,
   AdminCrudUpdateParams
 } from '../../shared/types/adminCrud'
 import { AuditRepository } from '../audit/auditRepository'
@@ -38,14 +37,10 @@ export function registerAdminCrudIpcHandlers(): void {
   ipcMain.handle('adminCrud:update', (_event, params: AdminCrudUpdateParams) => {
     return service.update(params)
   })
-  ipcMain.handle(
-    'adminCrud:saveDepartmentWithFaculties',
-    (_event, params: SaveDepartmentWithFacultiesParams) => {
-      return service.saveDepartmentWithFaculties(params)
-    }
-  )
 
-
+  ipcMain.handle('adminCrud:archive', (_event, params: AdminCrudArchiveParams) => {
+    return service.archive(params)
+  })
 
   ipcMain.handle('adminCrud:delete', (_event, params: AdminCrudDeleteParams) => {
     return service.delete(params)

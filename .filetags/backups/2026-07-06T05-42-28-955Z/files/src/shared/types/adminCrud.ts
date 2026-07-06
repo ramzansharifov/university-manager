@@ -45,7 +45,7 @@ export interface AdminCrudListParams {
   page?: number
   pageSize?: number
   search?: string
-
+  includeArchived?: boolean
   orderBy?: string
   orderDirection?: SortDirection
   filters?: Record<string, string | number | boolean | null>
@@ -74,18 +74,16 @@ export interface AdminCrudUpdateParams {
   id: number
   data: AdminCrudRecord
 }
-export interface SaveDepartmentWithFacultiesParams {
-  id?: number
-  data: AdminCrudRecord
-  facultyIds: number[]
-}
 
 export interface AdminCrudDeleteParams {
   entity: AdminEntityKey
   id: number
 }
 
-
+export interface AdminCrudArchiveParams {
+  entity: AdminEntityKey
+  id: number
+}
 
 export interface AdminCrudOperationResult<TRecord = AdminCrudRecord> {
   success: boolean

@@ -25,7 +25,7 @@ export function DepartmentsPanel() {
   const [departmentFacultiesMap, setDepartmentFacultiesMap] = useState<Map<number, number[]>>(
     new Map()
   )
-
+  const [dfRecords, setDfRecords] = useState<AdminCrudRecord[]>([])
   const [editRecord, setEditRecord] = useState<AdminCrudRecord | null>(null)
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create')
   const [refreshVersion, setRefreshVersion] = useState(0)
@@ -57,7 +57,7 @@ export function DepartmentsPanel() {
 
     setTeacherOptions(createPersonOptions(teachers.items))
     setFacultyOptions(createNamedOptions(faculties.items))
-
+    setDfRecords(dfResult.items.filter((r) => Number(r.is_archived) !== 1))
 
     const dfMap = new Map<number, number[]>()
 
@@ -69,6 +69,9 @@ export function DepartmentsPanel() {
         continue
       }
 
+      if (Number(df.is_archived) === 1) {
+        continue
+      }
 
       if (!dfMap.has(deptId)) {
         dfMap.set(deptId, [])
@@ -124,24 +127,82 @@ export function DepartmentsPanel() {
     const selectedFacultyIds: string[] = Array.isArray(formData._selectedFacultyIds)
       ? (formData._selectedFacultyIds as string[])
       : []
-    const facultyIds = selectedFacultyIds
-      .map((facultyId) => Number(facultyId))
-      .filter((facultyId) => Number.isInteger(facultyId) && facultyId > 0)
 
-    if (appliesToAll === 0 && facultyIds.length === 0) {
+    if (appliesToAll === 0 && selectedFacultyIds.length === 0) {
       throw new Error('Выбери хотя бы один факультет или отметь «Для всех факультетов»')
     }
 
-    await window.api.adminCrud.saveDepartmentWithFaculties({
-      id: editMode === 'edit' && editRecord?.id ? Number(editRecord.id) : undefined,
-      data: {
-        name,
-        short_name: formData.short_name ? String(formData.short_name).trim() : null,
-        description: formData.description ? String(formData.description).trim() : null,
-        applies_to_all_faculties: appliesToAll
-      },
-      facultyIds: appliesToAll === 1 ? [] : facultyIds
-    })
+    const departmentData: AdminCrudRecord = {
+      name,
+      short_name: formData.short_name ? String(formData.short_name).trim() : null,
+      description: formData.description ? String(formData.description).trim() : null,
+      applies_to_all_faculties: appliesToAll
+    }
+
+    let departmentId: number
+
+    if (editMode === 'edit' && editRecord?.id) {
+      departmentId = Number(editRecord.id)
+      await window.api.adminCrud.update({
+        entity: 'departments',
+        id: departmentId,
+        data: departmentData
+      })
+    } else {
+      const result = await window.api.adminCrud.create({
+        entity: 'departments',
+        data: departmentData
+      })
+
+      departmentId = Number(result.item?.id)
+
+      if (!Number.isFinite(departmentId)) {
+        throw new Error('Не удалось получить ID созданной кафедры')
+      }
+    }
+
+    const existingDfIds = departmentFacultiesMap.get(departmentId) ?? []
+    const selectedSet = new Set(selectedFacultyIds.map(Number))
+
+    if (appliesToAll === 1) {
+      for (const facultyId of existingDfIds) {
+        const dfId = findDfRecordId(dfRecords, departmentId, facultyId)
+
+        if (dfId !== null) {
+          await window.api.adminCrud.archive({
+            entity: 'department_faculties',
+            id: dfId
+          })
+        }
+      }
+    } else {
+      for (const facultyId of existingDfIds) {
+        if (!selectedSet.has(facultyId)) {
+          const dfId = findDfRecordId(dfRecords, departmentId, facultyId)
+
+          if (dfId !== null) {
+            await window.api.adminCrud.archive({
+              entity: 'department_faculties',
+              id: dfId
+            })
+          }
+        }
+      }
+
+      for (const facultyIdStr of selectedFacultyIds) {
+        const facultyId = Number(facultyIdStr)
+
+        if (!existingDfIds.includes(facultyId)) {
+          await window.api.adminCrud.create({
+            entity: 'department_faculties',
+            data: {
+              department_id: departmentId,
+              faculty_id: facultyId
+            }
+          })
+        }
+      }
+    }
 
     setEditRecord(null)
     await loadOptions()
@@ -160,7 +221,7 @@ export function DepartmentsPanel() {
         columns={departmentColumns}
         canCreate={true}
         canEdit={true}
-        
+        canArchive={true}
         canDelete={true}
         orderBy="name"
         orderDirection="asc"
@@ -442,6 +503,20 @@ function createNamedOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
 
 function createOptionsMap(options: AdminCrudSelectOption[]): Map<number, string> {
   return new Map(options.map((option) => [Number(option.value), option.label]))
+}
+
+function findDfRecordId(
+  dfRecords: AdminCrudRecord[],
+  departmentId: number,
+  facultyId: number
+): number | null {
+  for (const df of dfRecords) {
+    if (Number(df.department_id) === departmentId && Number(df.faculty_id) === facultyId) {
+      return Number(df.id)
+    }
+  }
+
+  return null
 }
 
 function getPersonName(record: AdminCrudRecord): string {

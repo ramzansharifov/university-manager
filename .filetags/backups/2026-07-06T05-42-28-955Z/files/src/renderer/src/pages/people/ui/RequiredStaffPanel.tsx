@@ -436,7 +436,7 @@ export function RequiredStaffPanel() {
             columns={facultyColumns}
             canCreate={false}
             canEdit={false}
-            
+            canArchive={false}
             orderBy="name"
             orderDirection="asc"
             emptyMessage="Факультеты пока не созданы. Создай их в разделе «Университет → Учебная структура»."
@@ -462,7 +462,7 @@ export function RequiredStaffPanel() {
             columns={departmentColumns}
             canCreate={false}
             canEdit={false}
-            
+            canArchive={false}
             orderBy="name"
             orderDirection="asc"
             emptyMessage="Кафедры пока не созданы. Создай их в разделе «Университет → Учебная структура»."
@@ -491,7 +491,7 @@ export function RequiredStaffPanel() {
             columns={groupColumns}
             canCreate={false}
             canEdit={false}
-            
+            canArchive={false}
             orderBy="name"
             orderDirection="asc"
             emptyMessage="Учебные группы пока не созданы. Создай их в разделе «Университет → Учебная структура»."

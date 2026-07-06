@@ -16,10 +16,6 @@ const maxAdminCrudPageSize = 50000
 export class AdminCrudRepository {
   constructor(private readonly database: Database.Database) {}
 
-  transaction<T>(callback: () => T): T {
-    return this.database.transaction(callback)()
-  }
-
   list(config: AdminCrudEntityConfig, params: AdminCrudListParams): AdminCrudListResult {
     const page = normalizePage(params.page)
     const pageSize = normalizePageSize(params.pageSize)
@@ -141,6 +137,66 @@ export class AdminCrudRepository {
     return updated
   }
 
+  archive(config: AdminCrudEntityConfig, id: number): AdminCrudRecord {
+    if (!config.supportsArchive) {
+      throw new Error(`Entity "${config.key}" does not support archive operation`)
+    }
+
+    const setParts = ['is_archived = 1']
+
+    if (config.hasUpdatedAt) {
+      setParts.push('updated_at = CURRENT_TIMESTAMP')
+    }
+
+    this.database
+      .prepare(
+        `
+        UPDATE ${config.tableName}
+        SET ${setParts.join(', ')}
+        WHERE ${config.primaryKey} = ?
+      `
+      )
+      .run(id)
+
+    const archived = this.getById(config, id)
+
+    if (!archived) {
+      throw new Error('Archived record not found')
+    }
+
+    return archived
+  }
+
+  restore(config: AdminCrudEntityConfig, id: number): AdminCrudRecord {
+    if (!config.supportsArchive) {
+      throw new Error(`Entity "${config.key}" does not support restore operation`)
+    }
+
+    const setParts = ['is_archived = 0']
+
+    if (config.hasUpdatedAt) {
+      setParts.push('updated_at = CURRENT_TIMESTAMP')
+    }
+
+    this.database
+      .prepare(
+        `
+        UPDATE ${config.tableName}
+        SET ${setParts.join(', ')}
+        WHERE ${config.primaryKey} = ?
+      `
+      )
+      .run(id)
+
+    const restored = this.getById(config, id)
+
+    if (!restored) {
+      throw new Error('Restored record not found')
+    }
+
+    return restored
+  }
+
   delete(config: AdminCrudEntityConfig, id: number): void {
     this.database
       .prepare(
@@ -156,7 +212,9 @@ export class AdminCrudRepository {
     const conditions: string[] = []
     const values: Record<string, unknown> = {}
 
-
+    if (config.supportsArchive && !params.includeArchived) {
+      conditions.push('is_archived = 0')
+    }
 
     if (params.search && config.searchableColumns.length > 0) {
       const searchConditions = config.searchableColumns.map((column, index) => {
