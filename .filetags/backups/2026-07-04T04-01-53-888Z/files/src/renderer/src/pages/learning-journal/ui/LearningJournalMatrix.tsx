@@ -418,7 +418,14 @@ export function LearningJournalMatrix(): ReactElement {
         columns
       }
     })
-  }, [disciplineById, lessonPeriodById, scheduleItems, selectedGroup, selectedWeek, subjectNameById])
+  }, [
+    disciplineById,
+    lessonPeriodById,
+    scheduleItems,
+    selectedGroup,
+    selectedWeek,
+    subjectNameById
+  ])
 
   const journalColumns = useMemo(
     () => journalDayGroups.flatMap((dayGroup) => dayGroup.columns),
@@ -643,8 +650,8 @@ export function LearningJournalMatrix(): ReactElement {
               <div>
                 <CardTitle>Журнал группы: {getRecordName(selectedGroup)}</CardTitle>
                 <CardDescription>
-                  {getSemesterLabel(selectedSemester, academicYearById)} · {getWeekLabel(selectedWeek)} ·{' '}
-                  {getWeekDateRangeLabel(selectedWeek)}
+                  {getSemesterLabel(selectedSemester, academicYearById)} ·{' '}
+                  {getWeekLabel(selectedWeek)} · {getWeekDateRangeLabel(selectedWeek)}
                 </CardDescription>
               </div>
 
@@ -915,8 +922,11 @@ function getSemesterLabel(
   academicYearById: Map<number, AdminCrudRecord>
 ): string {
   const academicYearId = toNumberOrNull(semester.academic_year_id)
-  const academicYear = academicYearId === null ? null : (academicYearById.get(academicYearId) ?? null)
-  const semesterName = semester.name ? String(semester.name) : `${String(semester.number ?? '')} семестр`
+  const academicYear =
+    academicYearId === null ? null : (academicYearById.get(academicYearId) ?? null)
+  const semesterName = semester.name
+    ? String(semester.name)
+    : `${String(semester.number ?? '')} семестр`
 
   return academicYear ? `${getRecordName(academicYear)} · ${semesterName}` : semesterName
 }

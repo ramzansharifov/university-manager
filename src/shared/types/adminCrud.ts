@@ -85,8 +85,6 @@ export interface AdminCrudDeleteParams {
   id: number
 }
 
-
-
 export interface AdminCrudOperationResult<TRecord = AdminCrudRecord> {
   success: boolean
   item?: TRecord

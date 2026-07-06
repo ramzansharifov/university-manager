@@ -1,5 +1,4 @@
 import type {
-
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,
@@ -54,9 +53,7 @@ export class AdminCrudService {
     }
   }
 
-  saveDepartmentWithFaculties(
-    params: SaveDepartmentWithFacultiesParams
-  ): AdminCrudOperationResult {
+  saveDepartmentWithFaculties(params: SaveDepartmentWithFacultiesParams): AdminCrudOperationResult {
     const departmentConfig = getAdminCrudEntityConfig('departments')
     const linkConfig = getAdminCrudEntityConfig('department_faculties')
 
@@ -68,11 +65,7 @@ export class AdminCrudService {
         throw new Error('Кафедра для редактирования не найдена')
       }
 
-      const preparedData = this.prepareDataForSave(
-        'departments',
-        params.data,
-        before ?? undefined
-      )
+      const preparedData = this.prepareDataForSave('departments', params.data, before ?? undefined)
 
       const savedDepartment =
         params.id === undefined
@@ -99,11 +92,7 @@ export class AdminCrudService {
       }
 
       facultyIds.forEach((facultyId) => {
-        this.ensureActiveRelatedRecord(
-          'faculties',
-          facultyId,
-          `Факультет #${facultyId} не найден`
-        )
+        this.ensureActiveRelatedRecord('faculties', facultyId, `Факультет #${facultyId} не найден`)
       })
 
       const existingLinks = this.repository.list(linkConfig, {
@@ -167,7 +156,8 @@ export class AdminCrudService {
         })
       }
 
-      const finalDepartment = this.repository.getById(departmentConfig, departmentId) ?? savedDepartment
+      const finalDepartment =
+        this.repository.getById(departmentConfig, departmentId) ?? savedDepartment
 
       this.auditService.write({
         action: params.id === undefined ? 'create' : 'update',
@@ -1614,8 +1604,6 @@ export class AdminCrudService {
     }
 
     if (existingSemester?.id) {
-
-
       return this.repository.update(semesterConfig, Number(existingSemester.id), payload)
     }
 
@@ -1645,8 +1633,6 @@ export class AdminCrudService {
       })
 
       if (existingWeek?.id) {
-
-
         this.repository.update(weekConfig, Number(existingWeek.id), weekPayload)
         return
       }
@@ -1658,9 +1644,7 @@ export class AdminCrudService {
       const weekId = normalizeNullableNumber(week.id)
       const weekNumber = normalizeNullableNumber(week.number)
 
-      if (
-        weekId === null || (weekNumber !== null && activeWeekNumbers.has(weekNumber))
-      ) {
+      if (weekId === null || (weekNumber !== null && activeWeekNumbers.has(weekNumber))) {
         return
       }
 

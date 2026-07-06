@@ -58,7 +58,6 @@ export function DepartmentsPanel() {
     setTeacherOptions(createPersonOptions(teachers.items))
     setFacultyOptions(createNamedOptions(faculties.items))
 
-
     const dfMap = new Map<number, number[]>()
 
     for (const df of dfResult.items) {
@@ -68,7 +67,6 @@ export function DepartmentsPanel() {
       if (!Number.isFinite(deptId) || !Number.isFinite(facId)) {
         continue
       }
-
 
       if (!dfMap.has(deptId)) {
         dfMap.set(deptId, [])
@@ -160,7 +158,7 @@ export function DepartmentsPanel() {
         columns={departmentColumns}
         canCreate={true}
         canEdit={true}
-        
+
         canDelete={true}
         orderBy="name"
         orderDirection="asc"

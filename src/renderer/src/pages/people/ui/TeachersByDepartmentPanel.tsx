@@ -158,7 +158,7 @@ export function TeachersByDepartmentPanel({
           columns={departmentColumns}
           canCreate={false}
           canEdit={false}
-          
+
           emptyMessage="Кафедры пока не созданы. Создай их в разделе «Университет → Учебная структура»."
           onAfterMutation={loadTeacherOptions}
           onRowClick={openDepartment}

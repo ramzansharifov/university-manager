@@ -411,7 +411,14 @@ export function LearningJournalMatrix(): ReactElement {
         columns
       }
     })
-  }, [disciplineById, lessonPeriodById, scheduleItems, selectedGroup, selectedWeek, subjectNameById])
+  }, [
+    disciplineById,
+    lessonPeriodById,
+    scheduleItems,
+    selectedGroup,
+    selectedWeek,
+    subjectNameById
+  ])
 
   const journalColumns = useMemo(
     () => journalDayGroups.flatMap((dayGroup) => dayGroup.columns),
@@ -637,8 +644,8 @@ export function LearningJournalMatrix(): ReactElement {
               <div>
                 <CardTitle>Журнал группы: {getRecordName(selectedGroup)}</CardTitle>
                 <CardDescription>
-                  {getSemesterLabel(selectedSemester, academicYearById)} · {getWeekLabel(selectedWeek)} ·{' '}
-                  {getWeekDateRangeLabel(selectedWeek)}
+                  {getSemesterLabel(selectedSemester, academicYearById)} ·{' '}
+                  {getWeekLabel(selectedWeek)} · {getWeekDateRangeLabel(selectedWeek)}
                 </CardDescription>
               </div>
 
@@ -728,7 +735,9 @@ export function LearningJournalMatrix(): ReactElement {
                           <th
                             key={`${column.id}-subject`}
                             className="border-b border-r border-[var(--color-border)] px-1 py-2 text-center text-[11px] font-semibold text-[var(--color-text)] last:border-r-0"
-                            title={column.kind === 'schedule' ? column.disciplineName : 'Нет занятий'}
+                            title={
+                              column.kind === 'schedule' ? column.disciplineName : 'Нет занятий'
+                            }
                           >
                             {column.kind === 'schedule' ? column.disciplineShortName : '—'}
                           </th>
@@ -757,7 +766,9 @@ export function LearningJournalMatrix(): ReactElement {
                                   className="h-10 border-r border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 px-1 text-center align-middle last:border-r-0"
                                   title="В этот день занятий нет"
                                 >
-                                  <span className="text-[var(--color-text-muted)] opacity-40">—</span>
+                                  <span className="text-[var(--color-text-muted)] opacity-40">
+                                    —
+                                  </span>
                                 </td>
                               )
                             }
@@ -772,7 +783,9 @@ export function LearningJournalMatrix(): ReactElement {
                                 title={createJournalCellTitle(student, column, statusKey)}
                               >
                                 {value || (
-                                  <span className="text-[var(--color-text-muted)] opacity-40">·</span>
+                                  <span className="text-[var(--color-text-muted)] opacity-40">
+                                    ·
+                                  </span>
                                 )}
                               </td>
                             )
@@ -868,7 +881,8 @@ function createScheduleJournalColumn({
   const disciplineId = toNumberOrNull(scheduleItem.discipline_id)
   const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
   const lessonPeriodId = toNumberOrNull(scheduleItem.lesson_period_id)
-  const lessonPeriod = lessonPeriodId === null ? null : (lessonPeriodById.get(lessonPeriodId) ?? null)
+  const lessonPeriod =
+    lessonPeriodId === null ? null : (lessonPeriodById.get(lessonPeriodId) ?? null)
   const disciplineName = discipline ? getDisciplineName(discipline, subjectNameById) : 'Дисциплина'
   const lessonPeriodNumber = toNumberOrNull(lessonPeriod?.number)
 
@@ -913,8 +927,11 @@ function getSemesterLabel(
   academicYearById: Map<number, AdminCrudRecord>
 ): string {
   const academicYearId = toNumberOrNull(semester.academic_year_id)
-  const academicYear = academicYearId === null ? null : (academicYearById.get(academicYearId) ?? null)
-  const semesterName = semester.name ? String(semester.name) : `${String(semester.number ?? '')} семестр`
+  const academicYear =
+    academicYearId === null ? null : (academicYearById.get(academicYearId) ?? null)
+  const semesterName = semester.name
+    ? String(semester.name)
+    : `${String(semester.number ?? '')} семестр`
 
   return academicYear ? `${getRecordName(academicYear)} · ${semesterName}` : semesterName
 }

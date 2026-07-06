@@ -13,7 +13,6 @@ import type {
   LogoutResult
 } from '../../shared/types/auth'
 import type {
-
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,

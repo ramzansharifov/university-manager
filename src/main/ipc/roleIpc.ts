@@ -1,9 +1,7 @@
 import { ipcMain } from 'electron'
 import type {
-
   CreateRoleParams,
   DeleteRoleParams,
-
   SetRolePermissionsParams,
   UpdateRoleParams
 } from '../../shared/types/roles'

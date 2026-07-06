@@ -45,7 +45,6 @@ export interface SetRolePermissionsParams {
   permissionKeys: string[]
 }
 
-
 export interface DeleteRoleParams {
   roleId: number
 }

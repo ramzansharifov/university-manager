@@ -1,6 +1,5 @@
 import { ipcMain } from 'electron'
 import type {
-
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,
@@ -44,8 +43,6 @@ export function registerAdminCrudIpcHandlers(): void {
       return service.saveDepartmentWithFaculties(params)
     }
   )
-
-
 
   ipcMain.handle('adminCrud:delete', (_event, params: AdminCrudDeleteParams) => {
     return service.delete(params)

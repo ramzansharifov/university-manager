@@ -1,6 +1,5 @@
 import { ipcRenderer } from 'electron'
 import type {
-
   CreateRoleParams,
   DeleteRoleParams,
   ListRolesParams,

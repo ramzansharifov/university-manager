@@ -1,12 +1,5 @@
 export type AuditAction =
-  | 'create'
-  | 'update'
-  | 'delete'
-
-  | 'login'
-  | 'logout'
-  | 'change_permissions'
-  | 'change_settings'
+  'create' | 'update' | 'delete' | 'login' | 'logout' | 'change_permissions' | 'change_settings'
 
 export interface CreateAuditLogParams {
   userId?: number | null

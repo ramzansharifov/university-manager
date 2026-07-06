@@ -17,8 +17,7 @@ export function validateDatabaseSchema(database: Database.Database): void {
     const expectedSystemColumns = [
       config.primaryKey,
       'created_at',
-      ...(config.hasUpdatedAt ? ['updated_at'] : []),
-
+      ...(config.hasUpdatedAt ? ['updated_at'] : [])
     ]
     const configuredColumns = new Set([
       config.primaryKey,
@@ -131,8 +130,7 @@ function validateSystemColumnConfig(
   const checks: Array<[column: string, expected: boolean]> = [
     ['id', true],
     ['created_at', true],
-    ['updated_at', hasUpdatedAt],
-
+    ['updated_at', hasUpdatedAt]
   ]
 
   const mismatches = checks

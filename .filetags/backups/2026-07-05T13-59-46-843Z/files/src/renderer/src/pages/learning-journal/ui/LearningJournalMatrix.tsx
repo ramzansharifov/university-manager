@@ -485,9 +485,7 @@ export function LearningJournalMatrix(): ReactElement {
     }
   }, [activeTopicColumn, activeTopicColumnId])
 
-  const activeLessonCompleted = activeTopicColumn
-    ? isLessonCompleted(activeTopicColumn)
-    : false
+  const activeLessonCompleted = activeTopicColumn ? isLessonCompleted(activeTopicColumn) : false
 
   const studentColumnWidth = useMemo(() => {
     const longestNameLength = groupStudents.reduce(
@@ -553,9 +551,7 @@ export function LearningJournalMatrix(): ReactElement {
     )
   }
 
-  function getLessonCompletionRecord(
-    column: ScheduleJournalColumn
-  ): AdminCrudRecord | undefined {
+  function getLessonCompletionRecord(column: ScheduleJournalColumn): AdminCrudRecord | undefined {
     const session = getLessonSession(column)
 
     if (!session?.id) {
@@ -785,12 +781,14 @@ export function LearningJournalMatrix(): ReactElement {
         }
       })
 
-      return result.item ?? {
-        ...existingSession,
-        topic,
-        comment,
-        status: 'held'
-      }
+      return (
+        result.item ?? {
+          ...existingSession,
+          topic,
+          comment,
+          status: 'held'
+        }
+      )
     }
 
     const weekId = toNumberOrNull(selectedWeek?.id)
@@ -1324,9 +1322,7 @@ export function LearningJournalMatrix(): ReactElement {
                         variant={activeLessonCompleted ? 'secondary' : 'primary'}
                         disabled={isSavingTopic || isSavingCompletion}
                         onClick={() =>
-                          void (activeLessonCompleted
-                            ? cancelLessonCompletion()
-                            : completeLesson())
+                          void (activeLessonCompleted ? cancelLessonCompletion() : completeLesson())
                         }
                       >
                         {isSavingCompletion

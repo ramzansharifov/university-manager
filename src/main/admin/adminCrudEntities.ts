@@ -8,7 +8,6 @@ export interface AdminCrudEntityConfig {
   searchableColumns: string[]
   defaultOrderBy: string
   hasUpdatedAt: boolean
-
 }
 
 export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = {
@@ -214,9 +213,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     'attendance_records',
     ['lesson_session_id', 'student_id', 'attendance_status_id', 'comment', 'marked_by_user_id'],
     ['comment'],
-    {
-
-    }
+    {}
   ),
 
   grade_element_types: entity(
@@ -259,17 +256,13 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     'grades',
     ['grade_item_id', 'student_id', 'score', 'comment', 'graded_by_user_id'],
     ['comment'],
-    {
-
-    }
+    {}
   ),
   lesson_completion_records: entity(
     'lesson_completion_records',
     ['lesson_session_id', 'status', 'topic_completed', 'comment', 'updated_by_user_id'],
     ['status', 'comment'],
-    {
-
-    }
+    {}
   ),
 
   roles: entity(
@@ -282,8 +275,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['permission_key', 'module', 'action', 'name'],
     ['permission_key', 'module', 'action', 'name'],
     {
-      hasUpdatedAt: false,
-
+      hasUpdatedAt: false
     }
   ),
   app_users: entity(
@@ -298,26 +290,21 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'last_login_at'
     ],
     ['username', 'profile_type'],
-    {
-
-    }
+    {}
   ),
   audit_logs: entity(
     'audit_logs',
     ['user_id', 'action', 'module', 'entity_name', 'entity_id', 'before_json', 'after_json'],
     ['action', 'module', 'entity_name'],
     {
-      hasUpdatedAt: false,
-
+      hasUpdatedAt: false
     }
   ),
   app_settings: entity(
     'app_settings',
     ['setting_key', 'setting_value'],
     ['setting_key', 'setting_value'],
-    {
-
-    }
+    {}
   )
 }
 

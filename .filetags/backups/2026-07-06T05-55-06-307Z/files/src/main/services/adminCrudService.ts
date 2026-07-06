@@ -1,5 +1,4 @@
 import type {
-
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,
@@ -54,9 +53,7 @@ export class AdminCrudService {
     }
   }
 
-  saveDepartmentWithFaculties(
-    params: SaveDepartmentWithFacultiesParams
-  ): AdminCrudOperationResult {
+  saveDepartmentWithFaculties(params: SaveDepartmentWithFacultiesParams): AdminCrudOperationResult {
     const departmentConfig = getAdminCrudEntityConfig('departments')
     const linkConfig = getAdminCrudEntityConfig('department_faculties')
 
@@ -68,11 +65,7 @@ export class AdminCrudService {
         throw new Error('Кафедра для редактирования не найдена')
       }
 
-      const preparedData = this.prepareDataForSave(
-        'departments',
-        params.data,
-        before ?? undefined
-      )
+      const preparedData = this.prepareDataForSave('departments', params.data, before ?? undefined)
 
       const savedDepartment =
         params.id === undefined
@@ -99,11 +92,7 @@ export class AdminCrudService {
       }
 
       facultyIds.forEach((facultyId) => {
-        this.ensureActiveRelatedRecord(
-          'faculties',
-          facultyId,
-          `Факультет #${facultyId} не найден`
-        )
+        this.ensureActiveRelatedRecord('faculties', facultyId, `Факультет #${facultyId} не найден`)
       })
 
       const existingLinks = this.repository.list(linkConfig, {
@@ -167,7 +156,8 @@ export class AdminCrudService {
         })
       }
 
-      const finalDepartment = this.repository.getById(departmentConfig, departmentId) ?? savedDepartment
+      const finalDepartment =
+        this.repository.getById(departmentConfig, departmentId) ?? savedDepartment
 
       this.auditService.write({
         action: params.id === undefined ? 'create' : 'update',

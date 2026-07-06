@@ -1,6 +1,5 @@
 import { ipcRenderer } from 'electron'
 import type {
-
   AdminCrudCreateParams,
   AdminCrudDeleteParams,
   AdminCrudGetByIdParams,
@@ -33,8 +32,6 @@ export const adminCrudApi = {
   ): Promise<AdminCrudOperationResult> {
     return ipcRenderer.invoke('adminCrud:saveDepartmentWithFaculties', params)
   },
-
-
 
   delete(params: AdminCrudDeleteParams): Promise<AdminCrudOperationResult> {
     return ipcRenderer.invoke('adminCrud:delete', params)

@@ -1,9 +1,7 @@
 import type { AuditService } from '../audit/auditService'
 import type {
-
   CreateRoleParams,
   DeleteRoleParams,
-
   PermissionGroup,
   Role,
   RoleDetails,

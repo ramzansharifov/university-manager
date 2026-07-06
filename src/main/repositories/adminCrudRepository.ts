@@ -156,8 +156,6 @@ export class AdminCrudRepository {
     const conditions: string[] = []
     const values: Record<string, unknown> = {}
 
-
-
     if (params.search && config.searchableColumns.length > 0) {
       const searchConditions = config.searchableColumns.map((column, index) => {
         const key = `search_${index}`

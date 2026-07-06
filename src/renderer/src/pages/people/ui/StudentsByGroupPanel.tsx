@@ -135,7 +135,7 @@ export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPa
           columns={groupColumns}
           canCreate={false}
           canEdit={false}
-          
+
           emptyMessage="Учебные группы пока не созданы. Создай их в разделе «Университет → Учебная структура»."
           onAfterMutation={loadTeacherOptions}
           onRowClick={openGroup}

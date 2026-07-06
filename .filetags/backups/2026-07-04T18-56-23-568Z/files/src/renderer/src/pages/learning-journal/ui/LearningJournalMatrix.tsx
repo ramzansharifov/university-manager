@@ -426,7 +426,14 @@ export function LearningJournalMatrix(): ReactElement {
         columns
       }
     })
-  }, [disciplineById, lessonPeriodById, scheduleItems, selectedGroup, selectedWeek, subjectNameById])
+  }, [
+    disciplineById,
+    lessonPeriodById,
+    scheduleItems,
+    selectedGroup,
+    selectedWeek,
+    subjectNameById
+  ])
 
   const journalColumns = useMemo(
     () => journalDayGroups.flatMap((dayGroup) => dayGroup.columns),
@@ -835,8 +842,8 @@ export function LearningJournalMatrix(): ReactElement {
               <div>
                 <CardTitle>Журнал группы: {getRecordName(selectedGroup)}</CardTitle>
                 <CardDescription>
-                  {getSemesterLabel(selectedSemester, academicYearById)} · {getWeekLabel(selectedWeek)} ·{' '}
-                  {getWeekDateRangeLabel(selectedWeek)}
+                  {getSemesterLabel(selectedSemester, academicYearById)} ·{' '}
+                  {getWeekLabel(selectedWeek)} · {getWeekDateRangeLabel(selectedWeek)}
                 </CardDescription>
               </div>
 
@@ -1064,15 +1071,19 @@ export function LearningJournalMatrix(): ReactElement {
                         Закрыть
                       </Button>
 
-                      <Button type="button" disabled={isSavingTopic} onClick={() => void saveTopic()}>
+                      <Button
+                        type="button"
+                        disabled={isSavingTopic}
+                        onClick={() => void saveTopic()}
+                      >
                         {isSavingTopic ? 'Сохранение...' : 'Сохранить тему'}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
-                    Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто.
-                    Тема занятия редактируется через сокращение предмета в нижней строке.
+                    Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто. Тема
+                    занятия редактируется через сокращение предмета в нижней строке.
                   </div>
                 )}
               </div>
@@ -1192,8 +1203,11 @@ function getSemesterLabel(
   academicYearById: Map<number, AdminCrudRecord>
 ): string {
   const academicYearId = toNumberOrNull(semester.academic_year_id)
-  const academicYear = academicYearId === null ? null : (academicYearById.get(academicYearId) ?? null)
-  const semesterName = semester.name ? String(semester.name) : `${String(semester.number ?? '')} семестр`
+  const academicYear =
+    academicYearId === null ? null : (academicYearById.get(academicYearId) ?? null)
+  const semesterName = semester.name
+    ? String(semester.name)
+    : `${String(semester.number ?? '')} семестр`
 
   return academicYear ? `${getRecordName(academicYear)} · ${semesterName}` : semesterName
 }
@@ -1330,10 +1344,7 @@ function getJournalPairLabel(column: ScheduleJournalColumn): string {
 }
 
 function createTopicColumnTitle(column: ScheduleJournalColumn, topic: string): string {
-  return [
-    getJournalPairLabel(column),
-    topic ? `Тема: ${topic}` : 'Тема не указана'
-  ].join('\n')
+  return [getJournalPairLabel(column), topic ? `Тема: ${topic}` : 'Тема не указана'].join('\n')
 }
 
 function getAttendanceStatusLabel(statusKey: string): string {
