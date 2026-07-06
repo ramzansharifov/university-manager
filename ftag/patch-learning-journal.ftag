@@ -8,6 +8,113 @@
 @endwith
 @end
 
+@replace-all src/main/services/adminCrudService.ts
+@find
+  private listAllActiveRecords(entity: AdminEntityKey): AdminCrudRecord[] {
+    return this.listAllRecords(entity, false)
+  }
+
+  private listAllRecords(entity: AdminEntityKey, includeArchived: boolean): AdminCrudRecord[] {
+@endfind
+@with
+  private listAllActiveRecords(entity: AdminEntityKey): AdminCrudRecord[] {
+    return this.listAllRecords(entity)
+  }
+
+  private listAllRecords(entity: AdminEntityKey): AdminCrudRecord[] {
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+,
+        includeArchived
+@endfind
+@with
+
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+,
+        includeArchived: true
+@endfind
+@with
+
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+,
+      includeArchived: true
+@endfind
+@with
+
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+this.listAllRecords('semesters', true)
+@endfind
+@with
+this.listAllRecords('semesters')
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+this.listAllRecords('weeks', true)
+@endfind
+@with
+this.listAllRecords('weeks')
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+      if (Number(existingSemester.is_archived) === 1) {
+        this.repository.restore(semesterConfig, Number(existingSemester.id))
+      }
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+        if (Number(existingWeek.is_archived) === 1) {
+          this.repository.restore(weekConfig, Number(existingWeek.id))
+        }
+
+@endfind
+@with
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+        weekId === null ||
+        Number(week.is_archived) === 1 ||
+        (weekNumber !== null && activeWeekNumbers.has(weekNumber))
+@endfind
+@with
+        weekId === null || (weekNumber !== null && activeWeekNumbers.has(weekNumber))
+@endwith
+@end
+
+@replace-all src/main/services/adminCrudService.ts
+@find
+      this.repository.archive(weekConfig, weekId)
+@endfind
+@with
+      this.repository.delete(weekConfig, weekId)
+@endwith
+@end
+
 @replace-all src/main/roles/roleRepository.ts
 @find
   is_archived: number

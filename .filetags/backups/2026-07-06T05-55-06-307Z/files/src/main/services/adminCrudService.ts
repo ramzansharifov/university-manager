@@ -647,10 +647,10 @@ export class AdminCrudService {
   }
 
   private listAllActiveRecords(entity: AdminEntityKey): AdminCrudRecord[] {
-    return this.listAllRecords(entity)
+    return this.listAllRecords(entity, false)
   }
 
-  private listAllRecords(entity: AdminEntityKey): AdminCrudRecord[] {
+  private listAllRecords(entity: AdminEntityKey, includeArchived: boolean): AdminCrudRecord[] {
     const config = getAdminCrudEntityConfig(entity)
     const items: AdminCrudRecord[] = []
     let page = 1
@@ -661,7 +661,8 @@ export class AdminCrudService {
         page,
         pageSize: 100,
         orderBy: 'id',
-        orderDirection: 'asc'
+        orderDirection: 'asc',
+        includeArchived
       })
 
       items.push(...result.items)
@@ -892,6 +893,7 @@ export class AdminCrudService {
       entity: 'lesson_periods',
       page: 1,
       pageSize: 1000,
+      includeArchived: true,
       orderBy: 'number',
       orderDirection: 'asc'
     })
@@ -909,6 +911,7 @@ export class AdminCrudService {
       entity: 'lesson_periods',
       page: 1,
       pageSize: 1000,
+      includeArchived: true,
       orderBy: 'id',
       orderDirection: 'asc'
     })
@@ -1317,6 +1320,7 @@ export class AdminCrudService {
       entity: 'grade_element_types',
       page: 1,
       pageSize: 1000,
+      includeArchived: true,
       orderBy: 'id',
       orderDirection: 'asc'
     }).items
@@ -1598,7 +1602,7 @@ export class AdminCrudService {
     range: { startsAt: string; endsAt: string }
   ): AdminCrudRecord {
     const semesterConfig = getAdminCrudEntityConfig('semesters')
-    const existingSemester = this.listAllRecords('semesters').find((semester) => {
+    const existingSemester = this.listAllRecords('semesters', true).find((semester) => {
       return (
         normalizeNullableNumber(semester.academic_year_id) === academicYearId &&
         normalizeNullableNumber(semester.number) === semesterNumber
@@ -1614,7 +1618,9 @@ export class AdminCrudService {
     }
 
     if (existingSemester?.id) {
-
+      if (Number(existingSemester.is_archived) === 1) {
+        this.repository.restore(semesterConfig, Number(existingSemester.id))
+      }
 
       return this.repository.update(semesterConfig, Number(existingSemester.id), payload)
     }
@@ -1627,7 +1633,7 @@ export class AdminCrudService {
     range: { startsAt: string; endsAt: string }
   ): void {
     const weekConfig = getAdminCrudEntityConfig('weeks')
-    const existingWeeks = this.listAllRecords('weeks').filter((week) => {
+    const existingWeeks = this.listAllRecords('weeks', true).filter((week) => {
       return normalizeNullableNumber(week.semester_id) === semesterId
     })
     const weekPayloads = buildWeekPayloadsForRange(semesterId, range.startsAt, range.endsAt)
@@ -1645,7 +1651,9 @@ export class AdminCrudService {
       })
 
       if (existingWeek?.id) {
-
+        if (Number(existingWeek.is_archived) === 1) {
+          this.repository.restore(weekConfig, Number(existingWeek.id))
+        }
 
         this.repository.update(weekConfig, Number(existingWeek.id), weekPayload)
         return
@@ -1659,12 +1667,14 @@ export class AdminCrudService {
       const weekNumber = normalizeNullableNumber(week.number)
 
       if (
-        weekId === null || (weekNumber !== null && activeWeekNumbers.has(weekNumber))
+        weekId === null ||
+        Number(week.is_archived) === 1 ||
+        (weekNumber !== null && activeWeekNumbers.has(weekNumber))
       ) {
         return
       }
 
-      this.repository.delete(weekConfig, weekId)
+      this.repository.archive(weekConfig, weekId)
     })
   }
 
