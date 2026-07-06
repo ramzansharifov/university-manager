@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-07-06T08:44:45.226Z",
+  "backupPath": ".filetags/backups/2026-07-06T08-44-45-187Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1548 line(s)\n   new: 1568 line(s)"
+  ]
+}
