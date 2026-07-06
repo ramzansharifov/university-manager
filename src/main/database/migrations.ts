@@ -1,8 +1,7 @@
 import type Database from 'better-sqlite3'
+import { app } from 'electron'
 import { existsSync, readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
-
-const migrationsDirectory = join(process.cwd(), 'src/main/migrations')
 
 export function runMigrations(database: Database.Database): void {
   database.exec(`
@@ -13,9 +12,7 @@ export function runMigrations(database: Database.Database): void {
     );
   `)
 
-  if (!existsSync(migrationsDirectory)) {
-    throw new Error(`Migrations directory not found: ${migrationsDirectory}`)
-  }
+  const migrationsDirectory = resolveMigrationsDirectory()
 
   const migrationFiles = readdirSync(migrationsDirectory)
     .filter((fileName) => fileName.endsWith('.sql'))
@@ -46,6 +43,29 @@ export function runMigrations(database: Database.Database): void {
     const filePath = join(migrationsDirectory, fileName)
     const sql = readFileSync(filePath, 'utf8')
 
-    migrationTransaction(fileName, sql)
+    try {
+      migrationTransaction(fileName, sql)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+
+      throw new Error(`Не удалось применить миграцию ${fileName}: ${message}`, {
+        cause: error
+      })
+    }
   }
+}
+
+function resolveMigrationsDirectory(): string {
+  const candidates = [
+    join(process.resourcesPath, 'migrations'),
+    join(app.getAppPath(), 'src/main/migrations'),
+    join(process.cwd(), 'src/main/migrations')
+  ]
+  const migrationsDirectory = candidates.find((candidate) => existsSync(candidate))
+
+  if (!migrationsDirectory) {
+    throw new Error(`Каталог миграций не найден. Проверены пути: ${candidates.join(', ')}`)
+  }
+
+  return migrationsDirectory
 }

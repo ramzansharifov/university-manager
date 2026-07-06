@@ -186,21 +186,31 @@ schema_migrations
 
 хранит список применённых миграций.
 
-Миграции лежат в:
+Исходные SQL-миграции лежат в:
 
 ```txt
 src/main/migrations/
 ```
 
-На текущем этапе есть основная миграция:
+Актуальная последовательность миграций:
 
 ```txt
 001_initial_schema.sql
+002_required_faculty_teacher_assignments.sql
+005_academic_vacations.sql
+006_normalize_pass_fail_grade_element_types.sql
+007_remove_legacy_faculty_employee_assignments.sql
 ```
 
-Она создаёт основную структуру базы данных.
+`001` создаёт основную структуру базы данных. Последующие миграции обновляют уже существующие
+локальные базы без ручного reset. После `007` декан и заместитель декана хранятся только в
+`dean_teacher_id` и `deputy_dean_teacher_id`; устаревшие employee-поля удаляются.
 
 Миграции применяются только один раз. Если миграция уже есть в `schema_migrations`, она не выполняется повторно.
+
+В packaged-сборку каталог SQL копируется как `resources/migrations`. Runner сначала использует
+этот каталог, а в dev/build — `src/main/migrations` относительно каталога приложения. Поэтому
+поиск миграций не зависит исключительно от текущей рабочей директории процесса.
 
 ---
 
@@ -276,6 +286,7 @@ dictionary_items
 academic_years
 semesters
 weeks
+academic_vacations
 lesson_periods
 ```
 
@@ -284,6 +295,7 @@ lesson_periods
 - учебные годы;
 - семестры;
 - учебные недели;
+- каникулы;
 - пары / временные слоты.
 
 ---
@@ -315,11 +327,14 @@ disciplines
 Реализованы таблицы:
 
 ```txt
+audience_types
+buildings
 audiences
 lesson_sessions
 ```
 
-Типы аудиторий и типы занятий сейчас хранятся через общий справочник `dictionary_items`.
+Типы аудиторий хранятся в `audience_types`, корпуса — в `buildings`. Типы занятий хранятся
+в `dictionary_items` с ключом справочника `lesson_types`.
 
 ---
 
@@ -578,7 +593,8 @@ password: admin
 - статусы посещаемости;
 - категории оценок;
 - типы занятий;
-- типы аудиторий.
+
+Типы аудиторий пользователь ведёт в отдельной CRUD-таблице `audience_types`.
 
 ### Настройки
 
@@ -651,6 +667,7 @@ dictionary_items
 academic_years
 semesters
 weeks
+academic_vacations
 lesson_periods
 teachers
 employees
@@ -659,10 +676,13 @@ subjects
 curriculum_plans
 curriculum_items
 disciplines
+audience_types
+buildings
 audiences
 schedule_items
 lesson_sessions
 attendance_records
+grade_element_types
 grade_items
 score_scales
 grades
@@ -1025,6 +1045,9 @@ settings:update
 
 system:getHealthReport
 system:getDataQualityReport
+system:exportDatabaseToJson
+system:importDatabaseFromJson
+system:resetDatabase
 ```
 
 ---

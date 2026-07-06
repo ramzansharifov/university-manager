@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactElement } from 'react'
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/providers/AuthProvider'
@@ -12,7 +12,7 @@ import {
   Input
 } from '../../shared/ui'
 
-export function LoginPage() {
+export function LoginPage(): ReactElement {
   const auth = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -29,7 +29,7 @@ export function LoginPage() {
     return <Navigate to={redirectTo} replace />
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
 
     setError(null)
@@ -43,7 +43,7 @@ export function LoginPage() {
 
       navigate(redirectTo, { replace: true })
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'Не удалось войти в систему')
+      setError(getLoginErrorMessage(loginError))
     } finally {
       setIsSubmitting(false)
     }
@@ -94,5 +94,18 @@ export function LoginPage() {
         </CardContent>
       </Card>
     </main>
+  )
+}
+
+function getLoginErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'Не удалось войти в систему'
+  }
+
+  return (
+    error.message
+      .replace(/^Error invoking remote method '[^']+':\s*/i, '')
+      .replace(/^Error:\s*/i, '')
+      .trim() || 'Не удалось войти в систему'
   )
 }

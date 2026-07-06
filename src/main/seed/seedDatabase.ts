@@ -118,6 +118,14 @@ function seedDictionaries(database: Database.Database): void {
     ['education_forms', 'part_time', 'Заочная', 20],
     ['education_forms', 'distance', 'Дистанционная', 30],
 
+    ['lesson_types', 'lecture', 'Лекция', 10],
+    ['lesson_types', 'seminar', 'Семинар', 20],
+    ['lesson_types', 'practice', 'Практика', 30],
+    ['lesson_types', 'lab', 'Лабораторная работа', 40],
+    ['lesson_types', 'consultation', 'Консультация', 50],
+    ['lesson_types', 'exam', 'Экзамен', 60],
+    ['lesson_types', 'credit', 'Зачёт', 70],
+
     ['attendance_statuses', 'present', 'Присутствовал', 10],
     ['attendance_statuses', 'absent', 'Отсутствовал', 20],
     ['attendance_statuses', 'late', 'Опоздал', 30],

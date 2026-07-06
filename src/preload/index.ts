@@ -6,7 +6,7 @@ import { roleApi } from './api/roleApi'
 import { settingsApi } from './api/settingsApi'
 import { systemApi } from './api/systemApi'
 
-const api = {
+export const api = {
   adminCrud: adminCrudApi,
   auth: authApi,
   roles: roleApi,

@@ -30,19 +30,19 @@ export class AuthService {
     const username = params.username.trim()
 
     if (!username || !params.password) {
-      throw new Error('Username and password are required')
+      throw new Error('Укажите логин и пароль')
     }
 
     const credentials = this.authRepository.findUserCredentialsByUsername(username)
 
     if (!credentials || credentials.is_active !== 1) {
-      throw new Error('Invalid username or password')
+      throw new Error('Неверный логин или пароль')
     }
 
     const passwordIsValid = verifyPassword(params.password, credentials.password_hash)
 
     if (!passwordIsValid) {
-      throw new Error('Invalid username or password')
+      throw new Error('Неверный логин или пароль')
     }
 
     const token = randomBytes(32).toString('hex')
@@ -54,7 +54,7 @@ export class AuthService {
     const user = this.authRepository.getAuthUserById(credentials.id)
 
     if (!user) {
-      throw new Error('Authenticated user not found')
+      throw new Error('Пользователь не найден после авторизации')
     }
 
     this.auditService.write({
@@ -88,7 +88,9 @@ export class AuthService {
       return null
     }
 
-    return this.authRepository.getAuthUserById(session.user_id)
+    const user = this.authRepository.getAuthUserById(session.user_id)
+
+    return user?.isActive ? user : null
   }
 
   logout(params: LogoutParams): LogoutResult {
@@ -147,11 +149,11 @@ export class AuthService {
 
   changePassword(params: ChangePasswordParams): ChangePasswordResult {
     if (!this.authRepository.userExists(params.userId)) {
-      throw new Error('User not found')
+      throw new Error('Пользователь не найден')
     }
 
     if (!params.newPassword || params.newPassword.length < 4) {
-      throw new Error('Password must contain at least 4 characters')
+      throw new Error('Пароль должен содержать не менее 4 символов')
     }
 
     const passwordHash = hashPassword(params.newPassword)
@@ -178,23 +180,23 @@ export class AuthService {
     const username = params.username.trim()
 
     if (!username) {
-      throw new Error('Username is required')
+      throw new Error('Укажите логин')
     }
 
     if (!params.password || params.password.length < 4) {
-      throw new Error('Password must contain at least 4 characters')
+      throw new Error('Пароль должен содержать не менее 4 символов')
     }
 
     if (!this.authRepository.roleExists(params.roleId)) {
-      throw new Error('Role not found')
+      throw new Error('Роль не найдена')
     }
 
     if (!allowedProfileTypes.includes(params.profileType)) {
-      throw new Error('Invalid profile type')
+      throw new Error('Некорректный тип профиля')
     }
 
     if (!Number.isInteger(params.profileId) || params.profileId < 0) {
-      throw new Error('Invalid profile id')
+      throw new Error('Некорректный идентификатор профиля')
     }
   }
 }

@@ -11,6 +11,8 @@ interface SqlWhereResult {
   params: Record<string, unknown>
 }
 
+const maxAdminCrudPageSize = 50000
+
 export class AdminCrudRepository {
   constructor(private readonly database: Database.Database) {}
 
@@ -253,5 +255,5 @@ function normalizePageSize(pageSize?: number): number {
     return 20
   }
 
-  return Math.min(Math.floor(pageSize), 10000)
+  return Math.min(Math.floor(pageSize), maxAdminCrudPageSize)
 }

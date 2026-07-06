@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { AuthUser, LoginParams } from '../../../../shared/types/auth'
 
@@ -22,7 +22,7 @@ const authTokenStorageKey = 'university-manager.auth-token'
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(authTokenStorageKey))
   const [status, setStatus] = useState<AuthStatus>('loading')
@@ -60,7 +60,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   useEffect(() => {
-    void refreshUser()
+    const timeoutId = window.setTimeout(() => {
+      void refreshUser()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [refreshUser])
 
   const login = useCallback(async (params: LoginParams) => {
@@ -76,15 +80,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = useCallback(async () => {
     const storedToken = localStorage.getItem(authTokenStorageKey)
 
-    if (storedToken) {
-      await window.api.auth.logout({ token: storedToken })
+    try {
+      if (storedToken) {
+        await window.api.auth.logout({ token: storedToken })
+      }
+    } finally {
+      localStorage.removeItem(authTokenStorageKey)
+      setToken(null)
+      setUser(null)
+      setStatus('unauthenticated')
     }
-
-    localStorage.removeItem(authTokenStorageKey)
-
-    setToken(null)
-    setUser(null)
-    setStatus('unauthenticated')
   }, [])
 
   const value = useMemo<AuthContextValue>(
@@ -103,6 +108,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+// Хук намеренно экспортируется рядом с провайдером: это единая точка auth-контекста.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext)
 

@@ -11,18 +11,10 @@ export interface AdminCrudEntityConfig {
   supportsArchive: boolean
 }
 
-const commonSystemColumns = ['id', 'created_at', 'updated_at', 'is_archived']
-
 export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = {
   faculties: entity(
     'faculties',
-    [
-      'name',
-      'short_name',
-      'description',
-      'dean_teacher_id',
-      'deputy_dean_teacher_id'
-    ],
+    ['name', 'short_name', 'description', 'dean_teacher_id', 'deputy_dean_teacher_id'],
     ['name', 'short_name']
   ),
   departments: entity(
@@ -196,7 +188,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
 
   audiences: entity(
     'audiences',
-    ['audience_type_id', 'building_id', 'name', 'capacity', 'note'],
+    ['audience_type_id', 'building_id', 'name', 'floor', 'capacity', 'note'],
     ['name', 'note']
   ),
 
@@ -339,15 +331,24 @@ function entity(
   searchableColumns: string[],
   options?: Partial<Pick<AdminCrudEntityConfig, 'hasUpdatedAt' | 'supportsArchive'>>
 ): AdminCrudEntityConfig {
+  const hasUpdatedAt = options?.hasUpdatedAt ?? true
+  const supportsArchive = options?.supportsArchive ?? true
+  const systemColumns = [
+    'id',
+    'created_at',
+    ...(hasUpdatedAt ? ['updated_at'] : []),
+    ...(supportsArchive ? ['is_archived'] : [])
+  ]
+
   return {
     key: tableName,
     tableName,
     primaryKey: 'id',
-    allowedColumns: [...commonSystemColumns, ...editableColumns],
+    allowedColumns: [...systemColumns, ...editableColumns],
     searchableColumns,
     defaultOrderBy: 'id',
-    hasUpdatedAt: options?.hasUpdatedAt ?? true,
-    supportsArchive: options?.supportsArchive ?? true
+    hasUpdatedAt,
+    supportsArchive
   }
 }
 
