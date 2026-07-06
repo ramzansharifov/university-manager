@@ -1,37 +1,21 @@
-@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
 @find
-  const watchedFormValues = form.watch()
+      <Dialog open={gradeDialogOpen} onOpenChange={setGradeDialogOpen}>
+        <DialogContent>
 @endfind
 @with
-  // React Hook Form watch() is intentionally used here for dynamic admin CRUD fields.
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const watchedFormValues = form.watch()
-@endwith
-@end
+      <Dialog open={gradeDialogOpen} onOpenChange={setGradeDialogOpen}>
+        <DialogContent
+          onInteractOutside={(event) => {
+            const target = event.target
 
-@replace-all src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-  }, [entity, page, search, filtersKey, orderBy, orderDirection])
-@endfind
-@with
-  // filtersKey intentionally tracks filters by value to avoid unstable object dependencies.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity, page, search, filtersKey, orderBy, orderDirection])
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx
-@find
-    [
-      teacherCandidatePool,
-      teacherSearch.name,
-      teacherSearch.department_id,
-      teacherSearch.status_id,
-      teacherSearch.contact,
-      teacherSearch.subject
-    ]
-@endfind
-@with
-    [teacherCandidatePool, teacherSearch]
+            if (
+              target instanceof HTMLElement &&
+              target.closest('[data-university-manager-select-content]')
+            ) {
+              event.preventDefault()
+            }
+          }}
+        >
 @endwith
 @end

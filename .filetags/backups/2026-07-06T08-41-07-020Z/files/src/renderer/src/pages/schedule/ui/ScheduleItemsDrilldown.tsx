@@ -903,18 +903,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
       ) : null}
 
       <Dialog open={gradeDialogOpen} onOpenChange={setGradeDialogOpen}>
-        <DialogContent
-          onInteractOutside={(event) => {
-            const target = event.target
-
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
-        >
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Добавить оценочный элемент</DialogTitle>
             <DialogDescription>
