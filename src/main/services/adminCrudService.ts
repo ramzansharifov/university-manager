@@ -33,6 +33,10 @@ export class AdminCrudService {
   }
 
   create(params: AdminCrudCreateParams): AdminCrudOperationResult {
+    if (params.entity === 'department_faculties') {
+      return this.createOrRestoreDepartmentFacultyLink(params.data)
+    }
+
     const config = getAdminCrudEntityConfig(params.entity)
     const preparedData = this.prepareDataForSave(params.entity, params.data)
     const created = this.repository.create(config, preparedData)
@@ -50,6 +54,87 @@ export class AdminCrudService {
     return {
       success: true,
       item: finalItem
+    }
+  }
+
+  private createOrRestoreDepartmentFacultyLink(data: AdminCrudRecord): AdminCrudOperationResult {
+    const departmentId = normalizeNullableNumber(data.department_id)
+    const facultyId = normalizeNullableNumber(data.faculty_id)
+
+    if (departmentId === null || facultyId === null) {
+      throw new Error('Для связи кафедры с факультетом необходимо указать оба значения')
+    }
+
+    this.ensureActiveRelatedRecord(
+      'departments',
+      departmentId,
+      'Выбранная кафедра не найдена или архивирована'
+    )
+    this.ensureActiveRelatedRecord(
+      'faculties',
+      facultyId,
+      'Выбранный факультет не найден или архивирован'
+    )
+
+    const config = getAdminCrudEntityConfig('department_faculties')
+    const existingRecords = this.repository.list(config, {
+      entity: 'department_faculties',
+      page: 1,
+      pageSize: 50000,
+      includeArchived: true,
+      orderBy: 'id',
+      orderDirection: 'asc',
+      filters: {
+        department_id: departmentId,
+        faculty_id: facultyId
+      }
+    }).items
+    const active = existingRecords.find((record) => Number(record.is_archived) !== 1)
+
+    if (active) {
+      return {
+        success: true,
+        item: active
+      }
+    }
+
+    const archived = existingRecords[0]
+
+    if (archived) {
+      const restored = this.repository.restore(config, Number(archived.id))
+
+      this.auditService.write({
+        action: 'restore',
+        module: 'admin_crud',
+        entityName: 'department_faculties',
+        entityId: Number(restored.id),
+        before: archived,
+        after: restored
+      })
+
+      return {
+        success: true,
+        item: restored
+      }
+    }
+
+    const created = this.repository.create(config, {
+      department_id: departmentId,
+      faculty_id: facultyId
+    })
+
+    this.auditService.write({
+      action: 'create',
+      module: 'admin_crud',
+      entityName: 'department_faculties',
+      entityId: Number(created.id),
+      before: null,
+      after: created
+    })
+
+    return {
+      success: true,
+      item: created
     }
   }
 

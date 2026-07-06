@@ -3,8 +3,6 @@ import { app } from 'electron'
 import { existsSync, readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 
-const fkDisabledMigrations = new Set(['008_refactor_departments_and_specialties.sql'])
-
 export function runMigrations(database: Database.Database): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -44,28 +42,9 @@ export function runMigrations(database: Database.Database): void {
 
     const filePath = join(migrationsDirectory, fileName)
     const sql = readFileSync(filePath, 'utf8')
-    const needsFkDisabled = fkDisabledMigrations.has(fileName)
-
     try {
-      if (needsFkDisabled) {
-        database.pragma('foreign_keys = OFF')
-      }
-
       migrationTransaction(fileName, sql)
-
-      if (needsFkDisabled) {
-        database.pragma('foreign_keys = ON')
-        database.pragma('foreign_key_check')
-      }
     } catch (error) {
-      if (needsFkDisabled) {
-        try {
-          database.pragma('foreign_keys = ON')
-        } catch {
-          // ignore
-        }
-      }
-
       const message = error instanceof Error ? error.message : String(error)
 
       throw new Error(`Не удалось применить миграцию ${fileName}: ${message}`, {

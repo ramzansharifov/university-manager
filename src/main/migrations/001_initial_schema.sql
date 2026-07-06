@@ -57,8 +57,7 @@ CREATE TABLE IF NOT EXISTS department_faculties (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
-  FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE CASCADE,
-  UNIQUE (department_id, faculty_id)
+  FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS specialties (
@@ -563,6 +562,9 @@ CREATE TABLE IF NOT EXISTS app_settings (
 CREATE INDEX IF NOT EXISTS idx_specialties_faculty ON specialties (faculty_id);
 CREATE INDEX IF NOT EXISTS idx_department_faculties_department ON department_faculties (department_id);
 CREATE INDEX IF NOT EXISTS idx_department_faculties_faculty ON department_faculties (faculty_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_department_faculties_active_unique
+ON department_faculties (department_id, faculty_id)
+WHERE is_archived = 0;
 CREATE INDEX IF NOT EXISTS idx_positions_division ON positions (division_id);
 
 CREATE INDEX IF NOT EXISTS idx_students_group ON students (group_id);

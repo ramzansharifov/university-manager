@@ -96,6 +96,20 @@ export function validateDatabaseSchema(database: Database.Database): void {
     )
   }
 
+  if (departmentColumns.has('faculty_id')) {
+    throw new Error(
+      'Таблица "departments" всё ещё содержит legacy-поле "faculty_id" после schema repair'
+    )
+  }
+
+  const specialtyColumns = getTableColumns(database, 'specialties')
+
+  if (specialtyColumns.has('department_id')) {
+    throw new Error(
+      'Таблица "specialties" всё ещё содержит legacy-поле "department_id" после schema repair'
+    )
+  }
+
   const dfColumns = getTableColumns(database, 'department_faculties')
   const requiredDfColumns = ['id', 'department_id', 'faculty_id'].filter(
     (column) => !dfColumns.has(column)
