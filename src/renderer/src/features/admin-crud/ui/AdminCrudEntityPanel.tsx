@@ -320,8 +320,8 @@ export function AdminCrudEntityPanel({
     } finally {
       setIsLoading(false)
     }
-  // filtersKey intentionally tracks filters by value to avoid unstable object dependencies.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // filtersKey intentionally tracks filters by value to avoid unstable object dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity, page, search, filtersKey, orderBy, orderDirection])
 
   useEffect(() => {
