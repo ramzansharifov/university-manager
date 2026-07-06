@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-07-06T05:51:25.573Z",
+  "backupPath": ".filetags/backups/2026-07-06T05-51-25-558Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/roles/roleRepository.ts",
+      "backupRelativePath": "files/src/main/roles/roleRepository.ts"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/main/database/schemaValidation.ts\n   found: no\n   old: 171 line(s)\n   new: 171 line(s)",
+    "Replace file: src/main/roles/roleRepository.ts\n   found: yes\n   old: 257 line(s)\n   new: 257 line(s)"
+  ]
+}

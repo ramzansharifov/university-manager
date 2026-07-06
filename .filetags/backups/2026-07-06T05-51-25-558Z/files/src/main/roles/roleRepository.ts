@@ -14,7 +14,7 @@ interface RoleRow {
   name: string
   description: string | null
   is_system: number
-
+  is_archived: number
   created_at: string
   updated_at: string
 }
