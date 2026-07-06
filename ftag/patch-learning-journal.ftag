@@ -1,53 +1,9 @@
 @replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
 @find
-import { FiArchive, FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiUser } from 'react-icons/fi'
+          onDelete={onArchive}
 @endfind
 @with
-import { FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiTrash2, FiUser } from 'react-icons/fi'
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
-@find
-            canEdit,
-            canArchive,
-            openCreateDialog,
-            openEditDialog,
-            requestArchive
-@endfind
-@with
-            canEdit,
-            canDelete,
-            openCreateDialog,
-            openEditDialog,
-            requestDelete
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
-@find
-              canArchive={canArchive}
-@endfind
-@with
-              canDelete={canDelete}
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
-@find
-              onArchive={requestArchive}
-@endfind
-@with
-              onDelete={requestDelete}
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
-@find
-  canArchive,
-@endfind
-@with
-  canDelete,
+          onDelete={onDelete}
 @endwith
 @end
 
@@ -62,65 +18,9 @@ import { FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiTrash2, FiUser } fr
 
 @replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
 @find
-  canArchive: boolean
-@endfind
-@with
-  canDelete: boolean
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
-@find
   onArchive: (record: AdminCrudRecord) => void
 @endfind
 @with
   onDelete: (record: AdminCrudRecord) => void
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
-@find
-          canArchive={canArchive}
-@endfind
-@with
-          canDelete={canDelete}
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
-@find
-          onArchive={onArchive}
-@endfind
-@with
-          onDelete={onDelete}
-@endwith
-@end
-
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
-@find
-                  {canArchive ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      title="Архивировать"
-                      aria-label="Архивировать занятие"
-                      onClick={() => onArchive(item)}
-                    >
-                      <FiArchive />
-                    </Button>
-                  ) : null}
-@endfind
-@with
-                  {canDelete ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      title="Удалить безвозвратно"
-                      aria-label="Удалить занятие безвозвратно"
-                      onClick={() => onDelete(item)}
-                    >
-                      <FiTrash2 />
-                    </Button>
-                  ) : null}
 @endwith
 @end

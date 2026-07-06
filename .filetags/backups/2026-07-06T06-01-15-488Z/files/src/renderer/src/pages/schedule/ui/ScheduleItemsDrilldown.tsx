@@ -1147,7 +1147,7 @@ function ScheduleWeekBoard({
           canCreate={canCreate}
           onCreate={onCreateDay}
           onEdit={onEdit}
-          onDelete={onDelete}
+          onDelete={onArchive}
         />
       ))}
     </div>
