@@ -222,7 +222,14 @@ export function RequiredStaffPanel() {
 
   const teacherCandidates = useMemo(
     () => filterTeacherCandidates(teacherCandidatePool, teacherSearch),
-    [teacherCandidatePool, teacherSearch]
+    [
+      teacherCandidatePool,
+      teacherSearch.name,
+      teacherSearch.department_id,
+      teacherSearch.status_id,
+      teacherSearch.contact,
+      teacherSearch.subject
+    ]
   )
 
   useEffect(() => {

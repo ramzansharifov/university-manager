@@ -198,8 +198,6 @@ export function AdminCrudEntityPanel({
     defaultValues: emptyFormData
   })
 
-  // React Hook Form watch() is intentionally used here for dynamic admin CRUD fields.
-  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedFormValues = form.watch()
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -320,8 +318,6 @@ export function AdminCrudEntityPanel({
     } finally {
       setIsLoading(false)
     }
-  // filtersKey intentionally tracks filters by value to avoid unstable object dependencies.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity, page, search, filtersKey, orderBy, orderDirection])
 
   useEffect(() => {
