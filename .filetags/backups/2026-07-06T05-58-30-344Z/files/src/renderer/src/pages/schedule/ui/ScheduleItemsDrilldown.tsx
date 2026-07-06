@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
-import { FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiTrash2, FiUser } from 'react-icons/fi'
+import { FiArchive, FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiUser } from 'react-icons/fi'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { resolveGroupAcademicYearId } from '../../../shared/lib/academicYear'
@@ -873,17 +873,17 @@ export function ScheduleItemsDrilldown(): ReactElement {
             isLoading,
             emptyMessage,
             canEdit,
-            canDelete,
+            canArchive,
             openCreateDialog,
             openEditDialog,
-            requestDelete
+            requestArchive
           }) => (
             <ScheduleWeekBoard
               items={items}
               isLoading={isLoading}
               emptyMessage={emptyMessage}
               canEdit={canEdit}
-              canDelete={canDelete}
+              canArchive={canArchive}
               lessonPeriodById={lessonPeriodById}
               lessonPeriodNameById={lessonPeriodNameById}
               disciplineNameById={disciplineNameById}
@@ -896,7 +896,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
               canCreate={canCreateScheduleItem}
               onCreateDay={(dayNumber) => openCreateDialog({ day_of_week: dayNumber })}
               onEdit={openEditDialog}
-              onDelete={requestDelete}
+              onArchive={requestArchive}
             />
           )}
         />
@@ -1068,7 +1068,7 @@ function ScheduleWeekBoard({
   isLoading,
   emptyMessage,
   canEdit,
-  canDelete,
+  canArchive,
   lessonPeriodById,
   lessonPeriodNameById,
   disciplineNameById,
@@ -1081,13 +1081,13 @@ function ScheduleWeekBoard({
   canCreate,
   onCreateDay,
   onEdit,
-  onDelete
+  onArchive
 }: {
   items: AdminCrudRecord[]
   isLoading: boolean
   emptyMessage: string
   canEdit: boolean
-  canDelete: boolean
+  canArchive: boolean
   lessonPeriodById: Map<number, AdminCrudRecord>
   lessonPeriodNameById: Map<number, string>
   disciplineNameById: Map<number, string>
@@ -1100,7 +1100,7 @@ function ScheduleWeekBoard({
   canCreate: boolean
   onCreateDay: (dayNumber: number) => void
   onEdit: (record: AdminCrudRecord) => void
-  onDelete: (record: AdminCrudRecord) => void
+  onArchive: (record: AdminCrudRecord) => void
 }): ReactElement {
   if (isLoading) {
     return (
@@ -1135,7 +1135,7 @@ function ScheduleWeekBoard({
           items={itemsByDay.get(dayNumber) ?? []}
           emptyMessage={emptyMessage}
           canEdit={canEdit}
-          canDelete={canDelete}
+          canArchive={canArchive}
           lessonPeriodById={lessonPeriodById}
           lessonPeriodNameById={lessonPeriodNameById}
           disciplineNameById={disciplineNameById}
@@ -1147,7 +1147,7 @@ function ScheduleWeekBoard({
           canCreate={canCreate}
           onCreate={onCreateDay}
           onEdit={onEdit}
-          onDelete={onArchive}
+          onArchive={onArchive}
         />
       ))}
     </div>
@@ -1159,7 +1159,7 @@ function ScheduleDayCard({
   items,
   emptyMessage,
   canEdit,
-  canDelete,
+  canArchive,
   lessonPeriodById,
   lessonPeriodNameById,
   disciplineNameById,
@@ -1171,13 +1171,13 @@ function ScheduleDayCard({
   canCreate,
   onCreate,
   onEdit,
-  onDelete
+  onArchive
 }: {
   dayNumber: number
   items: AdminCrudRecord[]
   emptyMessage: string
   canEdit: boolean
-  canDelete: boolean
+  canArchive: boolean
   lessonPeriodById: Map<number, AdminCrudRecord>
   lessonPeriodNameById: Map<number, string>
   disciplineNameById: Map<number, string>
@@ -1189,7 +1189,7 @@ function ScheduleDayCard({
   canCreate: boolean
   onCreate: (dayNumber: number) => void
   onEdit: (record: AdminCrudRecord) => void
-  onDelete: (record: AdminCrudRecord) => void
+  onArchive: (record: AdminCrudRecord) => void
 }): ReactElement {
   return (
     <Card className="min-h-64 overflow-hidden">
@@ -1282,15 +1282,15 @@ function ScheduleDayCard({
                     </Button>
                   ) : null}
 
-                  {canDelete ? (
+                  {canArchive ? (
                     <Button
                       size="sm"
                       variant="ghost"
-                      title="Удалить безвозвратно"
-                      aria-label="Удалить занятие безвозвратно"
-                      onClick={() => onDelete(item)}
+                      title="Архивировать"
+                      aria-label="Архивировать занятие"
+                      onClick={() => onArchive(item)}
                     >
-                      <FiTrash2 />
+                      <FiArchive />
                     </Button>
                   ) : null}
                 </div>
