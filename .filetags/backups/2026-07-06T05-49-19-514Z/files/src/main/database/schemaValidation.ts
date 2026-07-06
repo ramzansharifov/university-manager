@@ -18,7 +18,7 @@ export function validateDatabaseSchema(database: Database.Database): void {
       config.primaryKey,
       'created_at',
       ...(config.hasUpdatedAt ? ['updated_at'] : []),
-
+      ...(config.supportsArchive ? ['is_archived'] : [])
     ]
     const configuredColumns = new Set([
       config.primaryKey,
@@ -126,13 +126,14 @@ export function validateDatabaseSchema(database: Database.Database): void {
 function validateSystemColumnConfig(
   tableName: string,
   allowedColumns: string[],
-  hasUpdatedAt: boolean
+  hasUpdatedAt: boolean,
+  supportsArchive: boolean
 ): void {
   const checks: Array<[column: string, expected: boolean]> = [
     ['id', true],
     ['created_at', true],
     ['updated_at', hasUpdatedAt],
-
+    ['is_archived', supportsArchive]
   ]
 
   const mismatches = checks

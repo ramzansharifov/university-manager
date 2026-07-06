@@ -1,6 +1,6 @@
 import type { AuditService } from '../audit/auditService'
 import type {
-
+  ArchiveRoleParams,
   CreateRoleParams,
   DeleteRoleParams,
   ListRolesParams,
@@ -19,8 +19,8 @@ export class RoleService {
     private readonly auditService: AuditService
   ) {}
 
-  listRoles(_params: ListRolesParams = {}): Role[] {
-    return this.roleRepository.listRoles()
+  listRoles(params: ListRolesParams = {}): Role[] {
+    return this.roleRepository.listRoles(params.includeArchived)
   }
 
   getRoleDetails(roleId: number): RoleDetails | null {
@@ -113,6 +113,27 @@ export class RoleService {
     }
   }
 
+  archiveRole(params: ArchiveRoleParams): RoleOperationResult {
+    const before = this.requireEditableRole(params.roleId)
+    this.ensureRoleIsNotAssigned(params.roleId)
+
+    const role = this.roleRepository.archiveRole(params.roleId)
+
+    this.auditService.write({
+      action: 'archive',
+      module: 'roles',
+      entityName: 'roles',
+      entityId: role.id,
+      before,
+      after: role
+    })
+
+    return {
+      success: true,
+      role
+    }
+  }
+
   deleteRole(params: DeleteRoleParams): RoleOperationResult {
     const before = this.requireEditableRole(params.roleId)
     this.ensureRoleIsNotAssigned(params.roleId)
@@ -151,7 +172,7 @@ export class RoleService {
     const usersCount = this.roleRepository.countUsersByRole(roleId)
 
     if (usersCount > 0) {
-      throw new Error('Cannot delete role assigned to users')
+      throw new Error('Cannot archive or delete role assigned to users')
     }
   }
 }

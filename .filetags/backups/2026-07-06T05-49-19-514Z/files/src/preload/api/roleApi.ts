@@ -1,6 +1,6 @@
 import { ipcRenderer } from 'electron'
 import type {
-
+  ArchiveRoleParams,
   CreateRoleParams,
   DeleteRoleParams,
   ListRolesParams,
@@ -35,6 +35,10 @@ export const roleApi = {
 
   setPermissions(params: SetRolePermissionsParams): Promise<RoleOperationResult> {
     return ipcRenderer.invoke('roles:setPermissions', params)
+  },
+
+  archive(params: ArchiveRoleParams): Promise<RoleOperationResult> {
+    return ipcRenderer.invoke('roles:archive', params)
   },
 
   delete(params: DeleteRoleParams): Promise<RoleOperationResult> {

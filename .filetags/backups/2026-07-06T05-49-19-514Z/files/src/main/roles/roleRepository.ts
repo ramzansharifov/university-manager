@@ -30,12 +30,13 @@ interface PermissionRow {
 export class RoleRepository {
   constructor(private readonly database: Database.Database) {}
 
-  listRoles(): Role[] {
+  listRoles(includeArchived = false): Role[] {
     const rows = this.database
       .prepare(
         `
         SELECT *
         FROM roles
+        ${includeArchived ? '' : 'WHERE is_archived = 0'}
         ORDER BY is_system DESC, name ASC
       `
       )
@@ -213,6 +214,28 @@ export class RoleRepository {
     transaction()
   }
 
+  archiveRole(roleId: number): RoleDetails {
+    this.database
+      .prepare(
+        `
+        UPDATE roles
+        SET
+          is_archived = 1,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `
+      )
+      .run(roleId)
+
+    const role = this.getRoleDetails(roleId)
+
+    if (!role) {
+      throw new Error('Archived role not found')
+    }
+
+    return role
+  }
+
   deleteRole(roleId: number): void {
     this.database.prepare('DELETE FROM roles WHERE id = ?').run(roleId)
   }
@@ -239,7 +262,7 @@ function mapRoleRow(row: RoleRow): Role {
     name: row.name,
     description: row.description,
     isSystem: row.is_system === 1,
-
+    isArchived: row.is_archived === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }

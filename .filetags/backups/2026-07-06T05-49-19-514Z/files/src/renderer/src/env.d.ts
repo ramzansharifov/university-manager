@@ -30,7 +30,7 @@ import type {
   UpdateAppSettingsResult
 } from '../../shared/types/settings'
 import type {
-
+  ArchiveRoleParams,
   CreateRoleParams,
   DeleteRoleParams,
   ListRolesParams,
@@ -77,7 +77,7 @@ declare global {
         create(params: CreateRoleParams): Promise<RoleOperationResult>
         update(params: UpdateRoleParams): Promise<RoleOperationResult>
         setPermissions(params: SetRolePermissionsParams): Promise<RoleOperationResult>
-
+        archive(params: ArchiveRoleParams): Promise<RoleOperationResult>
         delete(params: DeleteRoleParams): Promise<RoleOperationResult>
       }
 

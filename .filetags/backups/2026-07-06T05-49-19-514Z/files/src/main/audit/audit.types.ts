@@ -2,6 +2,7 @@ export type AuditAction =
   | 'create'
   | 'update'
   | 'delete'
+
   | 'login'
   | 'logout'
   | 'change_permissions'

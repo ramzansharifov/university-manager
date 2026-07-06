@@ -17,7 +17,7 @@ export interface Role {
   name: string
   description: string | null
   isSystem: boolean
-
+  isArchived: boolean
   createdAt: string
   updatedAt: string
 }
@@ -26,7 +26,9 @@ export interface RoleDetails extends Role {
   permissions: Permission[]
 }
 
-export type ListRolesParams = Record<string, never>
+export interface ListRolesParams {
+  includeArchived?: boolean
+}
 
 export interface CreateRoleParams {
   name: string
@@ -45,6 +47,9 @@ export interface SetRolePermissionsParams {
   permissionKeys: string[]
 }
 
+export interface ArchiveRoleParams {
+  roleId: number
+}
 
 export interface DeleteRoleParams {
   roleId: number

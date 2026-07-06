@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import type {
-
+  ArchiveRoleParams,
   CreateRoleParams,
   DeleteRoleParams,
   ListRolesParams,
@@ -44,6 +44,10 @@ export function registerRoleIpcHandlers(): void {
 
   ipcMain.handle('roles:setPermissions', (_event, params: SetRolePermissionsParams) => {
     return roleService.setRolePermissions(params)
+  })
+
+  ipcMain.handle('roles:archive', (_event, params: ArchiveRoleParams) => {
+    return roleService.archiveRole(params)
   })
 
   ipcMain.handle('roles:delete', (_event, params: DeleteRoleParams) => {

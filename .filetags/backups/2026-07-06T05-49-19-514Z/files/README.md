@@ -201,7 +201,6 @@ src/main/migrations/
 006_normalize_pass_fail_grade_element_types.sql
 007_remove_legacy_faculty_employee_assignments.sql
 008_refactor_departments_and_specialties.sql
-009_remove_admin_archive_api.sql
 ```
 
 `001` создаёт актуальную структуру новой базы: декан и заместитель декана хранятся в

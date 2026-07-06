@@ -8,7 +8,7 @@ export interface AdminCrudEntityConfig {
   searchableColumns: string[]
   defaultOrderBy: string
   hasUpdatedAt: boolean
-
+  supportsArchive: boolean
 }
 
 export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = {
@@ -215,7 +215,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['lesson_session_id', 'student_id', 'attendance_status_id', 'comment', 'marked_by_user_id'],
     ['comment'],
     {
-
+      supportsArchive: false
     }
   ),
 
@@ -260,7 +260,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['grade_item_id', 'student_id', 'score', 'comment', 'graded_by_user_id'],
     ['comment'],
     {
-
+      supportsArchive: false
     }
   ),
   lesson_completion_records: entity(
@@ -268,7 +268,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['lesson_session_id', 'status', 'topic_completed', 'comment', 'updated_by_user_id'],
     ['status', 'comment'],
     {
-
+      supportsArchive: false
     }
   ),
 
@@ -283,7 +283,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['permission_key', 'module', 'action', 'name'],
     {
       hasUpdatedAt: false,
-
+      supportsArchive: false
     }
   ),
   app_users: entity(
@@ -299,7 +299,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ],
     ['username', 'profile_type'],
     {
-
+      supportsArchive: false
     }
   ),
   audit_logs: entity(
@@ -308,7 +308,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['action', 'module', 'entity_name'],
     {
       hasUpdatedAt: false,
-
+      supportsArchive: false
     }
   ),
   app_settings: entity(
@@ -316,7 +316,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['setting_key', 'setting_value'],
     ['setting_key', 'setting_value'],
     {
-
+      supportsArchive: false
     }
   )
 }
@@ -325,10 +325,16 @@ function entity(
   tableName: AdminEntityKey,
   editableColumns: string[],
   searchableColumns: string[],
-  options?: Partial<Pick<AdminCrudEntityConfig, 'hasUpdatedAt'>>
+  options?: Partial<Pick<AdminCrudEntityConfig, 'hasUpdatedAt' | 'supportsArchive'>>
 ): AdminCrudEntityConfig {
   const hasUpdatedAt = options?.hasUpdatedAt ?? true
-  const systemColumns = ['id', 'created_at', ...(hasUpdatedAt ? ['updated_at'] : [])]
+  const supportsArchive = options?.supportsArchive ?? true
+  const systemColumns = [
+    'id',
+    'created_at',
+    ...(hasUpdatedAt ? ['updated_at'] : []),
+    ...(supportsArchive ? ['is_archived'] : [])
+  ]
 
   return {
     key: tableName,
@@ -337,7 +343,8 @@ function entity(
     allowedColumns: [...systemColumns, ...editableColumns],
     searchableColumns,
     defaultOrderBy: 'id',
-    hasUpdatedAt
+    hasUpdatedAt,
+    supportsArchive
   }
 }
 
