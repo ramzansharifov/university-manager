@@ -57,7 +57,8 @@ export function validateDatabaseSchema(database: Database.Database): void {
     validateSystemColumnConfig(
       config.tableName,
       config.allowedColumns,
-      config.hasUpdatedAt
+      config.hasUpdatedAt,
+      config.supportsArchive
     )
   })
 
