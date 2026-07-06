@@ -1,0 +1,21 @@
+{
+  "createdAt": "2026-07-06T06:06:54.546Z",
+  "backupPath": ".filetags/backups/2026-07-06T06-06-54-500Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/roles/roleService.ts",
+      "backupRelativePath": "files/src/main/roles/roleService.ts"
+    },
+    {
+      "originalPath": "src/main/ipc/roleIpc.ts",
+      "backupRelativePath": "files/src/main/ipc/roleIpc.ts"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/main/roles/roleService.ts\n   found: yes\n   old: 170 line(s)\n   new: 170 line(s)",
+    "Replace file: src/main/roles/roleService.ts\n   found: yes\n   old: 170 line(s)\n   new: 170 line(s)",
+    "Replace file: src/main/ipc/roleIpc.ts\n   found: yes\n   old: 53 line(s)\n   new: 53 line(s)",
+    "Replace file: src/main/ipc/roleIpc.ts\n   found: yes\n   old: 53 line(s)\n   new: 53 line(s)"
+  ]
+}

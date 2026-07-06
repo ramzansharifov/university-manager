@@ -3,7 +3,7 @@ import type {
 
   CreateRoleParams,
   DeleteRoleParams,
-
+  ListRolesParams,
   PermissionGroup,
   Role,
   RoleDetails,
@@ -19,7 +19,7 @@ export class RoleService {
     private readonly auditService: AuditService
   ) {}
 
-  listRoles(): Role[] {
+  listRoles(_params: ListRolesParams = {}): Role[] {
     return this.roleRepository.listRoles()
   }
 

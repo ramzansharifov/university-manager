@@ -3,7 +3,7 @@ import type {
 
   CreateRoleParams,
   DeleteRoleParams,
-
+  ListRolesParams,
   SetRolePermissionsParams,
   UpdateRoleParams
 } from '../../shared/types/roles'
@@ -22,8 +22,8 @@ export function registerRoleIpcHandlers(): void {
   const roleRepository = new RoleRepository(database)
   const roleService = new RoleService(roleRepository, auditService)
 
-  ipcMain.handle('roles:list', () => {
-    return roleService.listRoles()
+  ipcMain.handle('roles:list', (_event, params?: ListRolesParams) => {
+    return roleService.listRoles(params)
   })
 
   ipcMain.handle('roles:getDetails', (_event, roleId: number) => {

@@ -1,26 +1,43 @@
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@replace-all src/main/roles/roleService.ts
 @find
-          onDelete={onArchive}
+  ListRolesParams,
+
 @endfind
 @with
-          onDelete={onDelete}
 @endwith
 @end
 
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@replace-all src/main/roles/roleService.ts
 @find
-  onArchive
+  listRoles(_params: ListRolesParams = {}): Role[] {
+    return this.roleRepository.listRoles()
+  }
 @endfind
 @with
-  onDelete
+  listRoles(): Role[] {
+    return this.roleRepository.listRoles()
+  }
 @endwith
 @end
 
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@replace-all src/main/ipc/roleIpc.ts
 @find
-  onArchive: (record: AdminCrudRecord) => void
+  ListRolesParams,
+
 @endfind
 @with
-  onDelete: (record: AdminCrudRecord) => void
+@endwith
+@end
+
+@replace-all src/main/ipc/roleIpc.ts
+@find
+  ipcMain.handle('roles:list', (_event, params?: ListRolesParams) => {
+    return roleService.listRoles(params)
+  })
+@endfind
+@with
+  ipcMain.handle('roles:list', () => {
+    return roleService.listRoles()
+  })
 @endwith
 @end
