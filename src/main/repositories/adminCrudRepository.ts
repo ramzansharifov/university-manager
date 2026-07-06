@@ -167,6 +167,36 @@ export class AdminCrudRepository {
     return archived
   }
 
+  restore(config: AdminCrudEntityConfig, id: number): AdminCrudRecord {
+    if (!config.supportsArchive) {
+      throw new Error(`Entity "${config.key}" does not support restore operation`)
+    }
+
+    const setParts = ['is_archived = 0']
+
+    if (config.hasUpdatedAt) {
+      setParts.push('updated_at = CURRENT_TIMESTAMP')
+    }
+
+    this.database
+      .prepare(
+        `
+        UPDATE ${config.tableName}
+        SET ${setParts.join(', ')}
+        WHERE ${config.primaryKey} = ?
+      `
+      )
+      .run(id)
+
+    const restored = this.getById(config, id)
+
+    if (!restored) {
+      throw new Error('Restored record not found')
+    }
+
+    return restored
+  }
+
   delete(config: AdminCrudEntityConfig, id: number): void {
     this.database
       .prepare(

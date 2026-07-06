@@ -304,7 +304,10 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'is_active',
       'last_login_at'
     ],
-    ['username', 'profile_type']
+    ['username', 'profile_type'],
+    {
+      supportsArchive: false
+    }
   ),
   audit_logs: entity(
     'audit_logs',

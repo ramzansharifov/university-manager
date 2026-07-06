@@ -1,2 +1,4 @@
-ALTER TABLE faculties DROP COLUMN dean_employee_id;
-ALTER TABLE faculties DROP COLUMN deputy_dean_employee_id;
+-- Historical compatibility marker.
+-- Existing legacy columns are intentionally left untouched to avoid deleting user data.
+-- Backend and frontend ignore them; new databases never create them.
+SELECT 1;

@@ -3,8 +3,8 @@ CREATE TABLE IF NOT EXISTS faculties (
   name TEXT NOT NULL UNIQUE,
   short_name TEXT,
   description TEXT,
-  dean_employee_id INTEGER,
-  deputy_dean_employee_id INTEGER,
+  dean_teacher_id INTEGER,
+  deputy_dean_teacher_id INTEGER,
   is_archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

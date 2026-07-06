@@ -14,13 +14,20 @@ const requiredInfrastructureColumns: Record<string, string[]> = {
 export function validateDatabaseSchema(database: Database.Database): void {
   Object.values(adminCrudEntities).forEach((config) => {
     const columns = getTableColumns(database, config.tableName)
-    const requiredColumns = new Set([
+    const expectedSystemColumns = [
+      config.primaryKey,
+      'created_at',
+      ...(config.hasUpdatedAt ? ['updated_at'] : []),
+      ...(config.supportsArchive ? ['is_archived'] : [])
+    ]
+    const configuredColumns = new Set([
       config.primaryKey,
       config.defaultOrderBy,
       ...config.allowedColumns,
-      ...config.searchableColumns
+      ...config.searchableColumns,
+      ...expectedSystemColumns
     ])
-    const missingColumns = [...requiredColumns].filter((column) => !columns.has(column))
+    const missingColumns = [...configuredColumns].filter((column) => !columns.has(column))
 
     if (missingColumns.length > 0) {
       throw new Error(
@@ -28,6 +35,31 @@ export function validateDatabaseSchema(database: Database.Database): void {
           `Отсутствуют колонки: ${missingColumns.join(', ')}`
       )
     }
+
+    const invalidSearchColumns = config.searchableColumns.filter(
+      (column) => !config.allowedColumns.includes(column)
+    )
+
+    if (invalidSearchColumns.length > 0) {
+      throw new Error(
+        `Конфигурация таблицы "${config.tableName}" содержит недоступные колонки поиска: ` +
+          invalidSearchColumns.join(', ')
+      )
+    }
+
+    if (!config.allowedColumns.includes(config.defaultOrderBy)) {
+      throw new Error(
+        `Конфигурация таблицы "${config.tableName}" не разрешает сортировку по колонке ` +
+          `"${config.defaultOrderBy}"`
+      )
+    }
+
+    validateSystemColumnConfig(
+      config.tableName,
+      config.allowedColumns,
+      config.hasUpdatedAt,
+      config.supportsArchive
+    )
   })
 
   Object.entries(requiredInfrastructureColumns).forEach(([tableName, requiredColumns]) => {
@@ -42,27 +74,52 @@ export function validateDatabaseSchema(database: Database.Database): void {
     }
   })
 
+  getTableColumns(database, 'academic_vacations')
+
   const facultyColumns = getTableColumns(database, 'faculties')
-  const legacyFacultyColumns = ['dean_employee_id', 'deputy_dean_employee_id'].filter((column) =>
-    facultyColumns.has(column)
+  const missingFacultyColumns = ['dean_teacher_id', 'deputy_dean_teacher_id'].filter(
+    (column) => !facultyColumns.has(column)
   )
 
-  if (legacyFacultyColumns.length > 0) {
+  if (missingFacultyColumns.length > 0) {
     throw new Error(
-      `В таблице "faculties" остались устаревшие колонки: ${legacyFacultyColumns.join(', ')}`
+      `Таблица "faculties" не содержит актуальные поля руководителей: ` +
+        missingFacultyColumns.join(', ')
     )
   }
+}
 
-  const foreignKeyViolations = database.prepare('PRAGMA foreign_key_check').all()
+function validateSystemColumnConfig(
+  tableName: string,
+  allowedColumns: string[],
+  hasUpdatedAt: boolean,
+  supportsArchive: boolean
+): void {
+  const checks: Array<[column: string, expected: boolean]> = [
+    ['id', true],
+    ['created_at', true],
+    ['updated_at', hasUpdatedAt],
+    ['is_archived', supportsArchive]
+  ]
 
-  if (foreignKeyViolations.length > 0) {
-    throw new Error(`Проверка внешних ключей выявила нарушений: ${foreignKeyViolations.length}`)
+  const mismatches = checks
+    .filter(([column, expected]) => allowedColumns.includes(column) !== expected)
+    .map(
+      ([column, expected]) => `${column} (${expected ? 'ожидается' : 'не должна использоваться'})`
+    )
+
+  if (mismatches.length > 0) {
+    throw new Error(
+      `Некорректные системные колонки в admin CRUD для таблицы "${tableName}": ` +
+        mismatches.join(', ')
+    )
   }
 }
 
 function getTableColumns(database: Database.Database, tableName: string): Set<string> {
-  const safeTableName = quoteIdentifier(tableName)
-  const rows = database.prepare(`PRAGMA table_info(${safeTableName})`).all() as TableInfoRow[]
+  const rows = database
+    .prepare(`PRAGMA table_info(${quoteIdentifier(tableName)})`)
+    .all() as TableInfoRow[]
 
   if (rows.length === 0) {
     throw new Error(`Не найдена обязательная таблица "${tableName}"`)
