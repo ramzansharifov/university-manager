@@ -64,6 +64,7 @@ const resetTableOrder = [
   'academic_years',
 
   'specialties',
+  'department_faculties',
   'departments',
   'faculties',
 
@@ -693,7 +694,9 @@ function clampDate(date: Date, minDate: Date, maxDate: Date): Date {
 }
 
 function clampIsoDate(value: string, minValue: string, maxValue: string): string {
-  return formatIsoDate(clampDate(parseIsoDate(value), parseIsoDate(minValue), parseIsoDate(maxValue)))
+  return formatIsoDate(
+    clampDate(parseIsoDate(value), parseIsoDate(minValue), parseIsoDate(maxValue))
+  )
 }
 
 function normalizeVacationType(value: unknown): string | null {
@@ -812,11 +815,7 @@ function buildWeekPayloadsForRange(
 
   while (currentWeekStartDate.getTime() <= semesterEndDate.getTime()) {
     const calendarWeekEndDate = getCalendarWeekEndDate(currentWeekStartDate)
-    const currentWeekEndDate = clampDate(
-      calendarWeekEndDate,
-      currentWeekStartDate,
-      semesterEndDate
-    )
+    const currentWeekEndDate = clampDate(calendarWeekEndDate, currentWeekStartDate, semesterEndDate)
 
     payloads.push({
       semester_id: semesterId,

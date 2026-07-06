@@ -20,26 +20,19 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
   departments: entity(
     'departments',
     [
-      'faculty_id',
       'head_teacher_id',
       'deputy_head_teacher_id',
+      'applies_to_all_faculties',
       'name',
       'short_name',
       'description'
     ],
     ['name', 'short_name']
   ),
+  department_faculties: entity('department_faculties', ['department_id', 'faculty_id'], []),
   specialties: entity(
     'specialties',
-    [
-      'faculty_id',
-      'department_id',
-      'code',
-      'name',
-      'degree',
-      'study_duration_years',
-      'description'
-    ],
+    ['faculty_id', 'code', 'name', 'degree', 'study_duration_years', 'description'],
     ['code', 'name', 'degree']
   ),
   student_groups: entity(

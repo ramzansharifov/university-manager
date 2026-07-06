@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
 import { UniversityAdministrativeStructureDrilldown } from './ui/UniversityAdministrativeStructureDrilldown'
 import { UniversityStructureDrilldown } from './ui/UniversityStructureDrilldown'
+import { DepartmentsPanel } from './ui/DepartmentsPanel'
 
 export function UniversityPage() {
   return (
@@ -15,11 +16,16 @@ export function UniversityPage() {
       <Tabs defaultValue="structure">
         <TabsList>
           <TabsTrigger value="structure">Учебная структура</TabsTrigger>
+          <TabsTrigger value="departments">Кафедры</TabsTrigger>
           <TabsTrigger value="administration">Административная структура</TabsTrigger>
         </TabsList>
 
         <TabsContent value="structure">
           <UniversityStructureDrilldown />
+        </TabsContent>
+
+        <TabsContent value="departments">
+          <DepartmentsPanel />
         </TabsContent>
 
         <TabsContent value="administration">

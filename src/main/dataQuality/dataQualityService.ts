@@ -59,17 +59,19 @@ export class DataQualityService {
         id: 'faculties_without_departments',
         module: 'university',
         title: 'Факультеты без кафедр',
-        description: 'У факультета должна быть хотя бы одна кафедра.',
+        description:
+          'У факультета должна быть хотя бы одна кафедра (через привязку или «для всех факультетов»).',
         severity: 'warning',
         getCount: () => this.dataQualityRepository.countFacultiesWithoutDepartments()
       },
       {
-        id: 'departments_without_specialties',
+        id: 'departments_without_faculty_scope',
         module: 'university',
-        title: 'Кафедры без специальностей',
-        description: 'Кафедра должна быть связана хотя бы с одной специальностью.',
+        title: 'Кафедры без привязки к факультетам',
+        description:
+          'Кафедра должна быть привязана хотя бы к одному факультету или отмечена как «для всех факультетов».',
         severity: 'warning',
-        getCount: () => this.dataQualityRepository.countDepartmentsWithoutSpecialties()
+        getCount: () => this.dataQualityRepository.countDepartmentsWithoutFacultyScope()
       },
       {
         id: 'specialties_without_groups',

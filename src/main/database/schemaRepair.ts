@@ -22,12 +22,27 @@ const academicVacationsSql = `
   );
 `
 
+const departmentFacultiesSql = `
+  CREATE TABLE IF NOT EXISTS department_faculties (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    department_id INTEGER NOT NULL,
+    faculty_id INTEGER NOT NULL,
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+    FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE CASCADE,
+    UNIQUE (department_id, faculty_id)
+  );
+`
+
 /**
  * Repairs schema drift caused by manually or partially applied historical migrations.
  *
  * The repair is additive: it never removes tables, columns, or user records. Legacy
- * faculty employee columns may remain in upgraded databases, but application code
- * neither reads nor writes them.
+ * columns may remain in upgraded databases, but application code neither reads nor
+ * writes them.
  */
 export function repairDatabaseSchema(database: Database.Database): void {
   const repairTransaction = database.transaction(() => {
@@ -37,9 +52,33 @@ export function repairDatabaseSchema(database: Database.Database): void {
     if (tableExists(database, 'academic_years')) {
       database.exec(academicVacationsSql)
     }
+
+    if (tableExists(database, 'departments')) {
+      database.exec(departmentFacultiesSql)
+      ensureColumn(
+        database,
+        'departments',
+        'applies_to_all_faculties',
+        'INTEGER NOT NULL DEFAULT 0'
+      )
+      migrateLegacyDepartmentFacultyId(database)
+    }
   })
 
   repairTransaction()
+}
+
+function migrateLegacyDepartmentFacultyId(database: Database.Database): void {
+  if (!columnExists(database, 'departments', 'faculty_id')) {
+    return
+  }
+
+  database.exec(`
+    INSERT OR IGNORE INTO department_faculties (department_id, faculty_id)
+    SELECT d.id, d.faculty_id
+    FROM departments d
+    WHERE d.faculty_id IS NOT NULL
+  `)
 }
 
 function ensureColumn(
@@ -52,9 +91,7 @@ function ensureColumn(
     return
   }
 
-  const columns = getTableColumns(database, tableName)
-
-  if (columns.has(columnName)) {
+  if (columnExists(database, tableName, columnName)) {
     return
   }
 
@@ -69,6 +106,11 @@ function tableExists(database: Database.Database, tableName: string): boolean {
     .get(tableName)
 
   return Boolean(row)
+}
+
+function columnExists(database: Database.Database, tableName: string, columnName: string): boolean {
+  const columns = getTableColumns(database, tableName)
+  return columns.has(columnName)
 }
 
 function getTableColumns(database: Database.Database, tableName: string): Set<string> {

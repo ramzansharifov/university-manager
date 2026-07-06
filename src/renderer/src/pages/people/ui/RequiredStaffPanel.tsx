@@ -485,7 +485,7 @@ export function RequiredStaffPanel() {
             key={`groups-${refreshVersion}`}
             entity="student_groups"
             title="Кураторы групп"
-            description="Назначение куратора из списка преподавателей кафедры специальности группы."
+            description="Назначение куратора из списка преподавателей кафедр факультета специальности группы."
             createButtonLabel="Добавить группу"
             fields={groupFields}
             columns={groupColumns}
@@ -1075,19 +1075,7 @@ async function loadTeacherCandidates(
 ): Promise<AdminCrudRecord[]> {
   if (role.targetEntity === 'faculties') {
     const facultyId = normalizeRequiredNumber(record.id, 'У выбранного факультета нет ID')
-
-    const departments = await window.api.adminCrud.list({
-      entity: 'departments',
-      page: 1,
-      pageSize: 500,
-      filters: { faculty_id: facultyId },
-      orderBy: 'name',
-      orderDirection: 'asc'
-    })
-
-    const departmentIds = departments.items
-      .map((department) => normalizeOptionalNumber(String(department.id ?? '')))
-      .filter((departmentId): departmentId is number => departmentId !== null)
+    const departmentIds = await getDepartmentIdsForFaculty(facultyId)
 
     const candidateGroups = await Promise.all(
       departmentIds.map((departmentId) => loadTeachersByDepartment(departmentId))
@@ -1117,15 +1105,68 @@ async function loadTeacherCandidates(
       throw new Error('Специальность выбранной группы не найдена')
     }
 
-    const departmentId = normalizeRequiredNumber(
-      specialty.department_id,
-      'У специальности выбранной группы не указана кафедра'
+    const facultyId = normalizeRequiredNumber(
+      specialty.faculty_id,
+      'У специальности выбранной группы не указан факультет'
     )
 
-    return loadTeachersByDepartment(departmentId)
+    const departmentIds = await getDepartmentIdsForFaculty(facultyId)
+
+    if (departmentIds.length === 0) {
+      throw new Error('Для факультета специальности нет кафедр, из которых можно выбрать куратора')
+    }
+
+    const candidateGroups = await Promise.all(
+      departmentIds.map((departmentId) => loadTeachersByDepartment(departmentId))
+    )
+
+    return uniqueRecordsById(candidateGroups.flat())
   }
 
   return []
+}
+
+async function getDepartmentIdsForFaculty(facultyId: number): Promise<number[]> {
+  const [allDepartments, dfResult] = await Promise.all([
+    window.api.adminCrud.list({
+      entity: 'departments',
+      page: 1,
+      pageSize: 500,
+      orderBy: 'name',
+      orderDirection: 'asc'
+    }),
+    window.api.adminCrud.list({
+      entity: 'department_faculties',
+      page: 1,
+      pageSize: 5000,
+      orderBy: 'id',
+      orderDirection: 'asc'
+    })
+  ])
+
+  const linkedDepartmentIds = new Set<number>()
+
+  for (const df of dfResult.items) {
+    if (Number(df.is_archived) === 1) {
+      continue
+    }
+
+    if (Number(df.faculty_id) === facultyId) {
+      linkedDepartmentIds.add(Number(df.department_id))
+    }
+  }
+
+  for (const dept of allDepartments.items) {
+    if (Number(dept.is_archived) === 1) {
+      continue
+    }
+
+    if (Number(dept.applies_to_all_faculties) === 1) {
+      linkedDepartmentIds.add(Number(dept.id))
+    }
+  }
+
+  return Array.from(linkedDepartmentIds)
 }
 
 async function loadTeachersByDepartment(departmentId: number): Promise<AdminCrudRecord[]> {
@@ -1211,16 +1252,6 @@ function normalizeRequiredNumber(value: unknown, errorMessage: string): number {
   }
 
   return numberValue
-}
-
-function normalizeOptionalNumber(value: string): number | null {
-  if (!value.trim()) {
-    return null
-  }
-
-  const numberValue = Number(value)
-
-  return Number.isFinite(numberValue) ? numberValue : null
 }
 
 function createPersonOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {

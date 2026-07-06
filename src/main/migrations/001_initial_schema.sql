@@ -35,9 +35,9 @@ CREATE TABLE IF NOT EXISTS positions (
 
 CREATE TABLE IF NOT EXISTS departments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  faculty_id INTEGER NOT NULL,
   head_teacher_id INTEGER,
   deputy_head_teacher_id INTEGER,
+  applies_to_all_faculties INTEGER NOT NULL DEFAULT 0,
   name TEXT NOT NULL,
   short_name TEXT,
   description TEXT,
@@ -45,14 +45,25 @@ CREATE TABLE IF NOT EXISTS departments (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-  FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE RESTRICT,
-  UNIQUE (faculty_id, name)
+  UNIQUE (name)
+);
+
+CREATE TABLE IF NOT EXISTS department_faculties (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  department_id INTEGER NOT NULL,
+  faculty_id INTEGER NOT NULL,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+  FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE CASCADE,
+  UNIQUE (department_id, faculty_id)
 );
 
 CREATE TABLE IF NOT EXISTS specialties (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   faculty_id INTEGER NOT NULL,
-  department_id INTEGER NOT NULL,
   code TEXT,
   name TEXT NOT NULL,
   degree TEXT,
@@ -63,8 +74,7 @@ CREATE TABLE IF NOT EXISTS specialties (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE RESTRICT,
-  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT,
-  UNIQUE (department_id, name)
+  UNIQUE (faculty_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS dictionary_items (
@@ -550,9 +560,9 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_departments_faculty ON departments (faculty_id);
 CREATE INDEX IF NOT EXISTS idx_specialties_faculty ON specialties (faculty_id);
-CREATE INDEX IF NOT EXISTS idx_specialties_department ON specialties (department_id);
+CREATE INDEX IF NOT EXISTS idx_department_faculties_department ON department_faculties (department_id);
+CREATE INDEX IF NOT EXISTS idx_department_faculties_faculty ON department_faculties (faculty_id);
 CREATE INDEX IF NOT EXISTS idx_positions_division ON positions (division_id);
 
 CREATE INDEX IF NOT EXISTS idx_students_group ON students (group_id);

@@ -4,8 +4,6 @@ import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/a
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Button } from '../../../shared/ui'
 import {
-  createDepartmentColumns,
-  createDepartmentFields,
   createFacultyColumns,
   createFacultyFields,
   createGroupColumns,
@@ -21,7 +19,6 @@ import { StructureBreadcrumb } from './StructureBreadcrumb'
 
 export function UniversityStructureDrilldown() {
   const [selectedFaculty, setSelectedFaculty] = useState<AdminCrudRecord | null>(null)
-  const [selectedDepartment, setSelectedDepartment] = useState<AdminCrudRecord | null>(null)
   const [selectedSpecialty, setSelectedSpecialty] = useState<AdminCrudRecord | null>(null)
 
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
@@ -62,51 +59,20 @@ export function UniversityStructureDrilldown() {
   const facultyFields = useMemo(() => createFacultyFields(), [])
   const facultyColumns = useMemo(() => createFacultyColumns(teacherNameById), [teacherNameById])
 
-  const departmentFields = useMemo(() => createDepartmentFields(), [])
-  const departmentColumns = useMemo(
-    () => createDepartmentColumns(teacherNameById),
-    [teacherNameById]
-  )
-
-  const groupFields = useMemo(
-    () => createGroupFields(academicYearOptions),
-    [academicYearOptions]
-  )
+  const groupFields = useMemo(() => createGroupFields(academicYearOptions), [academicYearOptions])
   const groupColumns = useMemo(
     () => createGroupColumns(teacherNameById, academicYearNameById),
     [academicYearNameById, teacherNameById]
   )
 
-  const departmentFilters = useMemo(
-    () => (selectedFaculty ? { faculty_id: Number(selectedFaculty.id) } : undefined),
-    [selectedFaculty]
-  )
-
-  const departmentFixedData = useMemo(
-    () => (selectedFaculty ? { faculty_id: Number(selectedFaculty.id) } : undefined),
-    [selectedFaculty]
-  )
-
   const specialtyFilters = useMemo(
-    () =>
-      selectedFaculty && selectedDepartment
-        ? {
-            faculty_id: Number(selectedFaculty.id),
-            department_id: Number(selectedDepartment.id)
-          }
-        : undefined,
-    [selectedDepartment, selectedFaculty]
+    () => (selectedFaculty ? { faculty_id: Number(selectedFaculty.id) } : undefined),
+    [selectedFaculty]
   )
 
   const specialtyFixedData = useMemo(
-    () =>
-      selectedFaculty && selectedDepartment
-        ? {
-            faculty_id: Number(selectedFaculty.id),
-            department_id: Number(selectedDepartment.id)
-          }
-        : undefined,
-    [selectedDepartment, selectedFaculty]
+    () => (selectedFaculty ? { faculty_id: Number(selectedFaculty.id) } : undefined),
+    [selectedFaculty]
   )
 
   const groupFilters = useMemo(
@@ -121,12 +87,6 @@ export function UniversityStructureDrilldown() {
 
   function openFaculty(record: AdminCrudRecord) {
     setSelectedFaculty(record)
-    setSelectedDepartment(null)
-    setSelectedSpecialty(null)
-  }
-
-  function openDepartment(record: AdminCrudRecord) {
-    setSelectedDepartment(record)
     setSelectedSpecialty(null)
   }
 
@@ -136,12 +96,6 @@ export function UniversityStructureDrilldown() {
 
   function backToFaculties() {
     setSelectedFaculty(null)
-    setSelectedDepartment(null)
-    setSelectedSpecialty(null)
-  }
-
-  function backToDepartments() {
-    setSelectedDepartment(null)
     setSelectedSpecialty(null)
   }
 
@@ -153,18 +107,16 @@ export function UniversityStructureDrilldown() {
     <div className="grid gap-4">
       <StructureBreadcrumb
         faculty={selectedFaculty}
-        department={selectedDepartment}
         specialty={selectedSpecialty}
         onFacultiesClick={backToFaculties}
-        onDepartmentsClick={selectedFaculty ? backToDepartments : undefined}
-        onSpecialtiesClick={selectedDepartment ? backToSpecialties : undefined}
+        onSpecialtiesClick={selectedFaculty ? backToSpecialties : undefined}
       />
 
       {!selectedFaculty ? (
         <AdminCrudEntityPanel
           entity="faculties"
           title="Факультеты"
-          description="Выбери факультет, чтобы перейти к его кафедрам. Можно кликнуть по строке или нажать «Открыть»."
+          description="Выбери факультет, чтобы перейти к его специальностям. Можно кликнуть по строке или нажать «Открыть»."
           createButtonLabel="Добавить факультет"
           fields={facultyFields}
           columns={facultyColumns}
@@ -179,39 +131,17 @@ export function UniversityStructureDrilldown() {
         />
       ) : null}
 
-      {selectedFaculty && !selectedDepartment ? (
-        <AdminCrudEntityPanel
-          entity="departments"
-          title={`Кафедры: ${getRecordName(selectedFaculty)}`}
-          description="Кафедры выбранного факультета. Клик по кафедре откроет список специальностей."
-          createButtonLabel="Добавить кафедру"
-          fields={departmentFields}
-          columns={departmentColumns}
-          filters={departmentFilters}
-          fixedData={departmentFixedData}
-          emptyMessage="У этого факультета пока нет кафедр."
-          onAfterMutation={loadRelationOptions}
-          onRowClick={openDepartment}
-          extraRowActions={(record) => (
-            <Button size="sm" variant="primary" onClick={() => openDepartment(record)}>
-              Открыть
-              <FiArrowRight />
-            </Button>
-          )}
-        />
-      ) : null}
-
-      {selectedFaculty && selectedDepartment && !selectedSpecialty ? (
+      {selectedFaculty && !selectedSpecialty ? (
         <AdminCrudEntityPanel
           entity="specialties"
-          title={`Специальности: ${getRecordName(selectedDepartment)}`}
-          description="Специальности выбранной кафедры. Клик по специальности откроет список групп."
+          title={`Специальности: ${getRecordName(selectedFaculty)}`}
+          description="Специальности выбранного факультета. Клик по специальности откроет список групп."
           createButtonLabel="Добавить специальность"
           fields={specialtyFields}
           columns={specialtyColumns}
           filters={specialtyFilters}
           fixedData={specialtyFixedData}
-          emptyMessage="У этой кафедры пока нет специальностей."
+          emptyMessage="У этого факультета пока нет специальностей."
           onRowClick={openSpecialty}
           extraRowActions={(record) => (
             <Button size="sm" variant="primary" onClick={() => openSpecialty(record)}>
@@ -222,7 +152,7 @@ export function UniversityStructureDrilldown() {
         />
       ) : null}
 
-      {selectedFaculty && selectedDepartment && selectedSpecialty ? (
+      {selectedFaculty && selectedSpecialty ? (
         <AdminCrudEntityPanel
           entity="student_groups"
           title={`Группы: ${getRecordName(selectedSpecialty)}`}

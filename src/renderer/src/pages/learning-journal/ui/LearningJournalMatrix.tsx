@@ -487,9 +487,7 @@ export function LearningJournalMatrix(): ReactElement {
     }
   }, [activeTopicColumn, activeTopicColumnId])
 
-  const activeLessonCompleted = activeTopicColumn
-    ? isLessonCompleted(activeTopicColumn)
-    : false
+  const activeLessonCompleted = activeTopicColumn ? isLessonCompleted(activeTopicColumn) : false
   const activeLessonHasSavedDetails = activeTopicColumn
     ? hasSavedLessonDetails(activeTopicColumn)
     : false
@@ -562,9 +560,7 @@ export function LearningJournalMatrix(): ReactElement {
     )
   }
 
-  function getLessonCompletionRecord(
-    column: ScheduleJournalColumn
-  ): AdminCrudRecord | undefined {
+  function getLessonCompletionRecord(column: ScheduleJournalColumn): AdminCrudRecord | undefined {
     const session = getLessonSession(column)
 
     if (!session?.id) {
@@ -757,9 +753,7 @@ export function LearningJournalMatrix(): ReactElement {
       return false
     }
 
-    return Boolean(
-      String(session.topic ?? '').trim() || String(session.comment ?? '').trim()
-    )
+    return Boolean(String(session.topic ?? '').trim() || String(session.comment ?? '').trim())
   }
   function getLessonTeacherName(column: ScheduleJournalColumn): string {
     const session = getLessonSession(column)
@@ -808,12 +802,14 @@ export function LearningJournalMatrix(): ReactElement {
         }
       })
 
-      return result.item ?? {
-        ...existingSession,
-        topic,
-        comment,
-        status: 'held'
-      }
+      return (
+        result.item ?? {
+          ...existingSession,
+          topic,
+          comment,
+          status: 'held'
+        }
+      )
     }
 
     const weekId = toNumberOrNull(selectedWeek?.id)

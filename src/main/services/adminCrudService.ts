@@ -302,6 +302,15 @@ export class AdminCrudService {
     const deputyHeadTeacherId = normalizeNullableNumber(
       pickNextValue(nextData, before, 'deputy_head_teacher_id')
     )
+    const appliesToAll = normalizeNullableNumber(
+      pickNextValue(nextData, before, 'applies_to_all_faculties')
+    )
+
+    const name = String(nextData.name ?? before?.name ?? '').trim()
+
+    if (!name) {
+      throw new Error('Укажи название кафедры')
+    }
 
     if (
       headTeacherId !== null &&
@@ -355,6 +364,7 @@ export class AdminCrudService {
 
     return {
       ...nextData,
+      applies_to_all_faculties: appliesToAll === 1 ? 1 : 0,
       head_teacher_id: headTeacherId,
       deputy_head_teacher_id: deputyHeadTeacherId
     }
@@ -406,10 +416,10 @@ export class AdminCrudService {
       specialtyId,
       'Специальность группы не найдена или архивирована'
     )
-    const specialtyDepartmentId = normalizeNullableNumber(specialty.department_id)
+    const specialtyFacultyId = normalizeNullableNumber(specialty.faculty_id)
 
-    if (specialtyDepartmentId === null) {
-      throw new Error('У специальности группы не указана кафедра')
+    if (specialtyFacultyId === null) {
+      throw new Error('У специальности группы не указан факультет')
     }
 
     const curatorTeacher = this.ensureActiveRelatedRecord(
@@ -418,7 +428,7 @@ export class AdminCrudService {
       'Выбранный куратор группы не найден или архивирован'
     )
 
-    this.ensureTeacherBelongsToDepartment(curatorTeacher, specialtyDepartmentId, 'Куратор группы')
+    this.ensureTeacherBelongsToFaculty(curatorTeacher, specialtyFacultyId, 'Куратор группы')
 
     return {
       ...nextData,
@@ -694,9 +704,18 @@ export class AdminCrudService {
       throw new Error(`${roleTitle} привязан к несуществующей или архивированной кафедре`)
     }
 
-    const departmentFacultyId = normalizeNullableNumber(department.faculty_id)
+    if (Number(department.applies_to_all_faculties) === 1) {
+      return
+    }
 
-    if (departmentFacultyId !== facultyId) {
+    const dfRecords = this.listAllActiveRecords('department_faculties')
+    const hasLink = dfRecords.some(
+      (df) =>
+        normalizeNullableNumber(df.department_id) === teacherDepartmentId &&
+        normalizeNullableNumber(df.faculty_id) === facultyId
+    )
+
+    if (!hasLink) {
       throw new Error(`${roleTitle} должен относиться к кафедре выбранного факультета`)
     }
   }
@@ -1567,9 +1586,25 @@ export class AdminCrudService {
 
   private prepareSpecialtyData(data: AdminCrudRecord, before?: AdminCrudRecord): AdminCrudRecord {
     const nextData = { ...data }
+    const facultyId = normalizeNullableNumber(nextData.faculty_id ?? before?.faculty_id)
+    const name = String(nextData.name ?? before?.name ?? '').trim()
     const duration = normalizeNullableNumber(
       nextData.study_duration_years ?? before?.study_duration_years
     )
+
+    if (facultyId === null) {
+      throw new Error('Для специальности выбери факультет')
+    }
+
+    this.ensureActiveRelatedRecord(
+      'faculties',
+      facultyId,
+      'Выбранный факультет не найден или архивирован'
+    )
+
+    if (!name) {
+      throw new Error('Укажи название специальности')
+    }
 
     if (duration === null || duration < 1 || duration > 10) {
       throw new Error('Длительность обучения должна быть числом от 1 до 10 лет')
@@ -1577,6 +1612,7 @@ export class AdminCrudService {
 
     return {
       ...nextData,
+      faculty_id: facultyId,
       study_duration_years: Math.floor(duration)
     }
   }

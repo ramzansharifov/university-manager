@@ -98,7 +98,9 @@ export function GroupDisciplinesDrilldown() {
     const nextSubjectDepartmentIdById = createSubjectDepartmentMap(subjects.items)
 
     setSubjectOptions(createOptions(subjects.items, getRecordName))
-    setTeacherOptions(createTeacherOptions(teachers.items, nextDepartmentFacultyIdById, subjects.items))
+    setTeacherOptions(
+      createTeacherOptions(teachers.items, nextDepartmentFacultyIdById, subjects.items)
+    )
     setSemesterOptions(createOptions(semesters.items, getSemesterName))
     setCurriculumItems(curriculumItemsResult.items)
     setCurriculumPlans(curriculumPlansResult.items)
@@ -381,7 +383,10 @@ function createDepartmentSubjectKey(departmentId: number, subjectName: unknown):
 }
 
 function normalizeSubjectName(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
 }
 
 function toNumberOrNull(value: unknown): number | null {

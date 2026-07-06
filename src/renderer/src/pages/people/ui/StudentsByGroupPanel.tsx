@@ -4,7 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
-import { createOptionsMap, createStudentColumns, createStudentFields } from '../config/peopleCrudConfig'
+import {
+  createOptionsMap,
+  createStudentColumns,
+  createStudentFields
+} from '../config/peopleCrudConfig'
 import { createGroupColumns } from '../../university/config/universityCrudConfig'
 import { getRecordName } from '../lib/getRecordName'
 
@@ -175,10 +179,7 @@ export function StudentsByGroupPanel({ studentStatusOptions }: StudentsByGroupPa
 function createPersonOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
   return items.map((item) => ({
     value: String(item.id),
-    label: [item.last_name, item.first_name, item.middle_name]
-      .filter(Boolean)
-      .map(String)
-      .join(' ')
+    label: [item.last_name, item.first_name, item.middle_name].filter(Boolean).map(String).join(' ')
   }))
 }
 function StudentsBreadcrumb({

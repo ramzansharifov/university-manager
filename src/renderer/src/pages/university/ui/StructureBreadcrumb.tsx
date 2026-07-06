@@ -4,19 +4,15 @@ import { getRecordName } from '../lib/getRecordName'
 
 interface StructureBreadcrumbProps {
   faculty: AdminCrudRecord | null
-  department: AdminCrudRecord | null
   specialty: AdminCrudRecord | null
   onFacultiesClick: () => void
-  onDepartmentsClick?: () => void
   onSpecialtiesClick?: () => void
 }
 
 export function StructureBreadcrumb({
   faculty,
-  department,
   specialty,
   onFacultiesClick,
-  onDepartmentsClick,
   onSpecialtiesClick
 }: StructureBreadcrumbProps) {
   return (
@@ -31,23 +27,10 @@ export function StructureBreadcrumb({
             <BreadcrumbSeparator />
             <Button
               size="sm"
-              variant={department ? 'secondary' : 'primary'}
-              onClick={onDepartmentsClick}
-            >
-              {getRecordName(faculty)}
-            </Button>
-          </>
-        ) : null}
-
-        {department ? (
-          <>
-            <BreadcrumbSeparator />
-            <Button
-              size="sm"
               variant={specialty ? 'secondary' : 'primary'}
               onClick={onSpecialtiesClick}
             >
-              {getRecordName(department)}
+              {getRecordName(faculty)}
             </Button>
           </>
         ) : null}

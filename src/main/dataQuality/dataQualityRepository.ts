@@ -6,27 +6,36 @@ export class DataQualityRepository {
   countFacultiesWithoutDepartments(): number {
     return this.count(`
       SELECT COUNT(*) as total
-      FROM faculties
-      WHERE is_archived = 0
+      FROM faculties f
+      WHERE f.is_archived = 0
         AND NOT EXISTS (
           SELECT 1
-          FROM departments
-          WHERE departments.faculty_id = faculties.id
-            AND departments.is_archived = 0
+          FROM departments d
+          WHERE d.is_archived = 0
+            AND d.applies_to_all_faculties = 1
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM department_faculties df
+          JOIN departments d ON d.id = df.department_id
+          WHERE df.faculty_id = f.id
+            AND df.is_archived = 0
+            AND d.is_archived = 0
         )
     `)
   }
 
-  countDepartmentsWithoutSpecialties(): number {
+  countDepartmentsWithoutFacultyScope(): number {
     return this.count(`
       SELECT COUNT(*) as total
-      FROM departments
-      WHERE is_archived = 0
+      FROM departments d
+      WHERE d.is_archived = 0
+        AND d.applies_to_all_faculties = 0
         AND NOT EXISTS (
           SELECT 1
-          FROM specialties
-          WHERE specialties.department_id = departments.id
-            AND specialties.is_archived = 0
+          FROM department_faculties df
+          WHERE df.department_id = d.id
+            AND df.is_archived = 0
         )
     `)
   }

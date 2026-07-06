@@ -1,6 +1,7 @@
 export type AdminEntityKey =
   | 'faculties'
   | 'departments'
+  | 'department_faculties'
   | 'specialties'
   | 'student_groups'
   | 'divisions'

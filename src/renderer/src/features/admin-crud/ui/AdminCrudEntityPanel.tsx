@@ -139,6 +139,8 @@ interface AdminCrudEntityPanelProps {
   onRowClick?: (record: AdminCrudRecord) => void
   extraRowActions?: (record: AdminCrudRecord) => ReactNode
   onAfterMutation?: () => void | Promise<void>
+  onCreateClick?: () => void
+  onEditClick?: (record: AdminCrudRecord) => void
 }
 type DialogMode = 'create' | 'edit'
 
@@ -167,7 +169,9 @@ export function AdminCrudEntityPanel({
   renderRowGroupHeader,
   onRowClick,
   extraRowActions,
-  onAfterMutation
+  onAfterMutation,
+  onCreateClick,
+  onEditClick
 }: AdminCrudEntityPanelProps) {
   const [items, setItems] = useState<AdminCrudRecord[]>([])
   const [total, setTotal] = useState(0)
@@ -507,7 +511,7 @@ export function AdminCrudEntityPanel({
               {headerActions}
 
               {canCreate ? (
-                <Button onClick={() => openCreateDialog()}>
+                <Button onClick={() => (onCreateClick ? onCreateClick() : openCreateDialog())}>
                   <FiPlus />
                   {createButtonLabel}
                 </Button>
@@ -640,7 +644,9 @@ export function AdminCrudEntityPanel({
                                 variant="secondary"
                                 title="Редактировать"
                                 aria-label="Редактировать запись"
-                                onClick={() => openEditDialog(record)}
+                                onClick={() =>
+                                  onEditClick ? onEditClick(record) : openEditDialog(record)
+                                }
                               >
                                 <FiEdit2 />
                               </Button>

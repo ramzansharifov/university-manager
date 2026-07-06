@@ -19,10 +19,7 @@ interface TeachersByDepartmentPanelProps {
 function createPersonOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
   return items.map((item) => ({
     value: String(item.id),
-    label: [item.last_name, item.first_name, item.middle_name]
-      .filter(Boolean)
-      .map(String)
-      .join(' ')
+    label: [item.last_name, item.first_name, item.middle_name].filter(Boolean).map(String).join(' ')
   }))
 }
 

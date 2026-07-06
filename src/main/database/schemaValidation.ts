@@ -87,6 +87,26 @@ export function validateDatabaseSchema(database: Database.Database): void {
         missingFacultyColumns.join(', ')
     )
   }
+
+  const departmentColumns = getTableColumns(database, 'departments')
+
+  if (!departmentColumns.has('applies_to_all_faculties')) {
+    throw new Error(
+      'Таблица "departments" не содержит обязательное поле "applies_to_all_faculties"'
+    )
+  }
+
+  const dfColumns = getTableColumns(database, 'department_faculties')
+  const requiredDfColumns = ['id', 'department_id', 'faculty_id'].filter(
+    (column) => !dfColumns.has(column)
+  )
+
+  if (requiredDfColumns.length > 0) {
+    throw new Error(
+      `Таблица "department_faculties" не содержит обязательные поля: ` +
+        requiredDfColumns.join(', ')
+    )
+  }
 }
 
 function validateSystemColumnConfig(
