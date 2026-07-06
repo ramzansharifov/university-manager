@@ -1,20 +1,6 @@
 @replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
 @find
         <DialogContent
-          onInteractOutside={(event) => {
-            const target = event.target
-
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
-        >
-@endfind
-@with
-        <DialogContent
           onPointerDownOutside={(event) => {
             const target = event.target
 
@@ -34,6 +20,23 @@
             ) {
               event.preventDefault()
             }
+          }}
+          onInteractOutside={(event) => {
+            const target = event.target
+
+            if (
+              target instanceof HTMLElement &&
+              target.closest('[data-university-manager-select-content]')
+            ) {
+              event.preventDefault()
+            }
+          }}
+        >
+@endfind
+@with
+        <DialogContent
+          onPointerDownOutside={(event) => {
+            event.preventDefault()
           }}
           onInteractOutside={(event) => {
             const target = event.target

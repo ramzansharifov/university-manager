@@ -905,7 +905,24 @@ export function ScheduleItemsDrilldown(): ReactElement {
       <Dialog open={gradeDialogOpen} onOpenChange={setGradeDialogOpen}>
         <DialogContent
           onPointerDownOutside={(event) => {
-            event.preventDefault()
+            const target = event.target
+
+            if (
+              target instanceof HTMLElement &&
+              target.closest('[data-university-manager-select-content]')
+            ) {
+              event.preventDefault()
+            }
+          }}
+          onFocusOutside={(event) => {
+            const target = event.target
+
+            if (
+              target instanceof HTMLElement &&
+              target.closest('[data-university-manager-select-content]')
+            ) {
+              event.preventDefault()
+            }
           }}
           onInteractOutside={(event) => {
             const target = event.target
