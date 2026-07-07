@@ -596,7 +596,7 @@ function targetIsInsideRadixSelectPortal(target: EventTarget | null | undefined)
 
   return Boolean(
     element.closest('[data-university-manager-select-content]') ||
-      element.querySelector('[data-university-manager-select-content]')
+    element.querySelector('[data-university-manager-select-content]')
   )
 }
 function RoleSelect({
