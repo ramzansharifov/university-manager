@@ -121,3 +121,14 @@ export function canAccessNavigationItem(user: AuthUser | null, item: AppNavigati
 
   return item.permissions.some((permission) => user.permissions.includes(permission))
 }
+
+  if (user.roleKey === 'super_admin') {
+    return true
+  }
+
+  if (!item.permissions || item.permissions.length === 0) {
+    return true
+  }
+
+  return item.permissions.some((permission) => user.permissions.includes(permission))
+}

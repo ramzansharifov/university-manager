@@ -1,332 +1,112 @@
-@folder src/renderer/src/shared/ui/switch
-
-@write src/renderer/src/shared/ui/switch/Switch.tsx
-import * as SwitchPrimitive from '@radix-ui/react-switch'
-import { forwardRef } from 'react'
-import { cn } from '../../lib/cn'
-
-export const Switch = forwardRef<
-  React.ElementRef<typeof SwitchPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>
->(({ className, ...props }, ref) => {
-  return (
-    <SwitchPrimitive.Root
-      ref={ref}
-      className={cn(
-        'inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent bg-[var(--color-border)] transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]',
-        'data-[state=checked]:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50',
-        className
-      )}
-      {...props}
-    >
-      <SwitchPrimitive.Thumb
-        className={cn(
-          'pointer-events-none block h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
-          'data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0'
-        )}
-      />
-    </SwitchPrimitive.Root>
-  )
-})
-
-Switch.displayName = SwitchPrimitive.Root.displayName
-@end
-
-@write src/renderer/src/shared/ui/switch/index.ts
-export { Switch } from './Switch'
-@end
-
-@insert-after-once src/renderer/src/shared/ui/index.ts
-@find
-export { Textarea } from './textarea'
-@endfind
-@content
-export { Switch } from './switch'
-@endcontent
-@end
-
-@replace-first src/renderer/src/pages/administration/ui/RolesAdministrationPanel.tsx
-@find
-  Input
-} from '../../../shared/ui'
-@endfind
-@with
-  Input,
-  Switch
-} from '../../../shared/ui'
-@endwith
-@end
-
-@replace-block src/renderer/src/pages/administration/ui/RolesAdministrationPanel.tsx
-@from
-                          <label className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-@endfrom
-@to
-                          </label>
-@endto
-@with
-                          <label className="flex items-center gap-3 text-sm text-[var(--color-text-muted)]">
-                            <Switch
-                              checked={groupIsSelected}
-                              disabled={!canEditCurrentRole}
-                              aria-label={`Переключить весь модуль ${moduleLabels[group.module] ?? group.module}`}
-                              onCheckedChange={() => togglePermissionGroup(group)}
-                            />
-                            Весь модуль
-                          </label>
-@endwith
-@end
-
-@replace-block src/renderer/src/pages/administration/ui/RolesAdministrationPanel.tsx
-@from
-                            <label
-                              key={permission.permissionKey}
-                              className="flex items-start gap-2 rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-                            >
-@endfrom
-@to
-                            </label>
-@endto
-@with
-                            <label
-                              key={permission.permissionKey}
-                              className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
-                            >
-                              <Switch
-                                checked={permissionKeySet.has(permission.permissionKey)}
-                                disabled={!canEditCurrentRole}
-                                aria-label={`Переключить право ${permission.permissionKey}`}
-                                onCheckedChange={() => togglePermission(permission.permissionKey)}
-                              />
-
-                              <span>
-                                <span className="block font-medium text-[var(--color-text)]">
-                                  {actionLabels[permission.action] ?? permission.action}
-                                </span>
-                                <span className="block text-xs text-[var(--color-text-muted)]">
-                                  {permission.permissionKey}
-                                </span>
-                              </span>
-                            </label>
-@endwith
-@end
-
-@folder src/renderer/src/shared/auth
-
-@write src/renderer/src/shared/auth/accessControl.ts
-import type { AuthUser } from '../../../../shared/types/auth'
-
-export type AccessModule =
-  | 'university'
-  | 'people'
-  | 'academic_calendar'
-  | 'academic_process'
-  | 'rooms_and_lessons'
-  | 'schedule'
-  | 'learning_journal'
-  | 'reports'
-  | 'administration'
-  | 'audit_log'
-  | 'settings'
-
-export type AccessAction = 'view' | 'create' | 'update' | 'delete'
-
-const teacherPermissions = [
-  'academic_process.view',
-  'schedule.view',
-  'learning_journal.view',
-  'learning_journal.create',
-  'learning_journal.update',
-  'reports.view'
-]
-
-const studentPermissions = [
-  'academic_process.view',
-  'schedule.view',
-  'learning_journal.view',
-  'reports.view'
-]
-
-export function isSuperAdmin(user: AuthUser | null): boolean {
-  return user?.roleKey === 'super_admin'
-}
-
-export function isSystemTeacher(user: AuthUser | null): boolean {
-  return user?.roleKey === 'teacher' && user.profileType === 'teacher'
-}
-
-export function isSystemStudent(user: AuthUser | null): boolean {
-  return user?.roleKey === 'student' && user.profileType === 'student'
-}
-
-export function getEffectivePermissions(user: AuthUser | null): string[] {
-  if (!user) {
-    return []
-  }
-
-  if (isSuperAdmin(user)) {
-    return ['*']
-  }
-
-  if (isSystemTeacher(user)) {
-    return teacherPermissions
-  }
-
-  if (isSystemStudent(user)) {
-    return studentPermissions
-  }
-
-  return user.permissions
-}
-
-export function hasPermission(user: AuthUser | null, permissionKey: string): boolean {
-  if (!user) {
-    return false
-  }
-
-  if (isSuperAdmin(user)) {
-    return true
-  }
-
-  return getEffectivePermissions(user).includes(permissionKey)
-}
-
-export function canPerformAction(
-  user: AuthUser | null,
-  module: AccessModule,
-  action: AccessAction
-): boolean {
-  return hasPermission(user, `${module}.${action}`)
-}
-
-export function canViewModule(user: AuthUser | null, module: AccessModule): boolean {
-  return canPerformAction(user, module, 'view')
-}
-
-export function canCreateInModule(user: AuthUser | null, module: AccessModule): boolean {
-  return canPerformAction(user, module, 'create')
-}
-
-export function canUpdateInModule(user: AuthUser | null, module: AccessModule): boolean {
-  return canPerformAction(user, module, 'update')
-}
-
-export function canDeleteFromModule(user: AuthUser | null, module: AccessModule): boolean {
-  return canPerformAction(user, module, 'delete')
-}
-@end
-
-@replace-first src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-import type { AuthUser } from '../../../../shared/types/auth'
-@endfind
-@with
+@write src/renderer/src/shared/navigation/appNavigation.tsx
+import type { ReactNode } from 'react'
+import {
+  FiActivity,
+  FiBarChart2,
+  FiBookOpen,
+  FiCalendar,
+  FiClipboard,
+  FiDatabase,
+  FiHome,
+  FiSettings,
+  FiShield,
+  FiUsers
+} from 'react-icons/fi'
 import type { AuthUser } from '../../../../shared/types/auth'
 import { canViewModule } from '../auth/accessControl'
 import type { AccessModule } from '../auth/accessControl'
-@endwith
-@end
 
-@replace-first src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-  permissions?: string[]
-@endfind
-@with
+export interface AppNavigationItem {
+  title: string
+  description: string
+  path: string
+  icon: ReactNode
   module?: AccessModule
   permissions?: string[]
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['settings.view']
-@endfind
-@with
-module: 'settings'
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['university.view']
-@endfind
-@with
-module: 'university'
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['people.view']
-@endfind
-@with
-module: 'people'
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['academic_process.view']
-@endfind
-@with
-module: 'academic_process'
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['schedule.view']
-@endfind
-@with
-module: 'schedule'
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['learning_journal.view']
-@endfind
-@with
-module: 'learning_journal'
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['reports.view']
-@endfind
-@with
-module: 'reports'
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['administration.view']
-@endfind
-@with
-module: 'administration'
-@endwith
-@end
-
-@replace-all src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-permissions: ['audit_log.view']
-@endfind
-@with
-module: 'audit_log'
-@endwith
-@end
-
-@replace-block src/renderer/src/shared/navigation/appNavigation.tsx
-@from
-export function canAccessNavigationItem(user: AuthUser | null, item: AppNavigationItem): boolean {
-@endfrom
-@to
 }
-@endto
-@with
+
+export const mainNavigationItems: AppNavigationItem[] = [
+  {
+    title: 'Главная',
+    description: 'Админ-центр и состояние системы',
+    path: '/',
+    icon: <FiHome />,
+    module: 'settings'
+  },
+  {
+    title: 'Университет',
+    description: 'Факультеты, кафедры, специальности, группы и подразделения',
+    path: '/university',
+    icon: <FiDatabase />,
+    module: 'university'
+  },
+  {
+    title: 'Люди',
+    description: 'Студенты, преподаватели и сотрудники',
+    path: '/people',
+    icon: <FiUsers />,
+    module: 'people'
+  },
+  {
+    title: 'Учебный процесс',
+    description: 'Предметы, учебные планы и дисциплины',
+    path: '/academic-process',
+    icon: <FiBookOpen />,
+    module: 'academic_process'
+  },
+  {
+    title: 'Расписание',
+    description: 'Пары, аудитории и расписание занятий',
+    path: '/schedule',
+    icon: <FiCalendar />,
+    module: 'schedule'
+  },
+  {
+    title: 'Журнал обучения',
+    description: 'Посещаемость, оценки и проведённые занятия',
+    path: '/learning-journal',
+    icon: <FiClipboard />,
+    module: 'learning_journal'
+  },
+  {
+    title: 'Отчёты',
+    description: 'Посещаемость, успеваемость и аналитика',
+    path: '/reports',
+    icon: <FiBarChart2 />,
+    module: 'reports'
+  }
+]
+
+export const systemNavigationItems: AppNavigationItem[] = [
+  {
+    title: 'Администрирование',
+    description: 'Пользователи, роли и права доступа',
+    path: '/administration',
+    icon: <FiShield />,
+    module: 'administration'
+  },
+  {
+    title: 'Журнал действий',
+    description: 'История важных изменений',
+    path: '/audit-log',
+    icon: <FiActivity />,
+    module: 'audit_log'
+  },
+  {
+    title: 'Настройки',
+    description: 'Тема, акцентный цвет и язык интерфейса',
+    path: '/settings',
+    icon: <FiSettings />,
+    module: 'settings'
+  }
+]
+
+export const allNavigationItems = [...mainNavigationItems, ...systemNavigationItems]
+
+export function getNavigationItemByPath(pathname: string): AppNavigationItem | undefined {
+  return allNavigationItems.find((item) => item.path === pathname)
+}
+
 export function canAccessNavigationItem(user: AuthUser | null, item: AppNavigationItem): boolean {
   if (!user) {
     return false
@@ -342,5 +122,4 @@ export function canAccessNavigationItem(user: AuthUser | null, item: AppNavigati
 
   return item.permissions.some((permission) => user.permissions.includes(permission))
 }
-@endwith
 @end

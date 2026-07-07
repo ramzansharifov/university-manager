@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-07-07T09:55:15.528Z",
+  "backupPath": ".filetags/backups/2026-07-07T09-55-15-492Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/shared/navigation/appNavigation.tsx",
+      "backupRelativePath": "files/src/renderer/src/shared/navigation/appNavigation.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Write file: src/renderer/src/shared/navigation/appNavigation.tsx\n   old: 135 line(s)\n   new: 123 line(s)"
+  ]
+}
