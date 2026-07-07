@@ -1,601 +1,878 @@
+@insert-after-once src/shared/types/adminCrud.ts
+@find
+export type SortDirection = 'asc' | 'desc'
+@endfind
+@content
+
+export type AdminCrudFilterValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Array<string | number | boolean>
+
+export type AdminCrudFilterRecord = Record<string, AdminCrudFilterValue>
+@endcontent
+@end
+
+@replace-first src/shared/types/adminCrud.ts
+@find
+  filters?: Record<string, string | number | boolean | null>
+@endfind
+@with
+  filters?: AdminCrudFilterRecord
+@endwith
+@end
+
+@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
+@find
+type AdminCrudFilterValue = string | number | boolean | null
+@endfind
+@with
+type AdminCrudFilterValue = string | number | boolean | null | Array<string | number | boolean>
+@endwith
+@end
+
+@replace-block src/main/repositories/adminCrudRepository.ts
+@from
+    if (params.filters) {
+@endfrom
+@to
+    return {
+      sql: conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '',
+      params: values
+    }
+@endto
+@with
+    if (params.filters) {
+      Object.entries(params.filters).forEach(([column, value], index) => {
+        if (!config.allowedColumns.includes(column) || value === undefined || value === null) {
+          return
+        }
+
+        if (Array.isArray(value)) {
+          const safeValues = value.filter((item) => item !== null && item !== undefined && item !== '')
+
+          if (safeValues.length === 0) {
+            conditions.push('1 = 0')
+            return
+          }
+
+          const keys = safeValues.map((_, itemIndex) => `filter_${index}_${itemIndex}`)
+
+          keys.forEach((key, itemIndex) => {
+            values[key] = safeValues[itemIndex]
+          })
+
+          conditions.push(`${column} IN (${keys.map((key) => `@${key}`).join(', ')})`)
+          return
+        }
+
+        if (value === '') {
+          return
+        }
+
+        const key = `filter_${index}`
+        conditions.push(`${column} = @${key}`)
+        values[key] = value
+      })
+    }
+
+    return {
+      sql: conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '',
+      params: values
+    }
+@endwith
+@end
+
+@replace-first src/main/admin/adminCrudEntities.ts
+@find
+    ['last_name', 'first_name', 'middle_name', 'email', 'phone', 'student_card_number']
+@endfind
+@with
+    [
+      'last_name',
+      'first_name',
+      'middle_name',
+      'email',
+      'phone',
+      'student_card_number',
+      'address',
+      'social_status',
+      'public_activity',
+      'transfer_info',
+      'note'
+    ]
+@endwith
+@end
+
 @write src/renderer/src/pages/filters/FilterStudentsPage.tsx
-import { FiUsers } from 'react-icons/fi'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '../../shared/ui'
-
-export function FilterStudentsPage() {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-          <FiUsers className="h-6 w-6" />
-        </div>
-
-        <CardTitle>Студенты</CardTitle>
-        <CardDescription>
-          Здесь будет общий список студентов с фильтрами по факультету, специальности, группе,
-          курсу, статусу и поиском по ФИО.
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent>
-        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-muted)]">
-          Следующим патчем наполним эту вкладку таблицей студентов и переходом на отдельную
-          страницу полного просмотра данных студента.
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-@end
-
-@write src/renderer/src/pages/filters/FilterTeachersPage.tsx
-import { FiUserCheck } from 'react-icons/fi'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '../../shared/ui'
-
-export function FilterTeachersPage() {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-          <FiUserCheck className="h-6 w-6" />
-        </div>
-
-        <CardTitle>Преподаватели</CardTitle>
-        <CardDescription>
-          Здесь позже появятся фильтры по кафедре, статусу, преподаваемым дисциплинам и поиску по
-          ФИО.
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent>
-        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-muted)]">
-          Вкладка подготовлена. Наполнение сделаем отдельным этапом после студентов.
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-@end
-
-@write src/renderer/src/pages/filters/FilterEmployeesPage.tsx
-import { FiBriefcase } from 'react-icons/fi'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '../../shared/ui'
-
-export function FilterEmployeesPage() {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-          <FiBriefcase className="h-6 w-6" />
-        </div>
-
-        <CardTitle>Сотрудники</CardTitle>
-        <CardDescription>
-          Здесь позже появятся фильтры по подразделению, должности, статусу и поиску по ФИО.
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent>
-        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-muted)]">
-          Вкладка подготовлена. Наполнение сделаем отдельным этапом после студентов.
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-@end
-
-@write src/renderer/src/pages/filters/FiltersPage.tsx
-import { FilterEmployeesPage } from './FilterEmployeesPage'
-import { FilterStudentsPage } from './FilterStudentsPage'
-import { FilterTeachersPage } from './FilterTeachersPage'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
-
-export function FiltersPage() {
-  return (
-    <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Фильтры</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Быстрый поиск больших сущностей и переход к их полной карточке.
-        </p>
-      </div>
-
-      <Tabs defaultValue="students">
-        <TabsList>
-          <TabsTrigger value="students">Студенты</TabsTrigger>
-          <TabsTrigger value="teachers">Преподаватели</TabsTrigger>
-          <TabsTrigger value="employees">Сотрудники</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="students">
-          <FilterStudentsPage />
-        </TabsContent>
-
-        <TabsContent value="teachers">
-          <FilterTeachersPage />
-        </TabsContent>
-
-        <TabsContent value="employees">
-          <FilterEmployeesPage />
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-@end
-
-@write src/renderer/src/app/router/AppRouter.tsx
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { MainLayout } from '../../layouts/MainLayout'
-import { AcademicProcessPage } from '../../pages/academic-process/AcademicProcessPage'
-import { AdministrationPage } from '../../pages/administration/AdministrationPage'
-import { AuditLogPage } from '../../pages/audit-log/AuditLogPage'
-import { AdminDashboardPage } from '../../pages/dashboard/AdminDashboardPage'
-import { FiltersPage } from '../../pages/filters/FiltersPage'
-import { LearningJournalPage } from '../../pages/learning-journal/LearningJournalPage'
-import { LoginPage } from '../../pages/login/LoginPage'
-import { PeoplePage } from '../../pages/people/PeoplePage'
-import { StudentDetailsPage } from '../../pages/people/StudentDetailsPage'
-import { ReportsPage } from '../../pages/reports/ReportsPage'
-import { SchedulePage } from '../../pages/schedule/SchedulePage'
-import { SettingsPage } from '../../pages/settings/SettingsPage'
-import { UniversityPage } from '../../pages/university/UniversityPage'
-import { RequireAuth } from './RequireAuth'
-
-export function AppRouter() {
-  return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-
-      <Route element={<RequireAuth />}>
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<AdminDashboardPage />} />
-          <Route path="/university" element={<UniversityPage />} />
-          <Route path="/people" element={<PeoplePage />} />
-          <Route path="/people/students/:studentId" element={<StudentDetailsPage />} />
-          <Route path="/filters" element={<FiltersPage />} />
-          <Route path="/filters/students" element={<Navigate to="/filters" replace />} />
-          <Route path="/filters/teachers" element={<Navigate to="/filters" replace />} />
-          <Route path="/filters/employees" element={<Navigate to="/filters" replace />} />
-          <Route path="/academic-process" element={<AcademicProcessPage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
-          <Route path="/learning-journal" element={<LearningJournalPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/administration" element={<AdministrationPage />} />
-          <Route path="/audit-log" element={<AuditLogPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-      </Route>
-
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  )
-}
-@end
-
-@write src/renderer/src/shared/navigation/appNavigation.tsx
-import type { ReactNode } from 'react'
-import {
-  FiActivity,
-  FiBarChart2,
-  FiBookOpen,
-  FiCalendar,
-  FiClipboard,
-  FiDatabase,
-  FiFilter,
-  FiHome,
-  FiSettings,
-  FiShield,
-  FiUsers
-} from 'react-icons/fi'
-import type { AuthUser } from '../../../../shared/types/auth'
-import { canViewModule } from '../auth/accessControl'
-import type { AccessModule } from '../auth/accessControl'
-
-export interface AppNavigationItem {
-  title: string
-  description: string
-  path: string
-  icon: ReactNode
-  module?: AccessModule
-  permissions?: string[]
-}
-
-export const mainNavigationItems: AppNavigationItem[] = [
-  {
-    title: 'Главная',
-    description: 'Админ-центр и состояние системы',
-    path: '/',
-    icon: <FiHome />,
-    module: 'settings'
-  },
-  {
-    title: 'Университет',
-    description: 'Факультеты, кафедры, специальности, группы и подразделения',
-    path: '/university',
-    icon: <FiDatabase />,
-    module: 'university'
-  },
-  {
-    title: 'Люди',
-    description: 'Студенты, преподаватели и сотрудники',
-    path: '/people',
-    icon: <FiUsers />,
-    module: 'people'
-  },
-  {
-    title: 'Фильтры',
-    description: 'Поиск студентов, преподавателей и сотрудников',
-    path: '/filters',
-    icon: <FiFilter />,
-    module: 'people'
-  },
-  {
-    title: 'Учебный процесс',
-    description: 'Предметы, учебные планы и дисциплины',
-    path: '/academic-process',
-    icon: <FiBookOpen />,
-    module: 'academic_process'
-  },
-  {
-    title: 'Расписание',
-    description: 'Пары, аудитории и расписание занятий',
-    path: '/schedule',
-    icon: <FiCalendar />,
-    module: 'schedule'
-  },
-  {
-    title: 'Журнал обучения',
-    description: 'Посещаемость, оценки и проведённые занятия',
-    path: '/learning-journal',
-    icon: <FiClipboard />,
-    module: 'learning_journal'
-  },
-  {
-    title: 'Отчёты',
-    description: 'Посещаемость, успеваемость и аналитика',
-    path: '/reports',
-    icon: <FiBarChart2 />,
-    module: 'reports'
-  }
-]
-
-export const systemNavigationItems: AppNavigationItem[] = [
-  {
-    title: 'Администрирование',
-    description: 'Пользователи, роли и права доступа',
-    path: '/administration',
-    icon: <FiShield />,
-    module: 'administration'
-  },
-  {
-    title: 'Журнал действий',
-    description: 'История важных изменений',
-    path: '/audit-log',
-    icon: <FiActivity />,
-    module: 'audit_log'
-  },
-  {
-    title: 'Настройки',
-    description: 'Тема, акцентный цвет и язык интерфейса',
-    path: '/settings',
-    icon: <FiSettings />,
-    module: 'settings'
-  }
-]
-
-export const allNavigationItems = [...mainNavigationItems, ...systemNavigationItems]
-
-export function getNavigationItemByPath(pathname: string): AppNavigationItem | undefined {
-  return allNavigationItems.find((item) => item.path === pathname)
-}
-
-export function canAccessNavigationItem(user: AuthUser | null, item: AppNavigationItem): boolean {
-  if (!user) {
-    return false
-  }
-
-  if (item.module) {
-    return canViewModule(user, item.module)
-  }
-
-  if (!item.permissions || item.permissions.length === 0) {
-    return true
-  }
-
-  return item.permissions.some((permission) => user.permissions.includes(permission))
-}
-@end
-
-@write src/renderer/src/widgets/app-sidebar/AppSidebar.tsx
-import { useState } from 'react'
-import type { ReactElement } from 'react'
-import { FiChevronLeft, FiChevronRight, FiLogOut, FiShield, FiUser } from 'react-icons/fi'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../app/providers/AuthProvider'
-import {
-  canAccessNavigationItem,
-  mainNavigationItems,
-  systemNavigationItems
-} from '../../shared/navigation/appNavigation'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { FiEye, FiRefreshCcw, FiUsers } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
+import type {
+  AdminCrudColumnConfig,
+  AdminCrudRecord,
+  AdminCrudSelectOption
+} from '../../features/admin-crud'
+import { AdminCrudEntityPanel } from '../../features/admin-crud'
 import {
   Badge,
   Button,
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarItemButton,
-  SidebarSection,
-  SidebarSectionTitle
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../../shared/ui'
+import { createOptions, createOptionsMap, getRecordName } from '../people/config/peopleCrudConfig'
 
-type ProfileType = 'system' | 'student' | 'teacher' | 'employee'
+const allSelectValue = '__all__'
 
-const sidebarCollapsedStorageKey = 'university-manager.sidebar-collapsed'
+interface StudentFilterState {
+  studentId: string
+  studentCardNumber: string
+  email: string
+  phone: string
+  facultyId: string
+  specialtyId: string
+  groupId: string
+  course: string
+  statusId: string
+  academicYearId: string
+  educationFormId: string
+  birthDate: string
+  admissionDate: string
+}
 
-export function AppSidebar(): ReactElement {
-  const location = useLocation()
+type StudentFilterRecord = Record<
+  string,
+  string | number | boolean | null | Array<string | number | boolean>
+>
+
+const initialFilters: StudentFilterState = {
+  studentId: '',
+  studentCardNumber: '',
+  email: '',
+  phone: '',
+  facultyId: '',
+  specialtyId: '',
+  groupId: '',
+  course: '',
+  statusId: '',
+  academicYearId: '',
+  educationFormId: '',
+  birthDate: '',
+  admissionDate: ''
+}
+
+export function FilterStudentsPage() {
   const navigate = useNavigate()
-  const auth = useAuth()
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    return window.localStorage.getItem(sidebarCollapsedStorageKey) === 'true'
-  })
 
-  const visibleMainItems = mainNavigationItems.filter((item) =>
-    canAccessNavigationItem(auth.user, item)
+  const [filters, setFilters] = useState<StudentFilterState>(initialFilters)
+  const [faculties, setFaculties] = useState<AdminCrudRecord[]>([])
+  const [specialties, setSpecialties] = useState<AdminCrudRecord[]>([])
+  const [groups, setGroups] = useState<AdminCrudRecord[]>([])
+  const [studentStatusOptions, setStudentStatusOptions] = useState<AdminCrudSelectOption[]>([])
+  const [academicYearOptions, setAcademicYearOptions] = useState<AdminCrudSelectOption[]>([])
+  const [educationFormOptions, setEducationFormOptions] = useState<AdminCrudSelectOption[]>([])
+  const [optionsError, setOptionsError] = useState<string | null>(null)
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false)
+
+  const loadOptions = useCallback(async () => {
+    setIsLoadingOptions(true)
+    setOptionsError(null)
+
+    try {
+      const [
+        facultiesResult,
+        specialtiesResult,
+        groupsResult,
+        studentStatusesResult,
+        academicYearsResult,
+        educationFormsResult
+      ] = await Promise.all([
+        window.api.adminCrud.list({
+          entity: 'faculties',
+          page: 1,
+          pageSize: 500,
+          orderBy: 'name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'specialties',
+          page: 1,
+          pageSize: 1000,
+          orderBy: 'name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'student_groups',
+          page: 1,
+          pageSize: 3000,
+          orderBy: 'name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'dictionary_items',
+          page: 1,
+          pageSize: 200,
+          filters: { dictionary_key: 'student_statuses' },
+          orderBy: 'sort_order',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'academic_years',
+          page: 1,
+          pageSize: 500,
+          orderBy: 'starts_at',
+          orderDirection: 'desc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'dictionary_items',
+          page: 1,
+          pageSize: 200,
+          filters: { dictionary_key: 'education_forms' },
+          orderBy: 'sort_order',
+          orderDirection: 'asc'
+        })
+      ])
+
+      setFaculties(facultiesResult.items)
+      setSpecialties(specialtiesResult.items)
+      setGroups(groupsResult.items)
+      setStudentStatusOptions(createOptions(studentStatusesResult.items, getRecordName))
+      setAcademicYearOptions(createOptions(academicYearsResult.items, getRecordName))
+      setEducationFormOptions(createOptions(educationFormsResult.items, getRecordName))
+    } catch (error) {
+      setOptionsError(error instanceof Error ? error.message : 'Не удалось загрузить фильтры')
+    } finally {
+      setIsLoadingOptions(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadOptions()
+  }, [loadOptions])
+
+  const facultyNameById = useMemo(() => createRecordNameMap(faculties), [faculties])
+  const specialtyById = useMemo(() => createRecordMap(specialties), [specialties])
+  const groupById = useMemo(() => createRecordMap(groups), [groups])
+  const statusNameById = useMemo(() => createOptionsMap(studentStatusOptions), [studentStatusOptions])
+  const academicYearNameById = useMemo(
+    () => createOptionsMap(academicYearOptions),
+    [academicYearOptions]
+  )
+  const educationFormNameById = useMemo(
+    () => createOptionsMap(educationFormOptions),
+    [educationFormOptions]
   )
 
-  const visibleSystemItems = systemNavigationItems.filter((item) =>
-    canAccessNavigationItem(auth.user, item)
-  )
+  const availableSpecialties = useMemo(() => {
+    if (!filters.facultyId) {
+      return specialties
+    }
 
-  function toggleSidebar(): void {
-    setIsSidebarCollapsed((currentValue) => {
-      const nextValue = !currentValue
-
-      window.localStorage.setItem(sidebarCollapsedStorageKey, String(nextValue))
-
-      return nextValue
+    return specialties.filter((specialty) => {
+      return String(specialty.faculty_id ?? '') === filters.facultyId
     })
+  }, [filters.facultyId, specialties])
+
+  const availableGroups = useMemo(() => {
+    return groups.filter((group) => {
+      if (filters.facultyId) {
+        const specialty = specialtyById.get(Number(group.specialty_id))
+
+        if (!specialty || String(specialty.faculty_id ?? '') !== filters.facultyId) {
+          return false
+        }
+      }
+
+      if (filters.specialtyId && String(group.specialty_id ?? '') !== filters.specialtyId) {
+        return false
+      }
+
+      if (filters.course && String(group.course ?? '') !== filters.course) {
+        return false
+      }
+
+      if (
+        filters.academicYearId &&
+        String(group.academic_year_id ?? '') !== filters.academicYearId
+      ) {
+        return false
+      }
+
+      if (
+        filters.educationFormId &&
+        String(group.education_form_id ?? '') !== filters.educationFormId
+      ) {
+        return false
+      }
+
+      return true
+    })
+  }, [
+    filters.academicYearId,
+    filters.course,
+    filters.educationFormId,
+    filters.facultyId,
+    filters.specialtyId,
+    groups,
+    specialtyById
+  ])
+
+  const courseOptions = useMemo(() => {
+    const courses = new Set<string>()
+
+    groups.forEach((group) => {
+      const course = group.course
+
+      if (course !== null && course !== undefined && String(course).trim()) {
+        courses.add(String(course))
+      }
+    })
+
+    return [...courses].sort((first, second) => Number(first) - Number(second))
+  }, [groups])
+
+  const studentCrudFilters = useMemo<StudentFilterRecord>(() => {
+    const result: StudentFilterRecord = {}
+
+    if (filters.studentId && Number.isInteger(Number(filters.studentId))) {
+      result.id = Number(filters.studentId)
+    }
+
+    if (filters.statusId) {
+      result.status_id = Number(filters.statusId)
+    }
+
+    if (filters.studentCardNumber.trim()) {
+      result.student_card_number = filters.studentCardNumber.trim()
+    }
+
+    if (filters.email.trim()) {
+      result.email = filters.email.trim()
+    }
+
+    if (filters.phone.trim()) {
+      result.phone = filters.phone.trim()
+    }
+
+    if (filters.birthDate) {
+      result.birth_date = filters.birthDate
+    }
+
+    if (filters.admissionDate) {
+      result.admission_date = filters.admissionDate
+    }
+
+    if (filters.groupId) {
+      result.group_id = Number(filters.groupId)
+      return result
+    }
+
+    const groupCriteriaIsActive = Boolean(
+      filters.facultyId ||
+        filters.specialtyId ||
+        filters.course ||
+        filters.academicYearId ||
+        filters.educationFormId
+    )
+
+    if (groupCriteriaIsActive) {
+      const groupIds = availableGroups
+        .map((group) => Number(group.id))
+        .filter((groupId) => Number.isInteger(groupId) && groupId > 0)
+
+      result.group_id = groupIds.length > 0 ? groupIds : [-1]
+    }
+
+    return result
+  }, [availableGroups, filters])
+
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filters).filter((value) => value.trim() !== '').length
+  }, [filters])
+
+  const studentColumns = useMemo<AdminCrudColumnConfig[]>(
+    () => [
+      {
+        key: 'id',
+        label: 'ID'
+      },
+      {
+        key: 'full_name',
+        label: 'ФИО',
+        render: (record) => getPersonName(record)
+      },
+      {
+        key: 'status_name',
+        label: 'Статус',
+        render: (record) => renderRelation(record.status_id, statusNameById)
+      },
+      {
+        key: 'group_name',
+        label: 'Группа',
+        render: (record) => getGroupName(record.group_id, groupById)
+      },
+      {
+        key: 'course_name',
+        label: 'Курс',
+        render: (record) => getGroupCourse(record.group_id, groupById)
+      },
+      {
+        key: 'specialty_name',
+        label: 'Специальность',
+        render: (record) => getStudentSpecialtyName(record.group_id, groupById, specialtyById)
+      },
+      {
+        key: 'faculty_name',
+        label: 'Факультет',
+        render: (record) =>
+          getStudentFacultyName(record.group_id, groupById, specialtyById, facultyNameById)
+      },
+      {
+        key: 'student_card_number',
+        label: 'Студенческий'
+      },
+      {
+        key: 'email',
+        label: 'Email'
+      },
+      {
+        key: 'phone',
+        label: 'Телефон'
+      }
+    ],
+    [facultyNameById, groupById, specialtyById, statusNameById]
+  )
+
+  function updateFilterField(field: keyof StudentFilterState, value: string): void {
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [field]: value === allSelectValue ? '' : value
+    }))
   }
 
-  const sidebarWidthClass = isSidebarCollapsed ? 'w-16' : 'w-72'
+  function updateFacultyFilter(value: string): void {
+    const nextValue = value === allSelectValue ? '' : value
+
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      facultyId: nextValue,
+      specialtyId: '',
+      groupId: ''
+    }))
+  }
+
+  function updateSpecialtyFilter(value: string): void {
+    const nextValue = value === allSelectValue ? '' : value
+
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      specialtyId: nextValue,
+      groupId: ''
+    }))
+  }
+
+  function updateGroupScopeFilter(field: keyof StudentFilterState, value: string): void {
+    const nextValue = value === allSelectValue ? '' : value
+
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [field]: nextValue,
+      groupId: ''
+    }))
+  }
+
+  function resetFilters(): void {
+    setFilters(initialFilters)
+  }
+
+  function openStudentDetails(record: AdminCrudRecord): void {
+    if (!record.id) {
+      return
+    }
+
+    navigate(`/people/students/${String(record.id)}`)
+  }
 
   return (
-    <div
-      className={`h-screen shrink-0 transition-[width] duration-200 ease-out ${sidebarWidthClass}`}
-    >
-      <Sidebar
-        className={`group fixed inset-y-0 left-0 z-40 transition-[width] duration-200 ease-out ${sidebarWidthClass}`}
-      >
-        <button
-          type="button"
-          className="absolute -right-3 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] opacity-0 shadow-md transition hover:text-[var(--color-primary)] focus:opacity-100 focus:outline-none group-hover:opacity-100"
-          title={isSidebarCollapsed ? 'Раскрыть меню' : 'Скрыть меню'}
-          aria-label={isSidebarCollapsed ? 'Раскрыть боковое меню' : 'Скрыть боковое меню'}
-          aria-expanded={!isSidebarCollapsed}
-          onClick={toggleSidebar}
-        >
-          {isSidebarCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
-        </button>
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                <FiUsers className="h-6 w-6" />
+              </div>
 
-        <SidebarHeader className={isSidebarCollapsed ? 'px-2 py-3' : undefined}>
-          <p
-            className={[
-              'text-center font-bold text-[var(--color-primary)] transition-all',
-              isSidebarCollapsed ? 'text-sm' : 'text-xl'
-            ].join(' ')}
-          >
-            {isSidebarCollapsed ? 'U' : 'UGER'}
-          </p>
-        </SidebarHeader>
-
-        <SidebarContent className={isSidebarCollapsed ? 'px-2 py-3' : undefined}>
-          <SidebarSection>
-            {!isSidebarCollapsed ? <SidebarSectionTitle>Основное</SidebarSectionTitle> : null}
-
-            <div className="grid gap-1">
-              {visibleMainItems.map((item) => (
-                <SidebarItemButton
-                  key={item.path}
-                  icon={item.icon}
-                  active={isNavigationItemActive(location.pathname, item.path)}
-                  title={item.title}
-                  aria-label={item.title}
-                  className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
-                  onClick={() => navigate(item.path)}
-                >
-                  {isSidebarCollapsed ? '' : item.title}
-                </SidebarItemButton>
-              ))}
+              <CardTitle>Расширенный поиск студентов</CardTitle>
+              <CardDescription>
+                Используй точные фильтры ниже, а поиск внутри таблицы — для ФИО, email, телефона,
+                номера студенческого, адреса, соц. статуса, активности, перевода и примечаний.
+              </CardDescription>
             </div>
-          </SidebarSection>
 
-          <SidebarSection>
-            {!isSidebarCollapsed ? <SidebarSectionTitle>Система</SidebarSectionTitle> : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={activeFilterCount > 0 ? 'primary' : 'muted'}>
+                Активных фильтров: {activeFilterCount}
+              </Badge>
 
-            <div className="grid gap-1">
-              {visibleSystemItems.map((item) => (
-                <SidebarItemButton
-                  key={item.path}
-                  icon={item.icon}
-                  active={isNavigationItemActive(location.pathname, item.path)}
-                  title={item.title}
-                  aria-label={item.title}
-                  className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
-                  onClick={() => navigate(item.path)}
-                >
-                  {isSidebarCollapsed ? '' : item.title}
-                </SidebarItemButton>
-              ))}
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={activeFilterCount === 0}
+                onClick={resetFilters}
+              >
+                <FiRefreshCcw />
+                Сбросить
+              </Button>
             </div>
-          </SidebarSection>
-        </SidebarContent>
+          </div>
+        </CardHeader>
 
-        {!isSidebarCollapsed ? (
-          <SidebarFooter>
-            <SidebarAccountCard
-              username={auth.user?.username ?? 'Пользователь'}
-              roleName={auth.user?.roleName ?? 'Роль не определена'}
-              profileType={auth.user?.profileType ?? 'system'}
-              isActive={Boolean(auth.user?.isActive)}
-              onLogout={() => void auth.logout()}
+        <CardContent>
+          {optionsError ? (
+            <div className="mb-4 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)]">
+              {optionsError}
+            </div>
+          ) : null}
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">ID студента</span>
+              <Input
+                value={filters.studentId}
+                inputMode="numeric"
+                placeholder="Например: 12"
+                onChange={(event) => updateFilterField('studentId', event.target.value)}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">№ студенческого</span>
+              <Input
+                value={filters.studentCardNumber}
+                placeholder="Точное значение"
+                onChange={(event) => updateFilterField('studentCardNumber', event.target.value)}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">Email</span>
+              <Input
+                value={filters.email}
+                placeholder="Точный email"
+                onChange={(event) => updateFilterField('email', event.target.value)}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">Телефон</span>
+              <Input
+                value={filters.phone}
+                placeholder="Точный телефон"
+                onChange={(event) => updateFilterField('phone', event.target.value)}
+              />
+            </label>
+
+            <StudentFilterSelect
+              label="Факультет"
+              value={filters.facultyId}
+              disabled={isLoadingOptions}
+              placeholder="Все факультеты"
+              options={createOptions(faculties, getRecordName)}
+              onValueChange={updateFacultyFilter}
             />
-          </SidebarFooter>
-        ) : null}
-      </Sidebar>
+
+            <StudentFilterSelect
+              label="Специальность"
+              value={filters.specialtyId}
+              disabled={isLoadingOptions}
+              placeholder="Все специальности"
+              options={createOptions(availableSpecialties, getRecordName)}
+              onValueChange={updateSpecialtyFilter}
+            />
+
+            <StudentFilterSelect
+              label="Курс"
+              value={filters.course}
+              disabled={isLoadingOptions}
+              placeholder="Все курсы"
+              options={courseOptions.map((course) => ({
+                value: course,
+                label: `${course} курс`
+              }))}
+              onValueChange={(value) => updateGroupScopeFilter('course', value)}
+            />
+
+            <StudentFilterSelect
+              label="Группа"
+              value={filters.groupId}
+              disabled={isLoadingOptions || availableGroups.length === 0}
+              placeholder="Все группы"
+              options={availableGroups.map((group) => ({
+                value: String(group.id),
+                label: getGroupOptionLabel(group, specialtyById, academicYearNameById)
+              }))}
+              onValueChange={(value) => updateFilterField('groupId', value)}
+            />
+
+            <StudentFilterSelect
+              label="Статус"
+              value={filters.statusId}
+              disabled={isLoadingOptions}
+              placeholder="Все статусы"
+              options={studentStatusOptions}
+              onValueChange={(value) => updateFilterField('statusId', value)}
+            />
+
+            <StudentFilterSelect
+              label="Учебный год группы"
+              value={filters.academicYearId}
+              disabled={isLoadingOptions}
+              placeholder="Все учебные годы"
+              options={academicYearOptions}
+              onValueChange={(value) => updateGroupScopeFilter('academicYearId', value)}
+            />
+
+            <StudentFilterSelect
+              label="Форма обучения"
+              value={filters.educationFormId}
+              disabled={isLoadingOptions}
+              placeholder="Все формы"
+              options={educationFormOptions}
+              onValueChange={(value) => updateGroupScopeFilter('educationFormId', value)}
+            />
+
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">Дата рождения</span>
+              <Input
+                value={filters.birthDate}
+                type="date"
+                onChange={(event) => updateFilterField('birthDate', event.target.value)}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">Дата поступления</span>
+              <Input
+                value={filters.admissionDate}
+                type="date"
+                onChange={(event) => updateFilterField('admissionDate', event.target.value)}
+              />
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AdminCrudEntityPanel
+        entity="students"
+        title="Результаты поиска"
+        description="Таблица студентов. Клик по строке или кнопка с глазом открывает полную карточку студента."
+        createButtonLabel="Добавить студента"
+        fields={[]}
+        columns={studentColumns}
+        filters={studentCrudFilters}
+        canCreate={false}
+        canEdit={false}
+        canDelete={false}
+        orderBy="last_name"
+        orderDirection="asc"
+        emptyMessage="По выбранным фильтрам студенты не найдены."
+        onRowClick={openStudentDetails}
+        extraRowActions={(record) => (
+          <Button
+            size="sm"
+            variant="ghost"
+            title="Открыть карточку"
+            aria-label="Открыть карточку студента"
+            onClick={() => openStudentDetails(record)}
+          >
+            <FiEye />
+          </Button>
+        )}
+      />
     </div>
   )
 }
 
-function isNavigationItemActive(pathname: string, itemPath: string): boolean {
-  if (pathname === itemPath) {
-    return true
-  }
-
-  return itemPath !== '/' && pathname.startsWith(`${itemPath}/`)
-}
-
-function SidebarAccountCard({
-  username,
-  roleName,
-  profileType,
-  isActive,
-  onLogout
+function StudentFilterSelect({
+  label,
+  value,
+  placeholder,
+  options,
+  disabled,
+  onValueChange
 }: {
-  username: string
-  roleName: string
-  profileType: ProfileType
-  isActive: boolean
-  onLogout: () => void
-}): ReactElement {
-  const initials = getUserInitials(username)
-  const profileTypeLabel = getProfileTypeLabel(profileType)
-
+  label: string
+  value: string
+  placeholder: string
+  options: AdminCrudSelectOption[]
+  disabled?: boolean
+  onValueChange: (value: string) => void
+}) {
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 shadow-sm">
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-sm font-bold uppercase text-white shadow-sm">
-          {initials}
-        </div>
+    <label className="grid gap-2 text-sm">
+      <span className="font-medium text-[var(--color-text)]">{label}</span>
+      <Select
+        value={value || allSelectValue}
+        disabled={disabled}
+        onValueChange={onValueChange}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
 
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-[var(--color-text)]">{username}</p>
-
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
-            <FiShield className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{roleName}</span>
-          </div>
-
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
-            <FiUser className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{profileTypeLabel}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <Badge variant={isActive ? 'success' : 'warning'}>
-          {isActive ? 'Активная сессия' : 'Неактивен'}
-        </Badge>
-
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          title="Выйти из аккаунта"
-          aria-label="Выйти из аккаунта"
-          onClick={onLogout}
-        >
-          <FiLogOut />
-          Выйти
-        </Button>
-      </div>
-    </div>
+        <SelectContent>
+          <SelectItem value={allSelectValue}>{placeholder}</SelectItem>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
   )
 }
 
-function getUserInitials(username: string): string {
-  const cleanUsername = username.trim()
+function createRecordMap(records: AdminCrudRecord[]): Map<number, AdminCrudRecord> {
+  return new Map(
+    records
+      .map((record) => [toNumberOrNull(record.id), record] as const)
+      .filter((entry): entry is readonly [number, AdminCrudRecord] => entry[0] !== null)
+  )
+}
 
-  if (!cleanUsername) {
-    return 'U'
-  }
+function createRecordNameMap(records: AdminCrudRecord[]): Map<number, string> {
+  return new Map(
+    records
+      .map((record) => [toNumberOrNull(record.id), getRecordName(record)] as const)
+      .filter((entry): entry is readonly [number, string] => entry[0] !== null)
+  )
+}
 
-  const parts = cleanUsername
-    .split(/[\s._-]+/)
-    .map((part) => part.trim())
+function getPersonName(record: AdminCrudRecord): string {
+  const fullName = [record.last_name, record.first_name, record.middle_name]
     .filter(Boolean)
+    .map(String)
+    .join(' ')
+    .trim()
 
-  if (parts.length >= 2) {
-    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase()
-  }
-
-  return cleanUsername.slice(0, 2).toUpperCase()
+  return fullName || `#${String(record.id ?? '')}`
 }
 
-function getProfileTypeLabel(profileType: ProfileType): string {
-  if (profileType === 'student') {
-    return 'Студент'
-  }
+function getGroupName(
+  groupId: unknown,
+  groupById: Map<number, AdminCrudRecord>
+): string {
+  const group = getRecordById(groupId, groupById)
 
-  if (profileType === 'teacher') {
-    return 'Преподаватель'
-  }
-
-  if (profileType === 'employee') {
-    return 'Сотрудник'
-  }
-
-  return 'Система'
+  return group ? getRecordName(group) : '—'
 }
-@end
 
-@insert-after-once src/renderer/src/shared/navigation/routeAccess.ts
-@find
-  {
-    module: 'people',
-    matches: (pathname) => isExactOrNested(pathname, '/people')
-  },
-@endfind
-@content
-  {
-    module: 'people',
-    matches: (pathname) => isExactOrNested(pathname, '/filters')
-  },
-@endcontent
-@end
+function getGroupCourse(
+  groupId: unknown,
+  groupById: Map<number, AdminCrudRecord>
+): string {
+  const group = getRecordById(groupId, groupById)
 
-@insert-after-once src/preload/api/adminCrudApi.ts
-@find
-  if (isExactOrNested(pathname, '/people')) {
-    return 'people'
+  if (!group?.course) {
+    return '—'
   }
-@endfind
-@content
 
-  if (isExactOrNested(pathname, '/filters')) {
-    return 'people'
+  return `${String(group.course)} курс`
+}
+
+function getStudentSpecialtyName(
+  groupId: unknown,
+  groupById: Map<number, AdminCrudRecord>,
+  specialtyById: Map<number, AdminCrudRecord>
+): string {
+  const group = getRecordById(groupId, groupById)
+
+  if (!group) {
+    return '—'
   }
-@endcontent
+
+  const specialty = getRecordById(group.specialty_id, specialtyById)
+
+  return specialty ? getRecordName(specialty) : '—'
+}
+
+function getStudentFacultyName(
+  groupId: unknown,
+  groupById: Map<number, AdminCrudRecord>,
+  specialtyById: Map<number, AdminCrudRecord>,
+  facultyNameById: Map<number, string>
+): string {
+  const group = getRecordById(groupId, groupById)
+  const specialty = group ? getRecordById(group.specialty_id, specialtyById) : null
+  const facultyId = specialty ? toNumberOrNull(specialty.faculty_id) : null
+
+  if (facultyId === null) {
+    return '—'
+  }
+
+  return facultyNameById.get(facultyId) ?? `#${facultyId}`
+}
+
+function getGroupOptionLabel(
+  group: AdminCrudRecord,
+  specialtyById: Map<number, AdminCrudRecord>,
+  academicYearNameById: Map<number, string>
+): string {
+  const specialty = getRecordById(group.specialty_id, specialtyById)
+  const academicYearId = toNumberOrNull(group.academic_year_id)
+  const parts = [
+    getRecordName(group),
+    group.course ? `${String(group.course)} курс` : null,
+    specialty ? getRecordName(specialty) : null,
+    academicYearId === null ? null : academicYearNameById.get(academicYearId)
+  ].filter(Boolean)
+
+  return parts.join(' · ')
+}
+
+function renderRelation(value: unknown, labelsById: Map<number, string>): string {
+  const id = toNumberOrNull(value)
+
+  if (id === null) {
+    return '—'
+  }
+
+  return labelsById.get(id) ?? `#${id}`
+}
+
+function getRecordById(
+  value: unknown,
+  recordsById: Map<number, AdminCrudRecord>
+): AdminCrudRecord | null {
+  const id = toNumberOrNull(value)
+
+  if (id === null) {
+    return null
+  }
+
+  return recordsById.get(id) ?? null
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numberValue = Number(value)
+
+  return Number.isFinite(numberValue) ? numberValue : null
+}
 @end

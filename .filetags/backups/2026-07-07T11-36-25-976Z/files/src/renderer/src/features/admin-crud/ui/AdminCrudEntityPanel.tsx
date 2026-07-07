@@ -42,7 +42,7 @@ type AdminCrudListResult = Awaited<ReturnType<Window['api']['adminCrud']['list']
 
 export type AdminCrudRecord = AdminCrudListResult['items'][number]
 export type AdminEntityKey = Parameters<Window['api']['adminCrud']['list']>[0]['entity']
-type AdminCrudFilterValue = string | number | boolean | null | Array<string | number | boolean>
+type AdminCrudFilterValue = string | number | boolean | null
 type AdminCrudFilterRecord = Record<string, AdminCrudFilterValue>
 type AdminCrudOrderDirection = 'asc' | 'desc'
 

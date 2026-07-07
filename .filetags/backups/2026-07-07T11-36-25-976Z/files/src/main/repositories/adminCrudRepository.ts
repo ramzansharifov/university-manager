@@ -172,30 +172,6 @@ export class AdminCrudRepository {
           return
         }
 
-        if (Array.isArray(value)) {
-          const safeValues = value.filter(
-            (item) => item !== null && item !== undefined && item !== ''
-          )
-
-          if (safeValues.length === 0) {
-            conditions.push('1 = 0')
-            return
-          }
-
-          const keys = safeValues.map((_, itemIndex) => `filter_${index}_${itemIndex}`)
-
-          keys.forEach((key, itemIndex) => {
-            values[key] = safeValues[itemIndex]
-          })
-
-          conditions.push(`${column} IN (${keys.map((key) => `@${key}`).join(', ')})`)
-          return
-        }
-
-        if (value === '') {
-          return
-        }
-
         const key = `filter_${index}`
         conditions.push(`${column} = @${key}`)
         values[key] = value

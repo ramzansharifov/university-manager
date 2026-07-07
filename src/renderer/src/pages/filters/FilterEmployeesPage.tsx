@@ -1,11 +1,5 @@
 import { FiBriefcase } from 'react-icons/fi'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '../../shared/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../shared/ui'
 
 export function FilterEmployeesPage() {
   return (

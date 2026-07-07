@@ -140,19 +140,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
       'status_changed_at',
       'note'
     ],
-    [
-      'last_name',
-      'first_name',
-      'middle_name',
-      'email',
-      'phone',
-      'student_card_number',
-      'address',
-      'social_status',
-      'public_activity',
-      'transfer_info',
-      'note'
-    ]
+    ['last_name', 'first_name', 'middle_name', 'email', 'phone', 'student_card_number']
   ),
 
   subjects: entity('subjects', ['department_id', 'name', 'description'], ['name']),

@@ -1,0 +1,35 @@
+{
+  "createdAt": "2026-07-07T11:36:26.045Z",
+  "backupPath": ".filetags/backups/2026-07-07T11-36-25-976Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/shared/types/adminCrud.ts",
+      "backupRelativePath": "files/src/shared/types/adminCrud.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx"
+    },
+    {
+      "originalPath": "src/main/repositories/adminCrudRepository.ts",
+      "backupRelativePath": "files/src/main/repositories/adminCrudRepository.ts"
+    },
+    {
+      "originalPath": "src/main/admin/adminCrudEntities.ts",
+      "backupRelativePath": "files/src/main/admin/adminCrudEntities.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/filters/FilterStudentsPage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/filters/FilterStudentsPage.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Insert after: src/shared/types/adminCrud.ts\n   found: yes\n   old: 112 line(s)\n   new: 121 line(s)",
+    "Replace file: src/shared/types/adminCrud.ts\n   found: yes\n   old: 121 line(s)\n   new: 121 line(s)",
+    "Replace file: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1511 line(s)\n   new: 1511 line(s)",
+    "Replace file: src/main/repositories/adminCrudRepository.ts\n   found: yes\n   old: 230 line(s)\n   new: 252 line(s)",
+    "Replace file: src/main/admin/adminCrudEntities.ts\n   found: yes\n   old: 341 line(s)\n   new: 353 line(s)",
+    "Write file: src/renderer/src/pages/filters/FilterStudentsPage.tsx\n   old: 33 line(s)\n   new: 768 line(s)"
+  ]
+}

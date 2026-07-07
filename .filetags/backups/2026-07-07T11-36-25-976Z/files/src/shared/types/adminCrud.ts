@@ -51,11 +51,6 @@ export type AdminEntityKey =
 
 export type SortDirection = 'asc' | 'desc'
 
-export type AdminCrudFilterValue =
-  string | number | boolean | null | Array<string | number | boolean>
-
-export type AdminCrudFilterRecord = Record<string, AdminCrudFilterValue>
-
 export type AdminCrudRecord = Record<string, unknown>
 
 export interface AdminCrudListParams {
@@ -67,7 +62,7 @@ export interface AdminCrudListParams {
 
   orderBy?: string
   orderDirection?: SortDirection
-  filters?: AdminCrudFilterRecord
+  filters?: Record<string, string | number | boolean | null>
 }
 
 export interface AdminCrudListResult<TRecord = AdminCrudRecord> {
