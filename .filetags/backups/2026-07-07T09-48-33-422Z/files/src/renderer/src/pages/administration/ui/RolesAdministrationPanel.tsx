@@ -321,7 +321,7 @@ export function RolesAdministrationPanel() {
                     <p className="mt-1 text-xs text-[var(--color-text-muted)]">{role.roleKey}</p>
                   </div>
 
-                  <Badge variant={role.isSystem ? 'success' : 'muted'}>
+                  <Badge variant={role.isSystem ? 'success' : 'secondary'}>
                     {role.isSystem ? 'Системная' : 'Кастомная'}
                   </Badge>
                 </div>
