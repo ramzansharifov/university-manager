@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-07-07T10:01:52.568Z",
+  "backupPath": ".filetags/backups/2026-07-07T10-01-52-527Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   found: yes\n   old: 439 line(s)\n   new: 439 line(s)"
+  ]
+}
