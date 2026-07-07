@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-07-07T10:28:26.324Z",
+  "backupPath": ".filetags/backups/2026-07-07T10-28-26-297Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   found: yes\n   old: 738 line(s)\n   new: 731 line(s)",
+    "Insert before: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   found: yes\n   old: 731 line(s)\n   new: 764 line(s)"
+  ]
+}
