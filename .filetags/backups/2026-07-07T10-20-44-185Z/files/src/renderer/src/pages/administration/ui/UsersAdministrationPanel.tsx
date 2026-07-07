@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FiEdit2, FiRefreshCw, FiSave, FiTrash2, FiUserPlus } from 'react-icons/fi'
+import { FiEdit2, FiKey, FiRefreshCw, FiSave, FiTrash2, FiUserPlus } from 'react-icons/fi'
 import type { AuthUserListItem, UserProfileType } from '../../../../../shared/types/auth'
 import type { AdminCrudRecord } from '../../../../../shared/types/adminCrud'
 import type { Role } from '../../../../../shared/types/roles'
