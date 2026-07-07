@@ -1,6 +1,7 @@
 import { AdminCrudEntityPanel } from '../../features/admin-crud'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
 import { gradeElementTypeColumns, gradeElementTypeFields } from './config/learningJournalCrudConfig'
+import { LearningJournalDisciplineGroup } from './ui/LearningJournalDisciplineGroup'
 import { LearningJournalMatrix } from './ui/LearningJournalMatrix'
 
 export function LearningJournalPage() {
@@ -16,11 +17,16 @@ export function LearningJournalPage() {
       <Tabs defaultValue="journal">
         <TabsList>
           <TabsTrigger value="journal">Журнал</TabsTrigger>
+          <TabsTrigger value="discipline-group">Дисциплины</TabsTrigger>
           <TabsTrigger value="grade-elements">Оценочные элементы</TabsTrigger>
         </TabsList>
 
         <TabsContent value="journal">
           <LearningJournalMatrix />
+        </TabsContent>
+
+        <TabsContent value="discipline-group">
+          <LearningJournalDisciplineGroup />
         </TabsContent>
 
         <TabsContent value="grade-elements">
