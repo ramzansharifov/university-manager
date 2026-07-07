@@ -19,63 +19,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
+  Input
 } from '../../shared/ui'
-import { RolesAdministrationPanel } from './ui/RolesAdministrationPanel'
 
 export function AdministrationPage() {
-  return (
-    <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Администрирование</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Система, роли, права доступа и пользователи приложения.
-        </p>
-      </div>
-
-      <Tabs defaultValue="system">
-        <TabsList>
-          <TabsTrigger value="system">Система</TabsTrigger>
-          <TabsTrigger value="roles">Роли</TabsTrigger>
-          <TabsTrigger value="users">Пользователи</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="system">
-          <SystemAdministrationPanel />
-        </TabsContent>
-
-        <TabsContent value="roles">
-          <RolesAdministrationPanel />
-        </TabsContent>
-
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle>Пользователи</CardTitle>
-              <CardDescription>
-                Создание пользователей, привязку к студентам, преподавателям и сотрудникам добавим
-                следующим этапом.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent>
-              <p className="text-sm text-[var(--color-text-muted)]">
-                Сначала завершаем роли и матрицу прав, затем подключим создание пользователей через
-                защищённый auth API.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-
-function SystemAdministrationPanel() {
   const [healthReport, setHealthReport] = useState<AppHealthReport | null>(null)
   const [dataQualityReport, setDataQualityReport] = useState<DataQualityReport | null>(null)
   const [operationResult, setOperationResult] = useState<DatabaseMaintenanceResult | null>(null)
@@ -166,6 +113,13 @@ function SystemAdministrationPanel() {
 
   return (
     <div className="grid gap-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Администрирование</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          Состояние системы, экспорт, импорт и полная очистка базы данных.
+        </p>
+      </div>
+
       {operationResult ? (
         <div
           className={[
