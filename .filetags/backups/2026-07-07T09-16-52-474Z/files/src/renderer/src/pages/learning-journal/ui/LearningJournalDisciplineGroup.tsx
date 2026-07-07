@@ -470,21 +470,18 @@ export function LearningJournalDisciplineGroup(): ReactElement {
       })
       .map((grade) => toNumberOrNull(grade.score))
       .filter((score): score is number => score !== null)
-    const passFailGradeItems = selectedDisciplineGradeItems.filter((gradeItem) => {
-      const gradeElementType = getGradeElementType(gradeItem, gradeElementTypeById)
+    const passFailGrades = studentGrades.filter((grade) => {
+      const gradeItem = selectedDisciplineGradeItems.find(
+        (item) => Number(item.id) === Number(grade.grade_item_id)
+      )
+      const gradeElementType = gradeItem
+        ? getGradeElementType(gradeItem, gradeElementTypeById)
+        : null
 
       return (
         gradeElementType?.grading_mode === 'pass_fail' && Number(gradeElementType?.is_final) !== 1
       )
     })
-    const passFailGradeItemIds = new Set(
-      passFailGradeItems
-        .map((gradeItem) => toNumberOrNull(gradeItem.id))
-        .filter((id): id is number => id !== null)
-    )
-    const passFailGrades = studentGrades.filter((grade) =>
-      passFailGradeItemIds.has(Number(grade.grade_item_id))
-    )
     const finalScores = studentGrades
       .filter((grade) => {
         const gradeItem = selectedDisciplineGradeItems.find(
@@ -515,11 +512,9 @@ export function LearningJournalDisciplineGroup(): ReactElement {
       scoreAverage:
         scoreGrades.length === 0 ? '—' : formatScoreValue(calculateAverage(scoreGrades)),
       passFail:
-        passFailGradeItems.length === 0
+        passFailGrades.length === 0
           ? '—'
-          : `Сдано ${
-              passFailGrades.filter((grade) => Number(grade.score) >= 1).length
-            }/${passFailGradeItems.length}`,
+          : `Сдано ${passFailGrades.filter((grade) => Number(grade.score) >= 1).length}/${passFailGrades.length}`,
       finalAverage:
         finalScores.length === 0 ? '—' : formatScoreValue(calculateAverage(finalScores)),
       attendance: `${presentCount}/${selectedDisciplineLessonSessions.length}`

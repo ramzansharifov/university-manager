@@ -1,53 +1,50 @@
-@replace-all src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx
+@replace-all src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx
 @find
-        <DialogContent
-          onPointerDownOutside={(event) => {
-            const target = event.target
+    const passFailGrades = studentGrades.filter((grade) => {
+      const gradeItem = selectedDisciplineGradeItems.find(
+        (item) => Number(item.id) === Number(grade.grade_item_id)
+      )
+      const gradeElementType = gradeItem
+        ? getGradeElementType(gradeItem, gradeElementTypeById)
+        : null
 
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
-          onFocusOutside={(event) => {
-            const target = event.target
-
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
-          onInteractOutside={(event) => {
-            const target = event.target
-
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
-        >
+      return (
+        gradeElementType?.grading_mode === 'pass_fail' && Number(gradeElementType?.is_final) !== 1
+      )
+    })
 @endfind
 @with
-        <DialogContent
-          onPointerDownOutside={(event) => {
-            event.preventDefault()
-          }}
-          onInteractOutside={(event) => {
-            const target = event.target
+    const passFailGradeItems = selectedDisciplineGradeItems.filter((gradeItem) => {
+      const gradeElementType = getGradeElementType(gradeItem, gradeElementTypeById)
 
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
-        >
+      return (
+        gradeElementType?.grading_mode === 'pass_fail' && Number(gradeElementType?.is_final) !== 1
+      )
+    })
+    const passFailGradeItemIds = new Set(
+      passFailGradeItems
+        .map((gradeItem) => toNumberOrNull(gradeItem.id))
+        .filter((id): id is number => id !== null)
+    )
+    const passFailGrades = studentGrades.filter((grade) =>
+      passFailGradeItemIds.has(Number(grade.grade_item_id))
+    )
+@endwith
+@end
+
+@replace-all src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx
+@find
+      passFail:
+        passFailGrades.length === 0
+          ? '—'
+          : `Сдано ${passFailGrades.filter((grade) => Number(grade.score) >= 1).length}/${passFailGrades.length}`,
+@endfind
+@with
+      passFail:
+        passFailGradeItems.length === 0
+          ? '—'
+          : `Сдано ${
+              passFailGrades.filter((grade) => Number(grade.score) >= 1).length
+            }/${passFailGradeItems.length}`,
 @endwith
 @end

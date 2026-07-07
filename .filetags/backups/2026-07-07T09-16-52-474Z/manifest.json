@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-07-07T09:16:52.508Z",
+  "backupPath": ".filetags/backups/2026-07-07T09-16-52-474Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx\n   found: yes\n   old: 1381 line(s)\n   new: 1384 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx\n   found: yes\n   old: 1384 line(s)\n   new: 1386 line(s)"
+  ]
+}
