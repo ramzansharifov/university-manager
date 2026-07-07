@@ -460,19 +460,7 @@ export function UsersAdministrationPanel() {
       </Card>
 
       <Dialog open={userDialogIsOpen} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent
-          className="max-h-[90vh] max-w-3xl overflow-y-auto"
-          onInteractOutside={(event) => {
-            const target = event.target
-
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
-        >
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {dialogMode === 'create' ? 'Новый пользователь' : 'Редактирование пользователя'}
