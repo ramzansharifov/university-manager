@@ -462,19 +462,9 @@ export function UsersAdministrationPanel() {
       <Dialog open={userDialogIsOpen} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent
           className="max-h-[90vh] max-w-3xl overflow-y-auto"
-          onPointerDownOutside={(event) => {
-            event.preventDefault()
-          }}
-          onInteractOutside={(event) => {
-            const target = event.target
-
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
+          onPointerDownOutside={preventDialogCloseFromRadixSelect}
+          onFocusOutside={preventDialogCloseFromRadixSelect}
+          onInteractOutside={preventDialogCloseFromRadixSelect}
         >
           <DialogHeader>
             <DialogTitle>
