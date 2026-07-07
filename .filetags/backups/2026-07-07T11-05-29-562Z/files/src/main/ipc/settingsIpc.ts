@@ -2,12 +2,9 @@ import { ipcMain } from 'electron'
 import type { UpdateAppSettingsParams } from '../../shared/types/settings'
 import { AuditRepository } from '../audit/auditRepository'
 import { AuditService } from '../audit/auditService'
-import { AuthRepository } from '../auth/authRepository'
-import { AuthService } from '../auth/authService'
 import { getDatabase } from '../database/connection'
 import { SettingsRepository } from '../settings/settingsRepository'
 import { SettingsService } from '../settings/settingsService'
-import { requireModuleAccess } from '../security/ipcAccess'
 
 export function registerSettingsIpcHandlers(): void {
   const database = getDatabase()
@@ -15,21 +12,14 @@ export function registerSettingsIpcHandlers(): void {
   const auditRepository = new AuditRepository(database)
   const auditService = new AuditService(auditRepository)
 
-  const authRepository = new AuthRepository(database)
-  const authService = new AuthService(authRepository, auditService)
-
   const settingsRepository = new SettingsRepository(database)
   const settingsService = new SettingsService(settingsRepository, auditService)
 
-  ipcMain.handle('settings:get', (event) => {
-    requireModuleAccess(event, authService, 'settings', 'view')
-
+  ipcMain.handle('settings:get', () => {
     return settingsService.getSettings()
   })
 
-  ipcMain.handle('settings:update', (event, params: UpdateAppSettingsParams) => {
-    requireModuleAccess(event, authService, 'settings', 'update')
-
+  ipcMain.handle('settings:update', (_event, params: UpdateAppSettingsParams) => {
     return settingsService.updateSettings(params)
   })
 }

@@ -1,141 +1,55 @@
-@folder src/main/security
-
-@write src/main/auth/sessionContext.ts
-const authTokenByWebContentsId = new Map<number, string>()
-
-export function rememberAuthTokenForWebContents(webContentsId: number, token: string): void {
-  authTokenByWebContentsId.set(webContentsId, token)
-}
-
-export function forgetAuthTokenForWebContents(webContentsId: number): void {
-  authTokenByWebContentsId.delete(webContentsId)
-}
-
-export function getAuthTokenForWebContents(webContentsId: number): string | null {
-  return authTokenByWebContentsId.get(webContentsId) ?? null
-}
-@end
-
-@write src/main/security/accessControl.ts
+@write src/main/security/ipcAccess.ts
+import type { IpcMainInvokeEvent } from 'electron'
 import type { AdminCrudAccessModule } from '../../shared/types/adminCrud'
 import type { AuthUser } from '../../shared/types/auth'
-
-export type AccessAction = 'view' | 'create' | 'update' | 'delete'
-
-const teacherPermissions = [
-  'academic_process.view',
-  'schedule.view',
-  'learning_journal.view',
-  'learning_journal.create',
-  'learning_journal.update',
-  'reports.view'
-]
-
-const studentPermissions = [
-  'academic_process.view',
-  'schedule.view',
-  'learning_journal.view',
-  'reports.view'
-]
-
-export function canPerformAction(
-  user: AuthUser,
-  module: AdminCrudAccessModule,
-  action: AccessAction
-): boolean {
-  if (user.roleKey === 'super_admin') {
-    return true
-  }
-
-  return getEffectivePermissions(user).includes(`${module}.${action}`)
-}
-
-function getEffectivePermissions(user: AuthUser): string[] {
-  if (user.roleKey === 'teacher' && user.profileType === 'teacher') {
-    return teacherPermissions
-  }
-
-  if (user.roleKey === 'student' && user.profileType === 'student') {
-    return studentPermissions
-  }
-
-  return user.permissions
-}
-@end
-
-@write src/main/security/adminCrudAccess.ts
-import type { IpcMainInvokeEvent } from 'electron'
-import type {
-  AdminCrudAccessModule,
-  AdminEntityKey
-} from '../../shared/types/adminCrud'
 import type { AuthService } from '../auth/authService'
 import { getAuthTokenForWebContents } from '../auth/sessionContext'
 import { canPerformAction } from './accessControl'
 import type { AccessAction } from './accessControl'
 
-export type AdminCrudAccessAction = AccessAction
-
-interface AdminCrudAccessParams {
-  entity?: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
+interface ModuleAccessRequirement {
+  module: AdminCrudAccessModule
+  action: AccessAction
 }
 
-const defaultAccessModuleByEntity: Partial<Record<AdminEntityKey, AdminCrudAccessModule>> = {
-  faculties: 'university',
-  departments: 'university',
-  department_faculties: 'university',
-  specialties: 'university',
-  student_groups: 'university',
-  divisions: 'university',
-  positions: 'university',
-
-  students: 'people',
-  teachers: 'people',
-  employees: 'people',
-
-  academic_years: 'academic_process',
-  semesters: 'academic_process',
-  weeks: 'academic_process',
-  academic_vacations: 'academic_process',
-  subjects: 'academic_process',
-  curriculum_plans: 'academic_process',
-  curriculum_items: 'academic_process',
-  disciplines: 'academic_process',
-
-  audience_types: 'schedule',
-  buildings: 'schedule',
-  audiences: 'schedule',
-  lesson_periods: 'schedule',
-  schedule_items: 'schedule',
-  lesson_sessions: 'schedule',
-
-  attendance_records: 'learning_journal',
-  grade_element_types: 'learning_journal',
-  grade_items: 'learning_journal',
-  score_scales: 'learning_journal',
-  grades: 'learning_journal',
-  lesson_completion_records: 'learning_journal',
-
-  dictionary_items: 'settings',
-  roles: 'administration',
-  permissions: 'administration',
-  app_users: 'administration',
-  audit_logs: 'audit_log',
-  app_settings: 'settings'
-}
-
-export function requireAdminCrudAccess(
+export function requireModuleAccess(
   event: IpcMainInvokeEvent,
   authService: AuthService,
-  params: AdminCrudAccessParams,
-  action: AdminCrudAccessAction,
-  fallbackModule?: AdminCrudAccessModule
+  module: AdminCrudAccessModule,
+  action: AccessAction
 ): void {
+  const user = requireAuthenticatedUser(event, authService)
+
+  if (!canPerformAction(user, module, action)) {
+    throw new Error(`Нет прав на выполнение операции: ${module}.${action}`)
+  }
+}
+
+export function requireAnyModuleAccess(
+  event: IpcMainInvokeEvent,
+  authService: AuthService,
+  requirements: ModuleAccessRequirement[]
+): void {
+  const user = requireAuthenticatedUser(event, authService)
+
+  const hasAccess = requirements.some((requirement) =>
+    canPerformAction(user, requirement.module, requirement.action)
+  )
+
+  if (!hasAccess) {
+    const allowedOperations = requirements
+      .map((requirement) => `${requirement.module}.${requirement.action}`)
+      .join(', ')
+
+    throw new Error(`Нет прав на выполнение операции. Требуется одно из прав: ${allowedOperations}`)
+  }
+}
+
+function requireAuthenticatedUser(event: IpcMainInvokeEvent, authService: AuthService): AuthUser {
   const token = getAuthTokenForWebContents(event.sender.id)
 
   if (!token) {
-    throw new Error('Требуется авторизация для работы с данными')
+    throw new Error('Требуется авторизация для выполнения операции')
   }
 
   const user = authService.getCurrentUser({ token })
@@ -144,278 +58,13 @@ export function requireAdminCrudAccess(
     throw new Error('Сессия истекла. Войди в систему заново')
   }
 
-  const module = resolveAccessModule(params, fallbackModule)
-
-  if (!module) {
-    throw new Error('Не удалось определить модуль доступа для операции')
-  }
-
-  if (!canPerformAction(user, module, action)) {
-    throw new Error(`Нет прав на выполнение операции: ${module}.${action}`)
-  }
-}
-
-function resolveAccessModule(
-  params: AdminCrudAccessParams,
-  fallbackModule?: AdminCrudAccessModule
-): AdminCrudAccessModule | null {
-  if (params.accessModule) {
-    return params.accessModule
-  }
-
-  if (fallbackModule) {
-    return fallbackModule
-  }
-
-  if (!params.entity) {
-    return null
-  }
-
-  return defaultAccessModuleByEntity[params.entity] ?? null
-}
-@end
-
-@write src/shared/types/adminCrud.ts
-export type AdminCrudAccessModule =
-  | 'university'
-  | 'people'
-  | 'academic_calendar'
-  | 'academic_process'
-  | 'rooms_and_lessons'
-  | 'schedule'
-  | 'learning_journal'
-  | 'reports'
-  | 'administration'
-  | 'audit_log'
-  | 'settings'
-
-export type AdminEntityKey =
-  | 'faculties'
-  | 'departments'
-  | 'department_faculties'
-  | 'specialties'
-  | 'student_groups'
-  | 'divisions'
-  | 'positions'
-  | 'dictionary_items'
-  | 'academic_years'
-  | 'semesters'
-  | 'weeks'
-  | 'academic_vacations'
-  | 'lesson_periods'
-  | 'teachers'
-  | 'employees'
-  | 'students'
-  | 'subjects'
-  | 'curriculum_plans'
-  | 'curriculum_items'
-  | 'disciplines'
-  | 'audience_types'
-  | 'buildings'
-  | 'audiences'
-  | 'schedule_items'
-  | 'lesson_sessions'
-  | 'attendance_records'
-  | 'grade_element_types'
-  | 'grade_items'
-  | 'score_scales'
-  | 'grades'
-  | 'lesson_completion_records'
-  | 'roles'
-  | 'permissions'
-  | 'app_users'
-  | 'audit_logs'
-  | 'app_settings'
-
-export type SortDirection = 'asc' | 'desc'
-
-export type AdminCrudRecord = Record<string, unknown>
-
-export interface AdminCrudListParams {
-  entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
-  page?: number
-  pageSize?: number
-  search?: string
-
-  orderBy?: string
-  orderDirection?: SortDirection
-  filters?: Record<string, string | number | boolean | null>
-}
-
-export interface AdminCrudListResult<TRecord = AdminCrudRecord> {
-  items: TRecord[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
-}
-
-export interface AdminCrudGetByIdParams {
-  entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
-  id: number
-}
-
-export interface AdminCrudCreateParams {
-  entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
-  data: AdminCrudRecord
-}
-
-export interface AdminCrudUpdateParams {
-  entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
-  id: number
-  data: AdminCrudRecord
-}
-
-export interface SaveDepartmentWithFacultiesParams {
-  id?: number
-  accessModule?: AdminCrudAccessModule
-  data: AdminCrudRecord
-  facultyIds: number[]
-}
-
-export interface AdminCrudDeleteParams {
-  entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
-  id: number
-}
-
-export interface AdminCrudOperationResult<TRecord = AdminCrudRecord> {
-  success: boolean
-  item?: TRecord
-}
-@end
-
-@write src/preload/api/adminCrudApi.ts
-import { ipcRenderer } from 'electron'
-import type {
-  AdminCrudAccessModule,
-  AdminCrudCreateParams,
-  AdminCrudDeleteParams,
-  AdminCrudGetByIdParams,
-  AdminCrudListParams,
-  AdminCrudListResult,
-  AdminCrudOperationResult,
-  AdminCrudRecord,
-  SaveDepartmentWithFacultiesParams,
-  AdminCrudUpdateParams
-} from '../../shared/types/adminCrud'
-
-export const adminCrudApi = {
-  list(params: AdminCrudListParams): Promise<AdminCrudListResult> {
-    return ipcRenderer.invoke('adminCrud:list', withCurrentAccessModule(params))
-  },
-
-  getById(params: AdminCrudGetByIdParams): Promise<AdminCrudRecord | null> {
-    return ipcRenderer.invoke('adminCrud:getById', withCurrentAccessModule(params))
-  },
-
-  create(params: AdminCrudCreateParams): Promise<AdminCrudOperationResult> {
-    return ipcRenderer.invoke('adminCrud:create', withCurrentAccessModule(params))
-  },
-
-  update(params: AdminCrudUpdateParams): Promise<AdminCrudOperationResult> {
-    return ipcRenderer.invoke('adminCrud:update', withCurrentAccessModule(params))
-  },
-
-  saveDepartmentWithFaculties(
-    params: SaveDepartmentWithFacultiesParams
-  ): Promise<AdminCrudOperationResult> {
-    return ipcRenderer.invoke('adminCrud:saveDepartmentWithFaculties', withCurrentAccessModule(params))
-  },
-
-  delete(params: AdminCrudDeleteParams): Promise<AdminCrudOperationResult> {
-    return ipcRenderer.invoke('adminCrud:delete', withCurrentAccessModule(params))
-  }
-}
-
-function withCurrentAccessModule<TParams extends { accessModule?: AdminCrudAccessModule }>(
-  params: TParams
-): TParams {
-  const accessModule = params.accessModule ?? getCurrentAccessModule()
-
-  if (!accessModule) {
-    return params
-  }
-
-  return {
-    ...params,
-    accessModule
-  }
-}
-
-function getCurrentAccessModule(): AdminCrudAccessModule | undefined {
-  const pathname = getCurrentPathname()
-
-  if (pathname === '/') {
-    return 'settings'
-  }
-
-  if (isExactOrNested(pathname, '/university')) {
-    return 'university'
-  }
-
-  if (isExactOrNested(pathname, '/people')) {
-    return 'people'
-  }
-
-  if (isExactOrNested(pathname, '/academic-process')) {
-    return 'academic_process'
-  }
-
-  if (isExactOrNested(pathname, '/schedule')) {
-    return 'schedule'
-  }
-
-  if (isExactOrNested(pathname, '/learning-journal')) {
-    return 'learning_journal'
-  }
-
-  if (isExactOrNested(pathname, '/reports')) {
-    return 'reports'
-  }
-
-  if (isExactOrNested(pathname, '/administration')) {
-    return 'administration'
-  }
-
-  if (isExactOrNested(pathname, '/audit-log')) {
-    return 'audit_log'
-  }
-
-  if (isExactOrNested(pathname, '/settings')) {
-    return 'settings'
-  }
-
-  return undefined
-}
-
-function getCurrentPathname(): string {
-  const runtimeGlobal = globalThis as {
-    location?: {
-      pathname?: string
-    }
-  }
-
-  const pathname = runtimeGlobal.location?.pathname ?? '/'
-
-  if (pathname.length > 1 && pathname.endsWith('/')) {
-    return pathname.slice(0, -1)
-  }
-
-  return pathname
-}
-
-function isExactOrNested(pathname: string, basePath: string): boolean {
-  return pathname === basePath || pathname.startsWith(`${basePath}/`)
+  return user
 }
 @end
 
 @write src/main/ipc/authIpc.ts
 import { ipcMain } from 'electron'
+import type { IpcMainInvokeEvent } from 'electron'
 import type {
   ChangePasswordParams,
   CreateUserParams,
@@ -435,6 +84,8 @@ import {
   rememberAuthTokenForWebContents
 } from '../auth/sessionContext'
 import { getDatabase } from '../database/connection'
+import { requireModuleAccess } from '../security/ipcAccess'
+import type { AccessAction } from '../security/accessControl'
 
 export function registerAuthIpcHandlers(): void {
   const database = getDatabase()
@@ -444,6 +95,10 @@ export function registerAuthIpcHandlers(): void {
 
   const authRepository = new AuthRepository(database)
   const authService = new AuthService(authRepository, auditService)
+
+  function requireAdministrationAccess(event: IpcMainInvokeEvent, action: AccessAction): void {
+    requireModuleAccess(event, authService, 'administration', action)
+  }
 
   ipcMain.handle('auth:login', (event, params: LoginParams) => {
     const result = authService.login(params)
@@ -473,65 +128,64 @@ export function registerAuthIpcHandlers(): void {
     return result
   })
 
-  ipcMain.handle('auth:listUsers', () => {
+  ipcMain.handle('auth:listUsers', (event) => {
+    requireAdministrationAccess(event, 'view')
+
     return authService.listUsers()
   })
 
-  ipcMain.handle('auth:createUser', (_event, params: CreateUserParams) => {
+  ipcMain.handle('auth:createUser', (event, params: CreateUserParams) => {
+    requireAdministrationAccess(event, 'create')
+
     return authService.createUser(params)
   })
 
-  ipcMain.handle('auth:updateUser', (_event, params: UpdateUserParams) => {
+  ipcMain.handle('auth:updateUser', (event, params: UpdateUserParams) => {
+    requireAdministrationAccess(event, 'update')
+
     return authService.updateUser(params)
   })
 
-  ipcMain.handle('auth:setUserActive', (_event, params: SetUserActiveParams) => {
+  ipcMain.handle('auth:setUserActive', (event, params: SetUserActiveParams) => {
+    requireAdministrationAccess(event, 'update')
+
     return authService.setUserActive(params)
   })
 
-  ipcMain.handle('auth:deleteUser', (_event, params: DeleteUserParams) => {
+  ipcMain.handle('auth:deleteUser', (event, params: DeleteUserParams) => {
+    requireAdministrationAccess(event, 'delete')
+
     return authService.deleteUser(params)
   })
 
-  ipcMain.handle('auth:changePassword', (_event, params: ChangePasswordParams) => {
+  ipcMain.handle('auth:changePassword', (event, params: ChangePasswordParams) => {
+    requireAdministrationAccess(event, 'update')
+
     return authService.changePassword(params)
   })
 }
 @end
 
-@write src/main/ipc/adminCrudIpc.ts
+@write src/main/ipc/roleIpc.ts
 import { ipcMain } from 'electron'
 import type { IpcMainInvokeEvent } from 'electron'
 import type {
-  AdminCrudAccessModule,
-  AdminCrudCreateParams,
-  AdminCrudDeleteParams,
-  AdminCrudGetByIdParams,
-  AdminCrudListParams,
-  SaveDepartmentWithFacultiesParams,
-  AdminCrudUpdateParams
-} from '../../shared/types/adminCrud'
+  CreateRoleParams,
+  DeleteRoleParams,
+  SetRolePermissionsParams,
+  UpdateRoleParams
+} from '../../shared/types/roles'
 import { AuditRepository } from '../audit/auditRepository'
 import { AuditService } from '../audit/auditService'
 import { AuthRepository } from '../auth/authRepository'
 import { AuthService } from '../auth/authService'
 import { getDatabase } from '../database/connection'
-import { AdminCrudRepository } from '../repositories/adminCrudRepository'
-import { AdminCrudService } from '../services/adminCrudService'
-import {
-  requireAdminCrudAccess,
-  type AdminCrudAccessAction
-} from '../security/adminCrudAccess'
+import { RoleRepository } from '../roles/roleRepository'
+import { RoleService } from '../roles/roleService'
+import { requireModuleAccess } from '../security/ipcAccess'
+import type { AccessAction } from '../security/accessControl'
 
-type GuardedAdminCrudParams =
-  | AdminCrudListParams
-  | AdminCrudGetByIdParams
-  | AdminCrudCreateParams
-  | AdminCrudUpdateParams
-  | AdminCrudDeleteParams
-  | SaveDepartmentWithFacultiesParams
-
-export function registerAdminCrudIpcHandlers(): void {
+export function registerRoleIpcHandlers(): void {
   const database = getDatabase()
 
   const auditRepository = new AuditRepository(database)
@@ -540,126 +194,159 @@ export function registerAdminCrudIpcHandlers(): void {
   const authRepository = new AuthRepository(database)
   const authService = new AuthService(authRepository, auditService)
 
-  const repository = new AdminCrudRepository(database)
-  const service = new AdminCrudService(repository, auditService)
+  const roleRepository = new RoleRepository(database)
+  const roleService = new RoleService(roleRepository, auditService)
 
-  function requireAccess(
-    event: IpcMainInvokeEvent,
-    params: GuardedAdminCrudParams,
-    action: AdminCrudAccessAction,
-    fallbackModule?: AdminCrudAccessModule
-  ): void {
-    requireAdminCrudAccess(event, authService, params, action, fallbackModule)
+  function requireAdministrationAccess(event: IpcMainInvokeEvent, action: AccessAction): void {
+    requireModuleAccess(event, authService, 'administration', action)
   }
 
-  ipcMain.handle('adminCrud:list', (event, params: AdminCrudListParams) => {
-    requireAccess(event, params, 'view')
+  ipcMain.handle('roles:list', (event) => {
+    requireAdministrationAccess(event, 'view')
 
-    return service.list(params)
+    return roleService.listRoles()
   })
 
-  ipcMain.handle('adminCrud:getById', (event, params: AdminCrudGetByIdParams) => {
-    requireAccess(event, params, 'view')
+  ipcMain.handle('roles:getDetails', (event, roleId: number) => {
+    requireAdministrationAccess(event, 'view')
 
-    return service.getById(params)
+    return roleService.getRoleDetails(roleId)
   })
 
-  ipcMain.handle('adminCrud:create', (event, params: AdminCrudCreateParams) => {
-    requireAccess(event, params, 'create')
+  ipcMain.handle('roles:listPermissionGroups', (event) => {
+    requireAdministrationAccess(event, 'view')
 
-    return service.create(params)
+    return roleService.listPermissionGroups()
   })
 
-  ipcMain.handle('adminCrud:update', (event, params: AdminCrudUpdateParams) => {
-    requireAccess(event, params, 'update')
+  ipcMain.handle('roles:create', (event, params: CreateRoleParams) => {
+    requireAdministrationAccess(event, 'create')
 
-    return service.update(params)
+    return roleService.createRole(params)
   })
 
-  ipcMain.handle(
-    'adminCrud:saveDepartmentWithFaculties',
-    (event, params: SaveDepartmentWithFacultiesParams) => {
-      requireAccess(event, params, params.id === undefined ? 'create' : 'update', 'university')
+  ipcMain.handle('roles:update', (event, params: UpdateRoleParams) => {
+    requireAdministrationAccess(event, 'update')
 
-      return service.saveDepartmentWithFaculties(params)
-    }
-  )
+    return roleService.updateRole(params)
+  })
 
-  ipcMain.handle('adminCrud:delete', (event, params: AdminCrudDeleteParams) => {
-    requireAccess(event, params, 'delete')
+  ipcMain.handle('roles:setPermissions', (event, params: SetRolePermissionsParams) => {
+    requireAdministrationAccess(event, 'update')
 
-    return service.delete(params)
+    return roleService.setRolePermissions(params)
+  })
+
+  ipcMain.handle('roles:delete', (event, params: DeleteRoleParams) => {
+    requireAdministrationAccess(event, 'delete')
+
+    return roleService.deleteRole(params)
   })
 }
 @end
 
-@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-        orderBy,
-        orderDirection
-@endfind
-@with
-        orderBy,
-        orderDirection,
-        accessModule: currentAccessModule ?? undefined
-@endwith
+@write src/main/ipc/settingsIpc.ts
+import { ipcMain } from 'electron'
+import type { UpdateAppSettingsParams } from '../../shared/types/settings'
+import { AuditRepository } from '../audit/auditRepository'
+import { AuditService } from '../audit/auditService'
+import { AuthRepository } from '../auth/authRepository'
+import { AuthService } from '../auth/authService'
+import { getDatabase } from '../database/connection'
+import { SettingsRepository } from '../settings/settingsRepository'
+import { SettingsService } from '../settings/settingsService'
+import { requireModuleAccess } from '../security/ipcAccess'
+
+export function registerSettingsIpcHandlers(): void {
+  const database = getDatabase()
+
+  const auditRepository = new AuditRepository(database)
+  const auditService = new AuditService(auditRepository)
+
+  const authRepository = new AuthRepository(database)
+  const authService = new AuthService(authRepository, auditService)
+
+  const settingsRepository = new SettingsRepository(database)
+  const settingsService = new SettingsService(settingsRepository, auditService)
+
+  ipcMain.handle('settings:get', (event) => {
+    requireModuleAccess(event, authService, 'settings', 'view')
+
+    return settingsService.getSettings()
+  })
+
+  ipcMain.handle('settings:update', (event, params: UpdateAppSettingsParams) => {
+    requireModuleAccess(event, authService, 'settings', 'update')
+
+    return settingsService.updateSettings(params)
+  })
+}
 @end
 
-@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-  }, [entity, page, search, filtersKey, orderBy, orderDirection])
-@endfind
-@with
-  }, [entity, page, search, filtersKey, orderBy, orderDirection, currentAccessModule])
-@endwith
-@end
+@write src/main/ipc/systemIpc.ts
+import { ipcMain } from 'electron'
+import { AuditRepository } from '../audit/auditRepository'
+import { AuditService } from '../audit/auditService'
+import { AuthRepository } from '../auth/authRepository'
+import { AuthService } from '../auth/authService'
+import { DataQualityRepository } from '../dataQuality/dataQualityRepository'
+import { DataQualityService } from '../dataQuality/dataQualityService'
+import { getDatabase } from '../database/connection'
+import { DatabaseTransferService } from '../database/databaseTransferService'
+import { HealthRepository } from '../health/healthRepository'
+import { HealthService } from '../health/healthService'
+import { requireAnyModuleAccess, requireModuleAccess } from '../security/ipcAccess'
 
-@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-        await window.api.adminCrud.create({
-          entity,
-          data: payload
-        })
-@endfind
-@with
-        await window.api.adminCrud.create({
-          entity,
-          accessModule: currentAccessModule ?? undefined,
-          data: payload
-        })
-@endwith
-@end
+export function registerSystemIpcHandlers(): void {
+  const database = getDatabase()
+  const databaseTransferService = new DatabaseTransferService(database)
 
-@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-        await window.api.adminCrud.update({
-          entity,
-          id: Number(selectedRecord.id),
-          data: payload
-        })
-@endfind
-@with
-        await window.api.adminCrud.update({
-          entity,
-          accessModule: currentAccessModule ?? undefined,
-          id: Number(selectedRecord.id),
-          data: payload
-        })
-@endwith
-@end
+  const auditRepository = new AuditRepository(database)
+  const auditService = new AuditService(auditRepository)
 
-@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-      await window.api.adminCrud.delete({
-        entity,
-        id: Number(deleteRecord.id)
-      })
-@endfind
-@with
-      await window.api.adminCrud.delete({
-        entity,
-        accessModule: currentAccessModule ?? undefined,
-        id: Number(deleteRecord.id)
-      })
-@endwith
+  const authRepository = new AuthRepository(database)
+  const authService = new AuthService(authRepository, auditService)
+
+  const healthRepository = new HealthRepository(database)
+  const healthService = new HealthService(healthRepository)
+
+  const dataQualityRepository = new DataQualityRepository(database)
+  const dataQualityService = new DataQualityService(dataQualityRepository)
+
+  ipcMain.handle('system:getHealthReport', (event) => {
+    requireAnyModuleAccess(event, authService, [
+      { module: 'settings', action: 'view' },
+      { module: 'administration', action: 'view' }
+    ])
+
+    return healthService.getHealthReport()
+  })
+
+  ipcMain.handle('system:getDataQualityReport', (event) => {
+    requireAnyModuleAccess(event, authService, [
+      { module: 'settings', action: 'view' },
+      { module: 'administration', action: 'view' }
+    ])
+
+    return dataQualityService.getReport()
+  })
+
+  ipcMain.handle('system:exportDatabaseToJson', (event) => {
+    requireModuleAccess(event, authService, 'administration', 'view')
+
+    return databaseTransferService.exportToJson()
+  })
+
+  ipcMain.handle('system:importDatabaseFromJson', (event) => {
+    requireModuleAccess(event, authService, 'administration', 'update')
+
+    return databaseTransferService.importFromJson()
+  })
+
+  ipcMain.handle('system:resetDatabase', (event) => {
+    requireModuleAccess(event, authService, 'administration', 'delete')
+
+    return databaseTransferService.resetDatabase()
+  })
+}
 @end

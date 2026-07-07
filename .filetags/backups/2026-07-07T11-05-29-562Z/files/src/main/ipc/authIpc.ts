@@ -1,5 +1,4 @@
 import { ipcMain } from 'electron'
-import type { IpcMainInvokeEvent } from 'electron'
 import type {
   ChangePasswordParams,
   CreateUserParams,
@@ -19,8 +18,6 @@ import {
   rememberAuthTokenForWebContents
 } from '../auth/sessionContext'
 import { getDatabase } from '../database/connection'
-import { requireModuleAccess } from '../security/ipcAccess'
-import type { AccessAction } from '../security/accessControl'
 
 export function registerAuthIpcHandlers(): void {
   const database = getDatabase()
@@ -30,10 +27,6 @@ export function registerAuthIpcHandlers(): void {
 
   const authRepository = new AuthRepository(database)
   const authService = new AuthService(authRepository, auditService)
-
-  function requireAdministrationAccess(event: IpcMainInvokeEvent, action: AccessAction): void {
-    requireModuleAccess(event, authService, 'administration', action)
-  }
 
   ipcMain.handle('auth:login', (event, params: LoginParams) => {
     const result = authService.login(params)
@@ -63,39 +56,27 @@ export function registerAuthIpcHandlers(): void {
     return result
   })
 
-  ipcMain.handle('auth:listUsers', (event) => {
-    requireAdministrationAccess(event, 'view')
-
+  ipcMain.handle('auth:listUsers', () => {
     return authService.listUsers()
   })
 
-  ipcMain.handle('auth:createUser', (event, params: CreateUserParams) => {
-    requireAdministrationAccess(event, 'create')
-
+  ipcMain.handle('auth:createUser', (_event, params: CreateUserParams) => {
     return authService.createUser(params)
   })
 
-  ipcMain.handle('auth:updateUser', (event, params: UpdateUserParams) => {
-    requireAdministrationAccess(event, 'update')
-
+  ipcMain.handle('auth:updateUser', (_event, params: UpdateUserParams) => {
     return authService.updateUser(params)
   })
 
-  ipcMain.handle('auth:setUserActive', (event, params: SetUserActiveParams) => {
-    requireAdministrationAccess(event, 'update')
-
+  ipcMain.handle('auth:setUserActive', (_event, params: SetUserActiveParams) => {
     return authService.setUserActive(params)
   })
 
-  ipcMain.handle('auth:deleteUser', (event, params: DeleteUserParams) => {
-    requireAdministrationAccess(event, 'delete')
-
+  ipcMain.handle('auth:deleteUser', (_event, params: DeleteUserParams) => {
     return authService.deleteUser(params)
   })
 
-  ipcMain.handle('auth:changePassword', (event, params: ChangePasswordParams) => {
-    requireAdministrationAccess(event, 'update')
-
+  ipcMain.handle('auth:changePassword', (_event, params: ChangePasswordParams) => {
     return authService.changePassword(params)
   })
 }
