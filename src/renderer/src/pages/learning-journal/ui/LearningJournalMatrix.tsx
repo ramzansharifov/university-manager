@@ -67,6 +67,29 @@ type JournalDayGroup = {
   columns: JournalColumn[]
 }
 
+type IntermediateGradeItemGroup = {
+  key: string
+  gradeElementType: AdminCrudRecord | null
+  title: string
+  gradeItems: AdminCrudRecord[]
+}
+
+type GradeSummary =
+  | {
+      kind: 'score'
+      value: number | null
+      filledCount: number
+      totalCount: number
+    }
+  | {
+      kind: 'pass_fail'
+      passedCount: number
+      filledCount: number
+      totalCount: number
+    }
+
+type GradeTone = 'empty' | 'minimum' | 'belowPassing' | 'passing' | 'maximum'
+
 export function LearningJournalMatrix(): ReactElement {
   const [faculties, setFaculties] = useState<AdminCrudRecord[]>([])
   const [specialties, setSpecialties] = useState<AdminCrudRecord[]>([])
@@ -1132,6 +1155,32 @@ export function LearningJournalMatrix(): ReactElement {
     return details.join(' · ')
   }
 
+  function getIntermediateGroupScoreDescription(group: IntermediateGradeItemGroup): string {
+    const gradeElementType = group.gradeElementType
+
+    if (!gradeElementType) {
+      const firstGradeItem = group.gradeItems[0]
+
+      return firstGradeItem ? getGradeItemScoreDescription(firstGradeItem) : 'Правила не заданы'
+    }
+
+    if (gradeElementType.grading_mode === 'pass_fail') {
+      return 'Сдал / не сдал'
+    }
+
+    const minScore = toNumberOrNull(gradeElementType.min_score) ?? 0
+    const maxScore = toNumberOrNull(gradeElementType.max_score)
+    const passingScore = toNumberOrNull(gradeElementType.passing_score)
+    const details = [
+      'Баллы',
+      `мин. ${minScore}`,
+      maxScore !== null ? `макс. ${maxScore}` : 'макс. не задан',
+      passingScore !== null ? `проходной ${passingScore}` : 'проходной не задан'
+    ]
+
+    return details.join(' · ')
+  }
+
   function getStudentGradeRecord(
     student: AdminCrudRecord,
     gradeItem: AdminCrudRecord
@@ -1157,6 +1206,116 @@ export function LearningJournalMatrix(): ReactElement {
     }
 
     return score >= 1 ? 'pass' : 'fail'
+  }
+
+  function getScoreGradeTone(score: number | null, gradeItem: AdminCrudRecord): GradeTone {
+    if (score === null) {
+      return 'empty'
+    }
+
+    const minScore = getGradeItemMinScore(gradeItem)
+    const passingScore = getGradeItemPassingScore(gradeItem)
+    const maxScore = getGradeItemMaxScore(gradeItem)
+
+    if (maxScore <= minScore) {
+      return 'empty'
+    }
+
+    if (areNumbersClose(score, maxScore)) {
+      return 'maximum'
+    }
+
+    if (areNumbersClose(score, minScore)) {
+      return 'minimum'
+    }
+
+    if (passingScore !== null) {
+      return score < passingScore ? 'belowPassing' : 'passing'
+    }
+
+    return score <= minScore ? 'minimum' : 'passing'
+  }
+
+  function getPassFailTone(value: string): GradeTone {
+    if (value === 'pass') {
+      return 'maximum'
+    }
+
+    if (value === 'fail') {
+      return 'belowPassing'
+    }
+
+    return 'empty'
+  }
+
+  function calculateStudentIntermediateSummary(
+    student: AdminCrudRecord,
+    group: IntermediateGradeItemGroup
+  ): GradeSummary {
+    const isPassFail = group.gradeElementType?.grading_mode === 'pass_fail'
+    const totalCount = group.gradeItems.length
+    const scores = group.gradeItems
+      .map((gradeItem) => toNumberOrNull(getStudentGradeRecord(student, gradeItem)?.score))
+      .filter((score): score is number => score !== null)
+
+    if (isPassFail) {
+      return {
+        kind: 'pass_fail',
+        passedCount: scores.filter((score) => score >= 1).length,
+        filledCount: scores.length,
+        totalCount
+      }
+    }
+
+    return {
+      kind: 'score',
+      value:
+        scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null,
+      filledCount: scores.length,
+      totalCount
+    }
+  }
+
+  function renderIntermediateSummaryCell(
+    student: AdminCrudRecord,
+    group: IntermediateGradeItemGroup
+  ): ReactElement {
+    const summary = calculateStudentIntermediateSummary(student, group)
+    const baseClassName =
+      'border-l border-r border-[var(--color-border)] px-3 py-2 text-center font-semibold'
+
+    if (summary.kind === 'pass_fail') {
+      const tone =
+        summary.filledCount === 0
+          ? 'empty'
+          : summary.passedCount === summary.totalCount
+            ? 'maximum'
+            : 'belowPassing'
+
+      return (
+        <td
+          className={`${baseClassName} ${getGradeToneClassName(tone)}`}
+          title={`Заполнено ${summary.filledCount}/${summary.totalCount}`}
+        >
+          {summary.filledCount === 0 ? '—' : `Сдано ${summary.passedCount}/${summary.totalCount}`}
+        </td>
+      )
+    }
+
+    const firstGradeItem = group.gradeItems[0]
+    const tone =
+      summary.value === null || !firstGradeItem
+        ? 'empty'
+        : getScoreGradeTone(summary.value, firstGradeItem)
+
+    return (
+      <td
+        className={`${baseClassName} ${getGradeToneClassName(tone)}`}
+        title={`Заполнено ${summary.filledCount}/${summary.totalCount}`}
+      >
+        {summary.value === null ? '—' : formatScoreValue(summary.value)}
+      </td>
+    )
   }
 
   async function saveStudentGrade(
@@ -1356,6 +1515,11 @@ export function LearningJournalMatrix(): ReactElement {
       return null
     }
 
+    const intermediateGradeItemGroups = createIntermediateGradeItemGroups(
+      activeDisciplineIntermediateGradeItems,
+      getGradeItemElementType
+    )
+
     return (
       <div className="mt-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -1368,7 +1532,27 @@ export function LearningJournalMatrix(): ReactElement {
             </p>
           </div>
 
-          <Badge variant="muted">Элементов: {activeDisciplineIntermediateGradeItems.length}</Badge>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="muted">
+              Элементов: {activeDisciplineIntermediateGradeItems.length}
+            </Badge>
+            <Badge variant="muted">Журналов: {intermediateGradeItemGroups.length}</Badge>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[var(--color-text-muted)]">
+          <span className={`rounded-md border px-2 py-1 ${getGradeToneClassName('minimum')}`}>
+            Минимум
+          </span>
+          <span className={`rounded-md border px-2 py-1 ${getGradeToneClassName('belowPassing')}`}>
+            Ниже проходного
+          </span>
+          <span className={`rounded-md border px-2 py-1 ${getGradeToneClassName('passing')}`}>
+            Проходной и выше
+          </span>
+          <span className={`rounded-md border px-2 py-1 ${getGradeToneClassName('maximum')}`}>
+            Максимум
+          </span>
         </div>
 
         {gradeError ? (
@@ -1382,89 +1566,128 @@ export function LearningJournalMatrix(): ReactElement {
             Для этой дисциплины пока нет промежуточных оценочных элементов.
           </div>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--color-border)]">
-            <table className="w-full min-w-max border-collapse text-xs">
-              <thead>
-                <tr className="bg-[var(--color-surface-muted)]">
-                  <th className="sticky left-0 z-20 whitespace-nowrap border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left font-semibold text-[var(--color-text-muted)]">
-                    Студент
-                  </th>
+          <div className="mt-3 grid gap-4">
+            {intermediateGradeItemGroups.map((group) => (
+              <div
+                key={group.key}
+                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/30 p-3"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text)]">{group.title}</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                      {getIntermediateGroupScoreDescription(group)}
+                    </p>
+                  </div>
 
-                  {activeDisciplineIntermediateGradeItems.map((gradeItem) => {
-                    const gradeElementType = getGradeItemElementType(gradeItem)
+                  <Badge variant="muted">Работ: {group.gradeItems.length}</Badge>
+                </div>
 
-                    return (
-                      <th
-                        key={String(gradeItem.id)}
-                        className="min-w-36 border-b border-r border-[var(--color-border)] px-3 py-2 text-center font-semibold text-[var(--color-text)] last:border-r-0"
-                        title={gradeElementType ? getRecordName(gradeElementType) : undefined}
-                      >
-                        <span className="block">{String(gradeItem.name ?? 'Оценка')}</span>
-                        <span className="mt-1 block text-[10px] font-medium text-[var(--color-text-muted)]">
-                          {getGradeItemScoreDescription(gradeItem)}
-                        </span>
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
+                <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--color-border)]">
+                  <table className="w-full min-w-max border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[var(--color-surface-muted)]">
+                        <th className="sticky left-0 z-20 whitespace-nowrap border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left font-semibold text-[var(--color-text-muted)]">
+                          Студент
+                        </th>
 
-              <tbody>
-                {groupStudents.map((student, index) => (
-                  <tr
-                    key={String(student.id)}
-                    className="border-b border-[var(--color-border)] last:border-b-0"
-                  >
-                    <td className="sticky left-0 z-10 whitespace-nowrap border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]">
-                      {index + 1}) {getPersonShortName(student)}
-                    </td>
+                        {group.gradeItems.map((gradeItem) => (
+                          <th
+                            key={String(gradeItem.id)}
+                            className="min-w-40 border-b border-r border-[var(--color-border)] px-3 py-2 text-center font-semibold text-[var(--color-text)]"
+                          >
+                            <span className="block">{String(gradeItem.name ?? 'Оценка')}</span>
+                            <span className="mt-1 block text-[10px] font-medium text-[var(--color-text-muted)]">
+                              {getGradeItemScoreDescription(gradeItem)}
+                            </span>
+                          </th>
+                        ))}
 
-                    {activeDisciplineIntermediateGradeItems.map((gradeItem) => {
-                      const gradeElementType = getGradeItemElementType(gradeItem)
-                      const isPassFail = gradeElementType?.grading_mode === 'pass_fail'
-                      const currentValue = getStudentGradeValue(student, gradeItem)
+                        <th className="min-w-28 border-b border-l border-[var(--color-border)] px-3 py-2 text-center font-semibold text-[var(--color-text)]">
+                          Итоги
+                        </th>
+                      </tr>
+                    </thead>
 
-                      return (
-                        <td
-                          key={`${String(student.id)}:${String(gradeItem.id)}`}
-                          className="border-r border-[var(--color-border)] px-2 py-2 text-center last:border-r-0"
+                    <tbody>
+                      {groupStudents.map((student, index) => (
+                        <tr
+                          key={`${group.key}:${String(student.id)}`}
+                          className="border-b border-[var(--color-border)] last:border-b-0"
                         >
-                          {isPassFail ? (
-                            <Select
-                              value={
-                                getStudentPassFailValue(student, gradeItem) || emptySelectValue
-                              }
-                              disabled={isSavingGrade}
-                              onValueChange={(value) =>
-                                handlePassFailGradeChange(student, gradeItem, value)
-                              }
-                            >
-                              <SelectTrigger className="h-8 min-w-28 text-xs">
-                                <SelectValue placeholder="—" />
-                              </SelectTrigger>
+                          <td className="sticky left-0 z-10 whitespace-nowrap border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]">
+                            {index + 1}) {getPersonShortName(student)}
+                          </td>
 
-                              <SelectContent>
-                                <SelectItem value={emptySelectValue}>—</SelectItem>
-                                <SelectItem value="pass">Сдал</SelectItem>
-                                <SelectItem value="fail">Не сдал</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <ScoreInput
-                              value={currentValue}
-                              min={getGradeItemMinScore(gradeItem)}
-                              max={getGradeItemMaxScore(gradeItem)}
-                              disabled={isSavingGrade}
-                              onCommit={(value) => handleScoreGradeBlur(student, gradeItem, value)}
-                            />
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          {group.gradeItems.map((gradeItem) => {
+                            const gradeElementType = getGradeItemElementType(gradeItem)
+                            const isPassFail = gradeElementType?.grading_mode === 'pass_fail'
+                            const currentValue = getStudentGradeValue(student, gradeItem)
+
+                            if (isPassFail) {
+                              const passFailValue = getStudentPassFailValue(student, gradeItem)
+
+                              return (
+                                <td
+                                  key={`${String(student.id)}:${String(gradeItem.id)}`}
+                                  className="border-r border-[var(--color-border)] px-2 py-2 text-center"
+                                >
+                                  <Select
+                                    value={passFailValue || emptySelectValue}
+                                    disabled={isSavingGrade}
+                                    onValueChange={(value) =>
+                                      handlePassFailGradeChange(student, gradeItem, value)
+                                    }
+                                  >
+                                    <SelectTrigger
+                                      className={`h-8 min-w-28 text-xs ${getGradeToneClassName(getPassFailTone(passFailValue))}`}
+                                    >
+                                      <SelectValue placeholder="—" />
+                                    </SelectTrigger>
+
+                                    <SelectContent>
+                                      <SelectItem value={emptySelectValue}>—</SelectItem>
+                                      <SelectItem value="pass">Сдал</SelectItem>
+                                      <SelectItem value="fail">Не сдал</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                              )
+                            }
+
+                            const score = toNumberOrNull(
+                              getStudentGradeRecord(student, gradeItem)?.score
+                            )
+
+                            return (
+                              <td
+                                key={`${String(student.id)}:${String(gradeItem.id)}`}
+                                className="border-r border-[var(--color-border)] px-2 py-2 text-center"
+                              >
+                                <ScoreInput
+                                  value={currentValue}
+                                  min={getGradeItemMinScore(gradeItem)}
+                                  max={getGradeItemMaxScore(gradeItem)}
+                                  disabled={isSavingGrade}
+                                  toneClassName={getGradeToneClassName(
+                                    getScoreGradeTone(score, gradeItem)
+                                  )}
+                                  onCommit={(value) =>
+                                    handleScoreGradeBlur(student, gradeItem, value)
+                                  }
+                                />
+                              </td>
+                            )
+                          })}
+
+                          {renderIntermediateSummaryCell(student, group)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -2211,12 +2434,14 @@ function EmptyState({ text }: { text: string }): ReactElement {
 function ScoreInput({
   value,
   disabled,
+  toneClassName,
   onCommit
 }: {
   value: string
   min: number
   max: number
   disabled?: boolean
+  toneClassName?: string
   onCommit: (value: string) => void
 }): ReactElement {
   const [draft, setDraft] = useState(value)
@@ -2231,7 +2456,7 @@ function ScoreInput({
       inputMode="decimal"
       pattern="[0-9]*[.,]?[0-9]*"
       disabled={disabled}
-      className="h-8 w-24 text-center text-xs"
+      className={`h-8 w-24 text-center text-xs ${toneClassName ?? ''}`}
       placeholder="—"
       onChange={(event) => {
         setDraft(sanitizeScoreInput(event.target.value))
@@ -2298,6 +2523,46 @@ function createRecordNameMap(items: AdminCrudRecord[]): Map<number, string> {
       .map((item) => [toNumberOrNull(item.id), getRecordName(item)] as const)
       .filter((entry): entry is readonly [number, string] => entry[0] !== null)
   )
+}
+
+function createIntermediateGradeItemGroups(
+  gradeItems: AdminCrudRecord[],
+  getGradeItemElementType: (gradeItem: AdminCrudRecord) => AdminCrudRecord | null
+): IntermediateGradeItemGroup[] {
+  const groupByKey = new Map<string, IntermediateGradeItemGroup>()
+
+  gradeItems.forEach((gradeItem) => {
+    const gradeElementType = getGradeItemElementType(gradeItem)
+    const key = gradeElementType?.id ? String(gradeElementType.id) : 'unknown'
+    const existingGroup = groupByKey.get(key)
+
+    if (existingGroup) {
+      existingGroup.gradeItems.push(gradeItem)
+      return
+    }
+
+    groupByKey.set(key, {
+      key,
+      gradeElementType,
+      title: gradeElementType ? getRecordName(gradeElementType) : 'Тип не указан',
+      gradeItems: [gradeItem]
+    })
+  })
+
+  return [...groupByKey.values()]
+    .map((group) => ({
+      ...group,
+      gradeItems: [...group.gradeItems].sort(compareGradeItems)
+    }))
+    .sort((firstGroup, secondGroup) => {
+      const titleComparison = firstGroup.title.localeCompare(secondGroup.title, 'ru')
+
+      if (titleComparison !== 0) {
+        return titleComparison
+      }
+
+      return firstGroup.key.localeCompare(secondGroup.key, 'ru')
+    })
 }
 
 function getSemesterLabel(
@@ -2416,6 +2681,33 @@ function sanitizeScoreInput(value: string): string {
   }
 
   return `${parts[0]}.${parts.slice(1).join('')}`
+}
+
+function areNumbersClose(firstValue: number, secondValue: number): boolean {
+  return Math.abs(firstValue - secondValue) < 0.0001
+}
+
+function formatScoreValue(value: number): string {
+  if (Number.isInteger(value)) {
+    return String(value)
+  }
+
+  return value.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function getGradeToneClassName(tone: GradeTone): string {
+  switch (tone) {
+    case 'minimum':
+      return 'border-red-300 bg-red-100 text-red-900'
+    case 'belowPassing':
+      return 'border-red-200 bg-red-50 text-red-700'
+    case 'passing':
+      return 'border-lime-200 bg-lime-50 text-lime-800'
+    case 'maximum':
+      return 'border-green-400 bg-green-100 text-green-900 font-semibold'
+    default:
+      return ''
+  }
 }
 
 function getRecordName(record: AdminCrudRecord): string {
