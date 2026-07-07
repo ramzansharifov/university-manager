@@ -84,6 +84,9 @@ export function LearningJournalMatrix(): ReactElement {
   const [attendanceRecords, setAttendanceRecords] = useState<AdminCrudRecord[]>([])
   const [attendanceStatuses, setAttendanceStatuses] = useState<AdminCrudRecord[]>([])
   const [teachers, setTeachers] = useState<AdminCrudRecord[]>([])
+  const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
+  const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
+  const [grades, setGrades] = useState<AdminCrudRecord[]>([])
 
   const [selectedFacultyId, setSelectedFacultyId] = useState('')
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
@@ -98,6 +101,11 @@ export function LearningJournalMatrix(): ReactElement {
   const [isSavingTopic, setIsSavingTopic] = useState(false)
   const [isSavingCompletion, setIsSavingCompletion] = useState(false)
   const [topicError, setTopicError] = useState<string | null>(null)
+  const [selectedIntermediateTypeId, setSelectedIntermediateTypeId] = useState('')
+  const [intermediateGradeItemNameDraft, setIntermediateGradeItemNameDraft] = useState('')
+  const [intermediateMaxScoreDraft, setIntermediateMaxScoreDraft] = useState('')
+  const [isSavingGrade, setIsSavingGrade] = useState(false)
+  const [gradeError, setGradeError] = useState<string | null>(null)
   const [isSavingAttendance, setIsSavingAttendance] = useState(false)
   const [attendanceError, setAttendanceError] = useState<string | null>(null)
 
@@ -118,7 +126,10 @@ export function LearningJournalMatrix(): ReactElement {
       lessonSessionsResult,
       lessonCompletionRecordsResult,
       attendanceRecordsResult,
-      attendanceStatusesResult
+      attendanceStatusesResult,
+      gradeElementTypesResult,
+      gradeItemsResult,
+      gradesResult
     ] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'faculties',
@@ -232,6 +243,27 @@ export function LearningJournalMatrix(): ReactElement {
         filters: { dictionary_key: 'attendance_statuses' },
         orderBy: 'sort_order',
         orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'grade_element_types',
+        page: 1,
+        pageSize: 500,
+        orderBy: 'name',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'grade_items',
+        page: 1,
+        pageSize: 10000,
+        orderBy: 'grade_date',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'grades',
+        page: 1,
+        pageSize: 20000,
+        orderBy: 'id',
+        orderDirection: 'asc'
       })
     ])
 
@@ -251,6 +283,9 @@ export function LearningJournalMatrix(): ReactElement {
     setLessonCompletionRecords(lessonCompletionRecordsResult.items)
     setAttendanceRecords(attendanceRecordsResult.items)
     setAttendanceStatuses(attendanceStatusesResult.items)
+    setGradeElementTypes(gradeElementTypesResult.items)
+    setGradeItems(gradeItemsResult.items)
+    setGrades(gradesResult.items)
   }, [])
 
   useEffect(() => {
@@ -348,6 +383,14 @@ export function LearningJournalMatrix(): ReactElement {
   const subjectNameById = useMemo(() => createRecordNameMap(subjects), [subjects])
   const lessonPeriodById = useMemo(() => createRecordMap(lessonPeriods), [lessonPeriods])
   const teacherById = useMemo(() => createRecordMap(teachers), [teachers])
+  const gradeElementTypeById = useMemo(
+    () => createRecordMap(gradeElementTypes),
+    [gradeElementTypes]
+  )
+  const intermediateGradeElementTypes = useMemo(
+    () => gradeElementTypes.filter((item) => Number(item.is_intermediate) === 1),
+    [gradeElementTypes]
+  )
 
   const selectedSemester = useMemo(
     () => filteredSemesters.find((semester) => String(semester.id) === selectedSemesterId) ?? null,
@@ -473,6 +516,10 @@ export function LearningJournalMatrix(): ReactElement {
     [activeTopicColumnId, journalColumns]
   )
 
+  const activeDisciplineIntermediateGradeItems = activeTopicColumn
+    ? getIntermediateGradeItemsForColumn(activeTopicColumn)
+    : []
+
   useEffect(() => {
     if (!activeTopicColumnId) {
       return
@@ -484,6 +531,7 @@ export function LearningJournalMatrix(): ReactElement {
       setLessonNoteDraft('')
       setIsLessonEditorEditing(false)
       setTopicError(null)
+      clearIntermediateGradeDraft()
     }
   }, [activeTopicColumn, activeTopicColumnId])
 
@@ -777,6 +825,579 @@ export function LearningJournalMatrix(): ReactElement {
     setLessonNoteDraft(getLessonNote(column))
     setIsLessonEditorEditing(!hasSavedDetails)
     setTopicError(null)
+    setGradeError(null)
+    initializeIntermediateGradeDraft(column)
+  }
+
+  function clearIntermediateGradeDraft(): void {
+    setSelectedIntermediateTypeId('')
+    setIntermediateGradeItemNameDraft('')
+    setIntermediateMaxScoreDraft('')
+    setGradeError(null)
+  }
+
+  function getGradeElementTypeById(value: unknown): AdminCrudRecord | null {
+    const id = toNumberOrNull(value)
+
+    return id === null ? null : (gradeElementTypeById.get(id) ?? null)
+  }
+
+  function getIntermediateGradeItemsForColumn(column: ScheduleJournalColumn): AdminCrudRecord[] {
+    const disciplineId = toNumberOrNull(column.scheduleItem.discipline_id)
+
+    if (disciplineId === null) {
+      return []
+    }
+
+    return gradeItems
+      .filter((gradeItem) => Number(gradeItem.discipline_id) === disciplineId)
+      .filter((gradeItem) => {
+        const gradeElementType = getGradeElementTypeById(gradeItem.grade_element_type_id)
+
+        return Number(gradeElementType?.is_intermediate) === 1
+      })
+      .sort(compareGradeItems)
+  }
+
+  function getIntermediateGradeItemForLesson(
+    column: ScheduleJournalColumn
+  ): AdminCrudRecord | null {
+    const lessonSession = getLessonSession(column)
+    const lessonSessionId = toNumberOrNull(lessonSession?.id)
+    const disciplineId = toNumberOrNull(column.scheduleItem.discipline_id)
+    const weekId = toNumberOrNull(selectedWeek?.id)
+
+    if (lessonSessionId !== null) {
+      const byLessonSession = gradeItems.find((gradeItem) => {
+        const gradeElementType = getGradeElementTypeById(gradeItem.grade_element_type_id)
+
+        return (
+          Number(gradeItem.lesson_session_id) === lessonSessionId &&
+          Number(gradeElementType?.is_intermediate) === 1
+        )
+      })
+
+      if (byLessonSession) {
+        return byLessonSession
+      }
+    }
+
+    if (disciplineId === null || weekId === null) {
+      return null
+    }
+
+    return (
+      gradeItems.find((gradeItem) => {
+        const gradeElementType = getGradeElementTypeById(gradeItem.grade_element_type_id)
+
+        return (
+          Number(gradeItem.discipline_id) === disciplineId &&
+          Number(gradeItem.week_id) === weekId &&
+          Number(gradeItem.day_of_week) === column.dayOfWeek &&
+          String(gradeItem.grade_date ?? '') === column.date &&
+          Number(gradeElementType?.is_intermediate) === 1
+        )
+      }) ?? null
+    )
+  }
+
+  function initializeIntermediateGradeDraft(column: ScheduleJournalColumn): void {
+    const gradeItem = getIntermediateGradeItemForLesson(column)
+
+    if (!gradeItem) {
+      clearIntermediateGradeDraft()
+      return
+    }
+
+    setSelectedIntermediateTypeId(String(gradeItem.grade_element_type_id ?? ''))
+    setIntermediateGradeItemNameDraft(String(gradeItem.name ?? ''))
+    setIntermediateMaxScoreDraft(String(gradeItem.max_score ?? ''))
+  }
+
+  function handleIntermediateTypeChange(value: string): void {
+    const nextValue = value === emptySelectValue ? '' : value
+
+    setSelectedIntermediateTypeId(nextValue)
+    setGradeError(null)
+
+    if (!nextValue || !activeTopicColumn) {
+      setIntermediateGradeItemNameDraft('')
+      setIntermediateMaxScoreDraft('')
+      return
+    }
+
+    const gradeElementType = getGradeElementTypeById(nextValue)
+
+    setIntermediateGradeItemNameDraft((current) => {
+      const trimmed = current.trim()
+
+      return trimmed || createDefaultGradeItemName(gradeElementType, activeTopicColumn)
+    })
+    setIntermediateMaxScoreDraft(String(getDefaultMaxScore(gradeElementType)))
+  }
+
+  async function ensureIntermediateGradeItem(
+    column: ScheduleJournalColumn,
+    lessonSession: AdminCrudRecord
+  ): Promise<void> {
+    if (!selectedIntermediateTypeId) {
+      return
+    }
+
+    const gradeElementType = getGradeElementTypeById(selectedIntermediateTypeId)
+
+    if (!gradeElementType?.id || Number(gradeElementType.is_intermediate) !== 1) {
+      throw new Error('Выбери промежуточный оценочный элемент')
+    }
+
+    const name = intermediateGradeItemNameDraft.trim()
+
+    if (!name) {
+      throw new Error('Укажи название промежуточной работы')
+    }
+
+    const maxScore =
+      gradeElementType.grading_mode === 'pass_fail' ? 1 : Number(intermediateMaxScoreDraft)
+
+    if (!Number.isFinite(maxScore) || maxScore <= 0) {
+      throw new Error('Укажи корректный максимальный балл')
+    }
+
+    const payload = {
+      discipline_id: Number(column.scheduleItem.discipline_id),
+      lesson_session_id: Number(lessonSession.id),
+      grade_element_type_id: Number(gradeElementType.id),
+      week_id: Number(selectedWeek?.id),
+      day_of_week: column.dayOfWeek,
+      name,
+      max_score: maxScore,
+      grade_date: column.date,
+      description: lessonNoteDraft.trim() || null
+    }
+
+    const existingGradeItem =
+      getIntermediateGradeItemForLesson(column) ??
+      gradeItems.find(
+        (gradeItem) =>
+          Number(gradeItem.lesson_session_id) === Number(lessonSession.id) &&
+          Number(gradeItem.grade_element_type_id) === Number(gradeElementType.id) &&
+          String(gradeItem.name ?? '').trim() === name
+      )
+
+    if (existingGradeItem?.id) {
+      await window.api.adminCrud.update({
+        entity: 'grade_items',
+        id: Number(existingGradeItem.id),
+        data: payload
+      })
+      return
+    }
+
+    await window.api.adminCrud.create({
+      entity: 'grade_items',
+      data: payload
+    })
+  }
+
+  function getGradeItemElementType(gradeItem: AdminCrudRecord): AdminCrudRecord | null {
+    return getGradeElementTypeById(gradeItem.grade_element_type_id)
+  }
+
+  function getGradeItemMaxScore(gradeItem: AdminCrudRecord): number {
+    const itemMaxScore = toNumberOrNull(gradeItem.max_score)
+
+    if (itemMaxScore !== null) {
+      return itemMaxScore
+    }
+
+    return getDefaultMaxScore(getGradeItemElementType(gradeItem))
+  }
+
+  function getGradeItemMinScore(gradeItem: AdminCrudRecord): number {
+    const gradeElementType = getGradeItemElementType(gradeItem)
+    const minScore = toNumberOrNull(gradeElementType?.min_score)
+
+    return minScore ?? 0
+  }
+
+  function getStudentGradeRecord(
+    student: AdminCrudRecord,
+    gradeItem: AdminCrudRecord
+  ): AdminCrudRecord | undefined {
+    return grades.find(
+      (grade) =>
+        Number(grade.grade_item_id) === Number(gradeItem.id) &&
+        Number(grade.student_id) === Number(student.id)
+    )
+  }
+
+  function getStudentGradeValue(student: AdminCrudRecord, gradeItem: AdminCrudRecord): string {
+    const score = toNumberOrNull(getStudentGradeRecord(student, gradeItem)?.score)
+
+    return score === null ? '' : String(score)
+  }
+
+  function getStudentPassFailValue(student: AdminCrudRecord, gradeItem: AdminCrudRecord): string {
+    const score = toNumberOrNull(getStudentGradeRecord(student, gradeItem)?.score)
+
+    if (score === null) {
+      return ''
+    }
+
+    return score >= 1 ? 'pass' : 'fail'
+  }
+
+  async function saveStudentGrade(
+    student: AdminCrudRecord,
+    gradeItem: AdminCrudRecord,
+    score: number | null
+  ): Promise<void> {
+    if (isSavingGrade) {
+      return
+    }
+
+    const gradeItemId = toNumberOrNull(gradeItem.id)
+    const studentId = toNumberOrNull(student.id)
+
+    if (gradeItemId === null || studentId === null) {
+      setGradeError('Не удалось определить студента или оценочный элемент')
+      return
+    }
+
+    const existingGrade = getStudentGradeRecord(student, gradeItem)
+
+    if (score === null && !existingGrade?.id) {
+      return
+    }
+
+    setIsSavingGrade(true)
+    setGradeError(null)
+
+    try {
+      if (score === null) {
+        await window.api.adminCrud.delete({
+          entity: 'grades',
+          id: Number(existingGrade?.id)
+        })
+        await loadData()
+        return
+      }
+
+      if (existingGrade?.id) {
+        await window.api.adminCrud.update({
+          entity: 'grades',
+          id: Number(existingGrade.id),
+          data: {
+            score
+          }
+        })
+      } else {
+        await window.api.adminCrud.create({
+          entity: 'grades',
+          data: {
+            grade_item_id: gradeItemId,
+            student_id: studentId,
+            score,
+            comment: null,
+            graded_by_user_id: null
+          }
+        })
+      }
+
+      await loadData()
+    } catch (error) {
+      setGradeError(getUserFacingError(error, 'Не удалось сохранить оценку'))
+    } finally {
+      setIsSavingGrade(false)
+    }
+  }
+
+  function handleScoreGradeBlur(
+    student: AdminCrudRecord,
+    gradeItem: AdminCrudRecord,
+    value: string
+  ): void {
+    const trimmedValue = value.trim().replace(',', '.')
+
+    if (!trimmedValue) {
+      void saveStudentGrade(student, gradeItem, null)
+      return
+    }
+
+    const score = Number(trimmedValue)
+    const minScore = getGradeItemMinScore(gradeItem)
+    const maxScore = getGradeItemMaxScore(gradeItem)
+
+    if (!Number.isFinite(score) || score < minScore || score > maxScore) {
+      setGradeError(`Оценка должна быть числом от ${minScore} до ${maxScore}`)
+      return
+    }
+
+    void saveStudentGrade(student, gradeItem, score)
+  }
+
+  function handlePassFailGradeChange(
+    student: AdminCrudRecord,
+    gradeItem: AdminCrudRecord,
+    value: string
+  ): void {
+    if (value === emptySelectValue) {
+      void saveStudentGrade(student, gradeItem, null)
+      return
+    }
+
+    void saveStudentGrade(student, gradeItem, value === 'pass' ? 1 : 0)
+  }
+
+  function renderIntermediateGradeItemEditor(): ReactElement {
+    const selectedGradeElementType = selectedIntermediateTypeId
+      ? getGradeElementTypeById(selectedIntermediateTypeId)
+      : null
+    const isPassFail = selectedGradeElementType?.grading_mode === 'pass_fail'
+
+    return (
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 p-4">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold text-[var(--color-text)]">
+            Промежуточный оценочный элемент
+          </p>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Если на занятии была работа, выбери ее тип: после сохранения она появится в
+            мини-журнале.
+          </p>
+        </div>
+
+        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-[var(--color-text)]">
+              Провели оценочный элемент
+            </span>
+            <Select
+              value={selectedIntermediateTypeId || emptySelectValue}
+              disabled={intermediateGradeElementTypes.length === 0}
+              onValueChange={handleIntermediateTypeChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Выбери тип работы" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value={emptySelectValue}>Не проводили</SelectItem>
+
+                {intermediateGradeElementTypes.map((gradeElementType) => (
+                  <SelectItem key={String(gradeElementType.id)} value={String(gradeElementType.id)}>
+                    {getRecordName(gradeElementType)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+
+          {selectedGradeElementType ? (
+            <>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-[var(--color-text)]">
+                  Название работы
+                </span>
+                <Input
+                  value={intermediateGradeItemNameDraft}
+                  placeholder="Например: Самостоятельная работа"
+                  onChange={(event) => {
+                    setIntermediateGradeItemNameDraft(event.target.value)
+                    setGradeError(null)
+                  }}
+                />
+              </label>
+
+              {!isPassFail ? (
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium text-[var(--color-text)]">
+                    Максимальный балл
+                  </span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={intermediateMaxScoreDraft}
+                    onChange={(event) => {
+                      setIntermediateMaxScoreDraft(event.target.value)
+                      setGradeError(null)
+                    }}
+                  />
+                </label>
+              ) : (
+                <div className="flex items-end">
+                  <Badge variant="muted">Сдал / не сдал</Badge>
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+
+        {intermediateGradeElementTypes.length === 0 ? (
+          <p className="mt-3 text-xs text-[var(--color-text-muted)]">
+            Сначала создай промежуточные оценочные элементы в разделе «Журнал обучения».
+          </p>
+        ) : null}
+      </div>
+    )
+  }
+
+  function renderIntermediateGradeItemSummary(column: ScheduleJournalColumn): ReactElement | null {
+    const gradeItem = getIntermediateGradeItemForLesson(column)
+
+    if (!gradeItem) {
+      return null
+    }
+
+    const gradeElementType = getGradeItemElementType(gradeItem)
+
+    return (
+      <div className="rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 px-3 py-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+          Промежуточный оценочный элемент
+        </p>
+        <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">
+          {String(gradeItem.name ?? 'Оценочный элемент')}
+        </p>
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+          {gradeElementType ? getRecordName(gradeElementType) : 'Тип не указан'} · максимум{' '}
+          {String(gradeItem.max_score ?? '—')}
+        </p>
+      </div>
+    )
+  }
+
+  function renderIntermediateGradesJournal(): ReactElement | null {
+    if (!activeTopicColumn) {
+      return null
+    }
+
+    return (
+      <div className="mt-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[var(--color-text)]">
+              Мини-журнал промежуточных оценок
+            </p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              {activeTopicColumn.disciplineName}
+            </p>
+          </div>
+
+          <Badge variant="muted">Элементов: {activeDisciplineIntermediateGradeItems.length}</Badge>
+        </div>
+
+        {gradeError ? (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+            {gradeError}
+          </div>
+        ) : null}
+
+        {activeDisciplineIntermediateGradeItems.length === 0 ? (
+          <div className="mt-3 rounded-xl border border-dashed border-[var(--color-border)] px-4 py-6 text-center text-sm text-[var(--color-text-muted)]">
+            Для этой дисциплины пока нет промежуточных оценочных элементов.
+          </div>
+        ) : (
+          <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--color-border)]">
+            <table className="w-full min-w-max border-collapse text-xs">
+              <thead>
+                <tr className="bg-[var(--color-surface-muted)]">
+                  <th className="sticky left-0 z-20 whitespace-nowrap border-b border-r border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left font-semibold text-[var(--color-text-muted)]">
+                    Студент
+                  </th>
+
+                  {activeDisciplineIntermediateGradeItems.map((gradeItem) => {
+                    const gradeElementType = getGradeItemElementType(gradeItem)
+
+                    return (
+                      <th
+                        key={String(gradeItem.id)}
+                        className="min-w-36 border-b border-r border-[var(--color-border)] px-3 py-2 text-center font-semibold text-[var(--color-text)] last:border-r-0"
+                        title={gradeElementType ? getRecordName(gradeElementType) : undefined}
+                      >
+                        <span className="block">{String(gradeItem.name ?? 'Оценка')}</span>
+                        <span className="mt-1 block text-[10px] font-medium text-[var(--color-text-muted)]">
+                          до {getGradeItemMaxScore(gradeItem)}
+                        </span>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+
+              <tbody>
+                {groupStudents.map((student, index) => (
+                  <tr
+                    key={String(student.id)}
+                    className="border-b border-[var(--color-border)] last:border-b-0"
+                  >
+                    <td className="sticky left-0 z-10 whitespace-nowrap border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]">
+                      {index + 1}) {getPersonShortName(student)}
+                    </td>
+
+                    {activeDisciplineIntermediateGradeItems.map((gradeItem) => {
+                      const gradeElementType = getGradeItemElementType(gradeItem)
+                      const isPassFail = gradeElementType?.grading_mode === 'pass_fail'
+                      const currentValue = getStudentGradeValue(student, gradeItem)
+
+                      return (
+                        <td
+                          key={`${String(student.id)}:${String(gradeItem.id)}`}
+                          className="border-r border-[var(--color-border)] px-2 py-2 text-center last:border-r-0"
+                        >
+                          {isPassFail ? (
+                            <Select
+                              value={
+                                getStudentPassFailValue(student, gradeItem) || emptySelectValue
+                              }
+                              disabled={isSavingGrade}
+                              onValueChange={(value) =>
+                                handlePassFailGradeChange(student, gradeItem, value)
+                              }
+                            >
+                              <SelectTrigger className="h-8 min-w-28 text-xs">
+                                <SelectValue placeholder="—" />
+                              </SelectTrigger>
+
+                              <SelectContent>
+                                <SelectItem value={emptySelectValue}>—</SelectItem>
+                                <SelectItem value="pass">Сдал</SelectItem>
+                                <SelectItem value="fail">Не сдал</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              key={`${String(student.id)}:${String(gradeItem.id)}:${currentValue}`}
+                              type="number"
+                              min={getGradeItemMinScore(gradeItem)}
+                              max={getGradeItemMaxScore(gradeItem)}
+                              step="0.01"
+                              defaultValue={currentValue}
+                              disabled={isSavingGrade}
+                              className="h-8 w-24 text-center text-xs"
+                              placeholder="—"
+                              onBlur={(event) =>
+                                handleScoreGradeBlur(student, gradeItem, event.target.value)
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.currentTarget.blur()
+                                }
+                              }}
+                            />
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    )
   }
 
   async function ensureLessonSessionForTopic(
@@ -798,7 +1419,7 @@ export function LearningJournalMatrix(): ReactElement {
         data: {
           topic,
           comment,
-          status: 'held'
+          status: 'conducted'
         }
       })
 
@@ -807,7 +1428,7 @@ export function LearningJournalMatrix(): ReactElement {
           ...existingSession,
           topic,
           comment,
-          status: 'held'
+          status: 'conducted'
         }
       )
     }
@@ -826,7 +1447,7 @@ export function LearningJournalMatrix(): ReactElement {
         lesson_date: column.date,
         topic,
         comment,
-        status: 'held',
+        status: 'conducted',
         teacher_id: toNumberOrNull(column.scheduleItem.teacher_id)
       }
     })
@@ -854,6 +1475,7 @@ export function LearningJournalMatrix(): ReactElement {
     try {
       const existingCompletionRecord = getLessonCompletionRecord(activeTopicColumn)
       const lessonSession = await ensureLessonSessionForTopic(activeTopicColumn)
+      await ensureIntermediateGradeItem(activeTopicColumn, lessonSession)
 
       if (existingCompletionRecord?.id) {
         await window.api.adminCrud.update({
@@ -938,9 +1560,10 @@ export function LearningJournalMatrix(): ReactElement {
       const topic = topicDraft.trim() || null
       const comment = lessonNoteDraft.trim() || null
       const existingSession = getLessonSession(activeTopicColumn)
+      let savedSession: AdminCrudRecord | null = null
 
       if (existingSession?.id) {
-        await window.api.adminCrud.update({
+        const result = await window.api.adminCrud.update({
           entity: 'lesson_sessions',
           id: Number(existingSession.id),
           data: {
@@ -948,6 +1571,7 @@ export function LearningJournalMatrix(): ReactElement {
             comment
           }
         })
+        savedSession = result.item ?? { ...existingSession, topic, comment }
       } else {
         const result = await window.api.adminCrud.create({
           entity: 'lesson_sessions',
@@ -965,6 +1589,12 @@ export function LearningJournalMatrix(): ReactElement {
         if (!result.item) {
           throw new Error('Не удалось создать занятие для темы')
         }
+
+        savedSession = result.item
+      }
+
+      if (savedSession) {
+        await ensureIntermediateGradeItem(activeTopicColumn, savedSession)
       }
 
       await loadData()
@@ -1319,6 +1949,7 @@ export function LearningJournalMatrix(): ReactElement {
                                   {getLessonNote(activeTopicColumn) || 'Заметки не указаны'}
                                 </p>
                               </div>
+                              {renderIntermediateGradeItemSummary(activeTopicColumn)}
                             </div>
 
                             <Button
@@ -1393,6 +2024,8 @@ export function LearningJournalMatrix(): ReactElement {
                               onChange={(event) => setLessonNoteDraft(event.target.value)}
                             />
                           </label>
+
+                          {renderIntermediateGradeItemEditor()}
                         </div>
 
                         <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -1437,6 +2070,8 @@ export function LearningJournalMatrix(): ReactElement {
                         </div>
                       </>
                     )}
+
+                    {renderIntermediateGradesJournal()}
                   </div>
                 ) : (
                   <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
@@ -1613,6 +2248,50 @@ function getDisciplineShortName(value: string): string {
       return firstLetter ? `${firstLetter}.` : ''
     })
     .join('')
+}
+
+function compareGradeItems(firstItem: AdminCrudRecord, secondItem: AdminCrudRecord): number {
+  const firstDate = String(firstItem.grade_date ?? '')
+  const secondDate = String(secondItem.grade_date ?? '')
+
+  if (firstDate !== secondDate) {
+    return firstDate.localeCompare(secondDate)
+  }
+
+  const firstWeekId = toNumberOrNull(firstItem.week_id) ?? 0
+  const secondWeekId = toNumberOrNull(secondItem.week_id) ?? 0
+
+  if (firstWeekId !== secondWeekId) {
+    return firstWeekId - secondWeekId
+  }
+
+  const firstDayOfWeek = toNumberOrNull(firstItem.day_of_week) ?? 0
+  const secondDayOfWeek = toNumberOrNull(secondItem.day_of_week) ?? 0
+
+  if (firstDayOfWeek !== secondDayOfWeek) {
+    return firstDayOfWeek - secondDayOfWeek
+  }
+
+  return Number(firstItem.id ?? 0) - Number(secondItem.id ?? 0)
+}
+
+function createDefaultGradeItemName(
+  gradeElementType: AdminCrudRecord | null,
+  column: ScheduleJournalColumn
+): string {
+  const gradeElementName = gradeElementType ? getRecordName(gradeElementType) : 'Оценочный элемент'
+
+  return `${gradeElementName} - ${formatJournalDate(column.date)}`
+}
+
+function getDefaultMaxScore(gradeElementType: AdminCrudRecord | null): number {
+  if (gradeElementType?.grading_mode === 'pass_fail') {
+    return 1
+  }
+
+  const maxScore = toNumberOrNull(gradeElementType?.max_score)
+
+  return maxScore !== null && maxScore > 0 ? maxScore : 100
 }
 
 function getRecordName(record: AdminCrudRecord): string {

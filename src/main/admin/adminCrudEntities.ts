@@ -235,6 +235,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     'grade_items',
     [
       'discipline_id',
+      'lesson_session_id',
       'grade_element_type_id',
       'grade_category_id',
       'week_id',

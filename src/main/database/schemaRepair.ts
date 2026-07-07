@@ -128,6 +128,7 @@ export function repairDatabaseSchema(database: Database.Database): void {
   const additiveRepair = database.transaction(() => {
     ensureColumn(database, 'faculties', 'dean_teacher_id', 'INTEGER')
     ensureColumn(database, 'faculties', 'deputy_dean_teacher_id', 'INTEGER')
+    ensureColumn(database, 'grade_items', 'lesson_session_id', 'INTEGER')
 
     if (tableExists(database, 'academic_years')) {
       database.exec(academicVacationsSql)
@@ -151,6 +152,7 @@ export function repairDatabaseSchema(database: Database.Database): void {
   const relationshipRepair = database.transaction(() => {
     repairDuplicateActiveDepartmentFacultyLinks(database)
     createDepartmentFacultyIndexes(database)
+    createGradeItemLessonSessionIndex(database)
   })
 
   relationshipRepair()
@@ -622,6 +624,17 @@ function createDepartmentFacultyIndexes(database: Database.Database): void {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_department_faculties_active_unique
       ON department_faculties (department_id, faculty_id)
       WHERE is_archived = 0;
+  `)
+}
+
+function createGradeItemLessonSessionIndex(database: Database.Database): void {
+  if (!tableExists(database, 'grade_items')) {
+    return
+  }
+
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_grade_items_lesson_session_id
+      ON grade_items (lesson_session_id);
   `)
 }
 

@@ -423,6 +423,7 @@ CREATE TABLE IF NOT EXISTS grade_element_types (
 CREATE TABLE IF NOT EXISTS grade_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   discipline_id INTEGER NOT NULL,
+  lesson_session_id INTEGER,
   grade_element_type_id INTEGER,
   grade_category_id INTEGER,
   week_id INTEGER,
@@ -436,6 +437,7 @@ CREATE TABLE IF NOT EXISTS grade_items (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (discipline_id) REFERENCES disciplines(id) ON DELETE RESTRICT,
+  FOREIGN KEY (lesson_session_id) REFERENCES lesson_sessions(id) ON DELETE SET NULL,
   FOREIGN KEY (grade_element_type_id) REFERENCES grade_element_types(id) ON DELETE SET NULL,
   FOREIGN KEY (grade_category_id) REFERENCES dictionary_items(id) ON DELETE SET NULL,
   FOREIGN KEY (week_id) REFERENCES weeks(id) ON DELETE SET NULL
@@ -617,6 +619,9 @@ ON attendance_records (student_id);
 CREATE INDEX IF NOT EXISTS idx_grade_items_week_day
 ON grade_items (week_id, day_of_week)
 WHERE is_archived = 0;
+
+CREATE INDEX IF NOT EXISTS idx_grade_items_lesson_session_id
+ON grade_items (lesson_session_id);
 
 CREATE INDEX IF NOT EXISTS idx_grade_items_discipline_week
 ON grade_items (discipline_id, week_id)
