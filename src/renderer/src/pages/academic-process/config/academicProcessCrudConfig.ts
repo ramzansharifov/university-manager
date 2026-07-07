@@ -11,6 +11,11 @@ export interface AcademicProcessColumnMaps {
   departmentNameById: Map<number, string>
 }
 
+export interface DepartmentFacultyScope {
+  appliesToAllFaculties: boolean
+  facultyIds: Set<number>
+}
+
 export function createSubjectFields(
   departmentOptions: AdminCrudSelectOption[]
 ): AdminCrudFieldConfig[] {
@@ -559,7 +564,7 @@ export function createCurriculumItemOptions(
     subjectNameById: Map<number, string>
     semesterNameById: Map<number, string>
     subjectDepartmentIdById?: Map<number, number>
-    departmentFacultyIdById?: Map<number, number>
+    departmentFacultyScopeById?: Map<number, DepartmentFacultyScope>
   }
 ): AdminCrudSelectOption[] {
   return items.map((item) => {
@@ -572,10 +577,12 @@ export function createCurriculumItemOptions(
     const subjectDepartmentId =
       subjectId === null ? null : (maps.subjectDepartmentIdById?.get(subjectId) ?? null)
 
-    const subjectFacultyId =
+    const subjectFacultyScope =
       subjectDepartmentId === null
-        ? null
-        : (maps.departmentFacultyIdById?.get(subjectDepartmentId) ?? null)
+        ? undefined
+        : maps.departmentFacultyScopeById?.get(subjectDepartmentId)
+    const subjectFacultyIds = getSortedFacultyIds(subjectFacultyScope)
+    const firstSubjectFacultyId = subjectFacultyIds[0] ?? null
 
     return {
       value: String(item.id),
@@ -585,7 +592,9 @@ export function createCurriculumItemOptions(
         semester_id: semesterId === null ? null : String(semesterId),
         subject_name: subjectName === '—' ? null : subjectName,
         subject_department_id: subjectDepartmentId === null ? null : String(subjectDepartmentId),
-        subject_faculty_id: subjectFacultyId === null ? null : String(subjectFacultyId)
+        subject_faculty_id: firstSubjectFacultyId === null ? null : String(firstSubjectFacultyId),
+        subject_faculty_ids: subjectFacultyIds.join(','),
+        subject_applies_to_all_faculties: subjectFacultyScope?.appliesToAllFaculties ? '1' : '0'
       }
     }
   })
@@ -771,6 +780,10 @@ function renderDisciplineProgress(
     : `осталось ${progress.remainingPairs}`
 
   return `Запланировано ${progress.scheduledPairs}/${progress.requiredPairs} пар · проведено ${progress.conductedPairs} · ${statusText}`
+}
+
+function getSortedFacultyIds(scope: DepartmentFacultyScope | undefined): number[] {
+  return Array.from(scope?.facultyIds ?? []).sort((firstId, secondId) => firstId - secondId)
 }
 
 function toNumberOrNull(value: unknown): number | null {

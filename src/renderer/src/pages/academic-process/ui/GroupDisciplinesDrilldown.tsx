@@ -5,6 +5,7 @@ import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { resolveGroupAcademicYearId } from '../../../shared/lib/academicYear'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
 import { createDisciplineProgressMap } from '../lib/disciplineProgress'
+import type { DepartmentFacultyScope } from '../config/academicProcessCrudConfig'
 import {
   createCurriculumItemOptions,
   createDisciplineColumns,
@@ -33,9 +34,9 @@ export function GroupDisciplinesDrilldown() {
   const [subjectDepartmentIdById, setSubjectDepartmentIdById] = useState<Map<number, number>>(
     new Map()
   )
-  const [departmentFacultyIdById, setDepartmentFacultyIdById] = useState<Map<number, number>>(
-    new Map()
-  )
+  const [departmentFacultyScopeById, setDepartmentFacultyScopeById] = useState<
+    Map<number, DepartmentFacultyScope>
+  >(new Map())
 
   const loadOptions = useCallback(async () => {
     const [
@@ -46,6 +47,7 @@ export function GroupDisciplinesDrilldown() {
       curriculumItemsResult,
       curriculumPlansResult,
       departments,
+      departmentFaculties,
       academicYearsResult,
       scheduleItemsResult,
       lessonSessionsResult
@@ -100,6 +102,13 @@ export function GroupDisciplinesDrilldown() {
         orderDirection: 'asc'
       }),
       window.api.adminCrud.list({
+        entity: 'department_faculties',
+        page: 1,
+        pageSize: 5000,
+        orderBy: 'id',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
         entity: 'academic_years',
         page: 1,
         pageSize: 500,
@@ -122,12 +131,15 @@ export function GroupDisciplinesDrilldown() {
       })
     ])
 
-    const nextDepartmentFacultyIdById = createDepartmentFacultyMap(departments.items)
+    const nextDepartmentFacultyScopeById = createDepartmentFacultyScopeMap(
+      departments.items,
+      departmentFaculties.items
+    )
     const nextSubjectDepartmentIdById = createSubjectDepartmentMap(subjects.items)
 
     setSubjectOptions(createOptions(subjects.items, getRecordName))
     setTeacherOptions(
-      createTeacherOptions(teachers.items, nextDepartmentFacultyIdById, subjects.items)
+      createTeacherOptions(teachers.items, nextDepartmentFacultyScopeById, subjects.items)
     )
     setSemesterOptions(createOptions(semesters.items, getSemesterName))
     setDisciplines(disciplinesResult.items)
@@ -137,7 +149,7 @@ export function GroupDisciplinesDrilldown() {
     setScheduleItems(scheduleItemsResult.items)
     setLessonSessions(lessonSessionsResult.items)
     setSubjectDepartmentIdById(nextSubjectDepartmentIdById)
-    setDepartmentFacultyIdById(nextDepartmentFacultyIdById)
+    setDepartmentFacultyScopeById(nextDepartmentFacultyScopeById)
   }, [])
 
   useEffect(() => {
@@ -186,12 +198,12 @@ export function GroupDisciplinesDrilldown() {
       subjectNameById,
       semesterNameById,
       subjectDepartmentIdById,
-      departmentFacultyIdById
+      departmentFacultyScopeById
     })
   }, [
     curriculumItems,
     curriculumPlans,
-    departmentFacultyIdById,
+    departmentFacultyScopeById,
     selectedGroup,
     selectedGroupAcademicYearId,
     semesterNameById,
@@ -355,25 +367,60 @@ function createSubjectDepartmentMap(subjects: AdminCrudRecord[]): Map<number, nu
   )
 }
 
-function createDepartmentFacultyMap(departments: AdminCrudRecord[]): Map<number, number> {
-  return new Map(
-    departments
-      .map((department) => [toNumberOrNull(department.id), toNumberOrNull(department.faculty_id)])
-      .filter((entry): entry is [number, number] => entry[0] !== null && entry[1] !== null)
-  )
+function createDepartmentFacultyScopeMap(
+  departments: AdminCrudRecord[],
+  departmentFaculties: AdminCrudRecord[]
+): Map<number, DepartmentFacultyScope> {
+  const result = new Map<number, DepartmentFacultyScope>()
+
+  departments.forEach((department) => {
+    const departmentId = toNumberOrNull(department.id)
+
+    if (departmentId === null) {
+      return
+    }
+
+    result.set(departmentId, {
+      appliesToAllFaculties: Number(department.applies_to_all_faculties) === 1,
+      facultyIds: new Set<number>()
+    })
+  })
+
+  departmentFaculties.forEach((departmentFaculty) => {
+    const departmentId = toNumberOrNull(departmentFaculty.department_id)
+    const facultyId = toNumberOrNull(departmentFaculty.faculty_id)
+
+    if (departmentId === null || facultyId === null) {
+      return
+    }
+
+    const currentScope =
+      result.get(departmentId) ??
+      ({
+        appliesToAllFaculties: false,
+        facultyIds: new Set<number>()
+      } satisfies DepartmentFacultyScope)
+
+    currentScope.facultyIds.add(facultyId)
+    result.set(departmentId, currentScope)
+  })
+
+  return result
 }
 
 function createTeacherOptions(
   teachers: AdminCrudRecord[],
-  departmentFacultyIdById: Map<number, number>,
+  departmentFacultyScopeById: Map<number, DepartmentFacultyScope>,
   subjects: AdminCrudRecord[]
 ): AdminCrudSelectOption[] {
   const subjectIdByDepartmentAndName = createSubjectIdByDepartmentAndName(subjects)
 
   return teachers.flatMap((teacher) => {
     const departmentId = toNumberOrNull(teacher.department_id)
-    const facultyId =
-      departmentId === null ? null : (departmentFacultyIdById.get(departmentId) ?? null)
+    const facultyScope =
+      departmentId === null ? undefined : departmentFacultyScopeById.get(departmentId)
+    const facultyIds = getSortedFacultyIds(facultyScope)
+    const firstFacultyId = facultyIds[0] ?? null
     const teacherSubjectIds =
       departmentId === null
         ? []
@@ -391,10 +438,16 @@ function createTeacherOptions(
       meta: {
         subject_id: subjectId === null ? null : String(subjectId),
         subject_department_id: departmentId === null ? null : String(departmentId),
-        subject_faculty_id: facultyId === null ? null : String(facultyId)
+        subject_faculty_id: firstFacultyId === null ? null : String(firstFacultyId),
+        subject_faculty_ids: facultyIds.join(','),
+        subject_applies_to_all_faculties: facultyScope?.appliesToAllFaculties ? '1' : '0'
       }
     }))
   })
+}
+
+function getSortedFacultyIds(scope: DepartmentFacultyScope | undefined): number[] {
+  return Array.from(scope?.facultyIds ?? []).sort((firstId, secondId) => firstId - secondId)
 }
 
 function createSubjectIdByDepartmentAndName(subjects: AdminCrudRecord[]): Map<string, number> {
