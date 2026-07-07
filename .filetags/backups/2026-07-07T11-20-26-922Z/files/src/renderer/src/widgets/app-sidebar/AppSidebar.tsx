@@ -39,7 +39,6 @@ export function AppSidebar(): ReactElement {
   const visibleSystemItems = systemNavigationItems.filter((item) =>
     canAccessNavigationItem(auth.user, item)
   )
-
   function toggleSidebar(): void {
     setIsSidebarCollapsed((currentValue) => {
       const nextValue = !currentValue
@@ -90,7 +89,7 @@ export function AppSidebar(): ReactElement {
                 <SidebarItemButton
                   key={item.path}
                   icon={item.icon}
-                  active={isNavigationItemActive(location.pathname, item.path)}
+                  active={location.pathname === item.path}
                   title={item.title}
                   aria-label={item.title}
                   className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
@@ -110,7 +109,7 @@ export function AppSidebar(): ReactElement {
                 <SidebarItemButton
                   key={item.path}
                   icon={item.icon}
-                  active={isNavigationItemActive(location.pathname, item.path)}
+                  active={location.pathname === item.path}
                   title={item.title}
                   aria-label={item.title}
                   className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
@@ -137,14 +136,6 @@ export function AppSidebar(): ReactElement {
       </Sidebar>
     </div>
   )
-}
-
-function isNavigationItemActive(pathname: string, itemPath: string): boolean {
-  if (pathname === itemPath) {
-    return true
-  }
-
-  return itemPath !== '/' && pathname.startsWith(`${itemPath}/`)
 }
 
 function SidebarAccountCard({

@@ -4,7 +4,9 @@ import { AcademicProcessPage } from '../../pages/academic-process/AcademicProces
 import { AdministrationPage } from '../../pages/administration/AdministrationPage'
 import { AuditLogPage } from '../../pages/audit-log/AuditLogPage'
 import { AdminDashboardPage } from '../../pages/dashboard/AdminDashboardPage'
-import { FiltersPage } from '../../pages/filters/FiltersPage'
+import { FilterEmployeesPage } from '../../pages/filters/FilterEmployeesPage'
+import { FilterStudentsPage } from '../../pages/filters/FilterStudentsPage'
+import { FilterTeachersPage } from '../../pages/filters/FilterTeachersPage'
 import { LearningJournalPage } from '../../pages/learning-journal/LearningJournalPage'
 import { LoginPage } from '../../pages/login/LoginPage'
 import { PeoplePage } from '../../pages/people/PeoplePage'
@@ -26,10 +28,10 @@ export function AppRouter() {
           <Route path="/university" element={<UniversityPage />} />
           <Route path="/people" element={<PeoplePage />} />
           <Route path="/people/students/:studentId" element={<StudentDetailsPage />} />
-          <Route path="/filters" element={<FiltersPage />} />
-          <Route path="/filters/students" element={<Navigate to="/filters" replace />} />
-          <Route path="/filters/teachers" element={<Navigate to="/filters" replace />} />
-          <Route path="/filters/employees" element={<Navigate to="/filters" replace />} />
+          <Route path="/filters" element={<Navigate to="/filters/students" replace />} />
+          <Route path="/filters/students" element={<FilterStudentsPage />} />
+          <Route path="/filters/teachers" element={<FilterTeachersPage />} />
+          <Route path="/filters/employees" element={<FilterEmployeesPage />} />
           <Route path="/academic-process" element={<AcademicProcessPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/learning-journal" element={<LearningJournalPage />} />

@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/providers/AuthProvider'
 import {
   canAccessNavigationItem,
+  filterNavigationItems,
   mainNavigationItems,
   systemNavigationItems
 } from '../../shared/navigation/appNavigation'
@@ -35,11 +36,13 @@ export function AppSidebar(): ReactElement {
   const visibleMainItems = mainNavigationItems.filter((item) =>
     canAccessNavigationItem(auth.user, item)
   )
+  const visibleFilterItems = filterNavigationItems.filter((item) =>
+    canAccessNavigationItem(auth.user, item)
+  )
 
   const visibleSystemItems = systemNavigationItems.filter((item) =>
     canAccessNavigationItem(auth.user, item)
   )
-
   function toggleSidebar(): void {
     setIsSidebarCollapsed((currentValue) => {
       const nextValue = !currentValue
@@ -104,6 +107,27 @@ export function AppSidebar(): ReactElement {
 
           <SidebarSection>
             {!isSidebarCollapsed ? <SidebarSectionTitle>Система</SidebarSectionTitle> : null}
+            {visibleFilterItems.length > 0 ? (
+              <SidebarSection>
+                {!isSidebarCollapsed ? <SidebarSectionTitle>Фильтры</SidebarSectionTitle> : null}
+
+                <div className="grid gap-1">
+                  {visibleFilterItems.map((item) => (
+                    <SidebarItemButton
+                      key={item.path}
+                      icon={item.icon}
+                      active={isNavigationItemActive(location.pathname, item.path)}
+                      title={item.title}
+                      aria-label={item.title}
+                      className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
+                      onClick={() => navigate(item.path)}
+                    >
+                      {isSidebarCollapsed ? '' : item.title}
+                    </SidebarItemButton>
+                  ))}
+                </div>
+              </SidebarSection>
+            ) : null}
 
             <div className="grid gap-1">
               {visibleSystemItems.map((item) => (
@@ -146,7 +170,6 @@ function isNavigationItemActive(pathname: string, itemPath: string): boolean {
 
   return itemPath !== '/' && pathname.startsWith(`${itemPath}/`)
 }
-
 function SidebarAccountCard({
   username,
   roleName,

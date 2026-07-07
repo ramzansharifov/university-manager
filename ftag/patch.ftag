@@ -1,352 +1,601 @@
-@write src/main/security/ipcAccess.ts
-import type { IpcMainInvokeEvent } from 'electron'
-import type { AdminCrudAccessModule } from '../../shared/types/adminCrud'
-import type { AuthUser } from '../../shared/types/auth'
-import type { AuthService } from '../auth/authService'
-import { getAuthTokenForWebContents } from '../auth/sessionContext'
-import { canPerformAction } from './accessControl'
-import type { AccessAction } from './accessControl'
+@write src/renderer/src/pages/filters/FilterStudentsPage.tsx
+import { FiUsers } from 'react-icons/fi'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '../../shared/ui'
 
-interface ModuleAccessRequirement {
-  module: AdminCrudAccessModule
-  action: AccessAction
+export function FilterStudentsPage() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+          <FiUsers className="h-6 w-6" />
+        </div>
+
+        <CardTitle>Студенты</CardTitle>
+        <CardDescription>
+          Здесь будет общий список студентов с фильтрами по факультету, специальности, группе,
+          курсу, статусу и поиском по ФИО.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-muted)]">
+          Следующим патчем наполним эту вкладку таблицей студентов и переходом на отдельную
+          страницу полного просмотра данных студента.
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+@end
+
+@write src/renderer/src/pages/filters/FilterTeachersPage.tsx
+import { FiUserCheck } from 'react-icons/fi'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '../../shared/ui'
+
+export function FilterTeachersPage() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+          <FiUserCheck className="h-6 w-6" />
+        </div>
+
+        <CardTitle>Преподаватели</CardTitle>
+        <CardDescription>
+          Здесь позже появятся фильтры по кафедре, статусу, преподаваемым дисциплинам и поиску по
+          ФИО.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-muted)]">
+          Вкладка подготовлена. Наполнение сделаем отдельным этапом после студентов.
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+@end
+
+@write src/renderer/src/pages/filters/FilterEmployeesPage.tsx
+import { FiBriefcase } from 'react-icons/fi'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '../../shared/ui'
+
+export function FilterEmployeesPage() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+          <FiBriefcase className="h-6 w-6" />
+        </div>
+
+        <CardTitle>Сотрудники</CardTitle>
+        <CardDescription>
+          Здесь позже появятся фильтры по подразделению, должности, статусу и поиску по ФИО.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-muted)]">
+          Вкладка подготовлена. Наполнение сделаем отдельным этапом после студентов.
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+@end
+
+@write src/renderer/src/pages/filters/FiltersPage.tsx
+import { FilterEmployeesPage } from './FilterEmployeesPage'
+import { FilterStudentsPage } from './FilterStudentsPage'
+import { FilterTeachersPage } from './FilterTeachersPage'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
+
+export function FiltersPage() {
+  return (
+    <div className="grid gap-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Фильтры</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          Быстрый поиск больших сущностей и переход к их полной карточке.
+        </p>
+      </div>
+
+      <Tabs defaultValue="students">
+        <TabsList>
+          <TabsTrigger value="students">Студенты</TabsTrigger>
+          <TabsTrigger value="teachers">Преподаватели</TabsTrigger>
+          <TabsTrigger value="employees">Сотрудники</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="students">
+          <FilterStudentsPage />
+        </TabsContent>
+
+        <TabsContent value="teachers">
+          <FilterTeachersPage />
+        </TabsContent>
+
+        <TabsContent value="employees">
+          <FilterEmployeesPage />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+@end
+
+@write src/renderer/src/app/router/AppRouter.tsx
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { MainLayout } from '../../layouts/MainLayout'
+import { AcademicProcessPage } from '../../pages/academic-process/AcademicProcessPage'
+import { AdministrationPage } from '../../pages/administration/AdministrationPage'
+import { AuditLogPage } from '../../pages/audit-log/AuditLogPage'
+import { AdminDashboardPage } from '../../pages/dashboard/AdminDashboardPage'
+import { FiltersPage } from '../../pages/filters/FiltersPage'
+import { LearningJournalPage } from '../../pages/learning-journal/LearningJournalPage'
+import { LoginPage } from '../../pages/login/LoginPage'
+import { PeoplePage } from '../../pages/people/PeoplePage'
+import { StudentDetailsPage } from '../../pages/people/StudentDetailsPage'
+import { ReportsPage } from '../../pages/reports/ReportsPage'
+import { SchedulePage } from '../../pages/schedule/SchedulePage'
+import { SettingsPage } from '../../pages/settings/SettingsPage'
+import { UniversityPage } from '../../pages/university/UniversityPage'
+import { RequireAuth } from './RequireAuth'
+
+export function AppRouter() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route element={<RequireAuth />}>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<AdminDashboardPage />} />
+          <Route path="/university" element={<UniversityPage />} />
+          <Route path="/people" element={<PeoplePage />} />
+          <Route path="/people/students/:studentId" element={<StudentDetailsPage />} />
+          <Route path="/filters" element={<FiltersPage />} />
+          <Route path="/filters/students" element={<Navigate to="/filters" replace />} />
+          <Route path="/filters/teachers" element={<Navigate to="/filters" replace />} />
+          <Route path="/filters/employees" element={<Navigate to="/filters" replace />} />
+          <Route path="/academic-process" element={<AcademicProcessPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/learning-journal" element={<LearningJournalPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/administration" element={<AdministrationPage />} />
+          <Route path="/audit-log" element={<AuditLogPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+@end
+
+@write src/renderer/src/shared/navigation/appNavigation.tsx
+import type { ReactNode } from 'react'
+import {
+  FiActivity,
+  FiBarChart2,
+  FiBookOpen,
+  FiCalendar,
+  FiClipboard,
+  FiDatabase,
+  FiFilter,
+  FiHome,
+  FiSettings,
+  FiShield,
+  FiUsers
+} from 'react-icons/fi'
+import type { AuthUser } from '../../../../shared/types/auth'
+import { canViewModule } from '../auth/accessControl'
+import type { AccessModule } from '../auth/accessControl'
+
+export interface AppNavigationItem {
+  title: string
+  description: string
+  path: string
+  icon: ReactNode
+  module?: AccessModule
+  permissions?: string[]
 }
 
-export function requireModuleAccess(
-  event: IpcMainInvokeEvent,
-  authService: AuthService,
-  module: AdminCrudAccessModule,
-  action: AccessAction
-): void {
-  const user = requireAuthenticatedUser(event, authService)
-
-  if (!canPerformAction(user, module, action)) {
-    throw new Error(`Нет прав на выполнение операции: ${module}.${action}`)
+export const mainNavigationItems: AppNavigationItem[] = [
+  {
+    title: 'Главная',
+    description: 'Админ-центр и состояние системы',
+    path: '/',
+    icon: <FiHome />,
+    module: 'settings'
+  },
+  {
+    title: 'Университет',
+    description: 'Факультеты, кафедры, специальности, группы и подразделения',
+    path: '/university',
+    icon: <FiDatabase />,
+    module: 'university'
+  },
+  {
+    title: 'Люди',
+    description: 'Студенты, преподаватели и сотрудники',
+    path: '/people',
+    icon: <FiUsers />,
+    module: 'people'
+  },
+  {
+    title: 'Фильтры',
+    description: 'Поиск студентов, преподавателей и сотрудников',
+    path: '/filters',
+    icon: <FiFilter />,
+    module: 'people'
+  },
+  {
+    title: 'Учебный процесс',
+    description: 'Предметы, учебные планы и дисциплины',
+    path: '/academic-process',
+    icon: <FiBookOpen />,
+    module: 'academic_process'
+  },
+  {
+    title: 'Расписание',
+    description: 'Пары, аудитории и расписание занятий',
+    path: '/schedule',
+    icon: <FiCalendar />,
+    module: 'schedule'
+  },
+  {
+    title: 'Журнал обучения',
+    description: 'Посещаемость, оценки и проведённые занятия',
+    path: '/learning-journal',
+    icon: <FiClipboard />,
+    module: 'learning_journal'
+  },
+  {
+    title: 'Отчёты',
+    description: 'Посещаемость, успеваемость и аналитика',
+    path: '/reports',
+    icon: <FiBarChart2 />,
+    module: 'reports'
   }
+]
+
+export const systemNavigationItems: AppNavigationItem[] = [
+  {
+    title: 'Администрирование',
+    description: 'Пользователи, роли и права доступа',
+    path: '/administration',
+    icon: <FiShield />,
+    module: 'administration'
+  },
+  {
+    title: 'Журнал действий',
+    description: 'История важных изменений',
+    path: '/audit-log',
+    icon: <FiActivity />,
+    module: 'audit_log'
+  },
+  {
+    title: 'Настройки',
+    description: 'Тема, акцентный цвет и язык интерфейса',
+    path: '/settings',
+    icon: <FiSettings />,
+    module: 'settings'
+  }
+]
+
+export const allNavigationItems = [...mainNavigationItems, ...systemNavigationItems]
+
+export function getNavigationItemByPath(pathname: string): AppNavigationItem | undefined {
+  return allNavigationItems.find((item) => item.path === pathname)
 }
 
-export function requireAnyModuleAccess(
-  event: IpcMainInvokeEvent,
-  authService: AuthService,
-  requirements: ModuleAccessRequirement[]
-): void {
-  const user = requireAuthenticatedUser(event, authService)
+export function canAccessNavigationItem(user: AuthUser | null, item: AppNavigationItem): boolean {
+  if (!user) {
+    return false
+  }
 
-  const hasAccess = requirements.some((requirement) =>
-    canPerformAction(user, requirement.module, requirement.action)
+  if (item.module) {
+    return canViewModule(user, item.module)
+  }
+
+  if (!item.permissions || item.permissions.length === 0) {
+    return true
+  }
+
+  return item.permissions.some((permission) => user.permissions.includes(permission))
+}
+@end
+
+@write src/renderer/src/widgets/app-sidebar/AppSidebar.tsx
+import { useState } from 'react'
+import type { ReactElement } from 'react'
+import { FiChevronLeft, FiChevronRight, FiLogOut, FiShield, FiUser } from 'react-icons/fi'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../app/providers/AuthProvider'
+import {
+  canAccessNavigationItem,
+  mainNavigationItems,
+  systemNavigationItems
+} from '../../shared/navigation/appNavigation'
+import {
+  Badge,
+  Button,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarItemButton,
+  SidebarSection,
+  SidebarSectionTitle
+} from '../../shared/ui'
+
+type ProfileType = 'system' | 'student' | 'teacher' | 'employee'
+
+const sidebarCollapsedStorageKey = 'university-manager.sidebar-collapsed'
+
+export function AppSidebar(): ReactElement {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const auth = useAuth()
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return window.localStorage.getItem(sidebarCollapsedStorageKey) === 'true'
+  })
+
+  const visibleMainItems = mainNavigationItems.filter((item) =>
+    canAccessNavigationItem(auth.user, item)
   )
 
-  if (!hasAccess) {
-    const allowedOperations = requirements
-      .map((requirement) => `${requirement.module}.${requirement.action}`)
-      .join(', ')
+  const visibleSystemItems = systemNavigationItems.filter((item) =>
+    canAccessNavigationItem(auth.user, item)
+  )
 
-    throw new Error(`Нет прав на выполнение операции. Требуется одно из прав: ${allowedOperations}`)
+  function toggleSidebar(): void {
+    setIsSidebarCollapsed((currentValue) => {
+      const nextValue = !currentValue
+
+      window.localStorage.setItem(sidebarCollapsedStorageKey, String(nextValue))
+
+      return nextValue
+    })
   }
+
+  const sidebarWidthClass = isSidebarCollapsed ? 'w-16' : 'w-72'
+
+  return (
+    <div
+      className={`h-screen shrink-0 transition-[width] duration-200 ease-out ${sidebarWidthClass}`}
+    >
+      <Sidebar
+        className={`group fixed inset-y-0 left-0 z-40 transition-[width] duration-200 ease-out ${sidebarWidthClass}`}
+      >
+        <button
+          type="button"
+          className="absolute -right-3 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] opacity-0 shadow-md transition hover:text-[var(--color-primary)] focus:opacity-100 focus:outline-none group-hover:opacity-100"
+          title={isSidebarCollapsed ? 'Раскрыть меню' : 'Скрыть меню'}
+          aria-label={isSidebarCollapsed ? 'Раскрыть боковое меню' : 'Скрыть боковое меню'}
+          aria-expanded={!isSidebarCollapsed}
+          onClick={toggleSidebar}
+        >
+          {isSidebarCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
+        </button>
+
+        <SidebarHeader className={isSidebarCollapsed ? 'px-2 py-3' : undefined}>
+          <p
+            className={[
+              'text-center font-bold text-[var(--color-primary)] transition-all',
+              isSidebarCollapsed ? 'text-sm' : 'text-xl'
+            ].join(' ')}
+          >
+            {isSidebarCollapsed ? 'U' : 'UGER'}
+          </p>
+        </SidebarHeader>
+
+        <SidebarContent className={isSidebarCollapsed ? 'px-2 py-3' : undefined}>
+          <SidebarSection>
+            {!isSidebarCollapsed ? <SidebarSectionTitle>Основное</SidebarSectionTitle> : null}
+
+            <div className="grid gap-1">
+              {visibleMainItems.map((item) => (
+                <SidebarItemButton
+                  key={item.path}
+                  icon={item.icon}
+                  active={isNavigationItemActive(location.pathname, item.path)}
+                  title={item.title}
+                  aria-label={item.title}
+                  className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
+                  onClick={() => navigate(item.path)}
+                >
+                  {isSidebarCollapsed ? '' : item.title}
+                </SidebarItemButton>
+              ))}
+            </div>
+          </SidebarSection>
+
+          <SidebarSection>
+            {!isSidebarCollapsed ? <SidebarSectionTitle>Система</SidebarSectionTitle> : null}
+
+            <div className="grid gap-1">
+              {visibleSystemItems.map((item) => (
+                <SidebarItemButton
+                  key={item.path}
+                  icon={item.icon}
+                  active={isNavigationItemActive(location.pathname, item.path)}
+                  title={item.title}
+                  aria-label={item.title}
+                  className={isSidebarCollapsed ? 'justify-center px-0' : undefined}
+                  onClick={() => navigate(item.path)}
+                >
+                  {isSidebarCollapsed ? '' : item.title}
+                </SidebarItemButton>
+              ))}
+            </div>
+          </SidebarSection>
+        </SidebarContent>
+
+        {!isSidebarCollapsed ? (
+          <SidebarFooter>
+            <SidebarAccountCard
+              username={auth.user?.username ?? 'Пользователь'}
+              roleName={auth.user?.roleName ?? 'Роль не определена'}
+              profileType={auth.user?.profileType ?? 'system'}
+              isActive={Boolean(auth.user?.isActive)}
+              onLogout={() => void auth.logout()}
+            />
+          </SidebarFooter>
+        ) : null}
+      </Sidebar>
+    </div>
+  )
 }
 
-function requireAuthenticatedUser(event: IpcMainInvokeEvent, authService: AuthService): AuthUser {
-  const token = getAuthTokenForWebContents(event.sender.id)
-
-  if (!token) {
-    throw new Error('Требуется авторизация для выполнения операции')
+function isNavigationItemActive(pathname: string, itemPath: string): boolean {
+  if (pathname === itemPath) {
+    return true
   }
 
-  const user = authService.getCurrentUser({ token })
+  return itemPath !== '/' && pathname.startsWith(`${itemPath}/`)
+}
 
-  if (!user) {
-    throw new Error('Сессия истекла. Войди в систему заново')
+function SidebarAccountCard({
+  username,
+  roleName,
+  profileType,
+  isActive,
+  onLogout
+}: {
+  username: string
+  roleName: string
+  profileType: ProfileType
+  isActive: boolean
+  onLogout: () => void
+}): ReactElement {
+  const initials = getUserInitials(username)
+  const profileTypeLabel = getProfileTypeLabel(profileType)
+
+  return (
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-sm font-bold uppercase text-white shadow-sm">
+          {initials}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-[var(--color-text)]">{username}</p>
+
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+            <FiShield className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{roleName}</span>
+          </div>
+
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+            <FiUser className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{profileTypeLabel}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <Badge variant={isActive ? 'success' : 'warning'}>
+          {isActive ? 'Активная сессия' : 'Неактивен'}
+        </Badge>
+
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          title="Выйти из аккаунта"
+          aria-label="Выйти из аккаунта"
+          onClick={onLogout}
+        >
+          <FiLogOut />
+          Выйти
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function getUserInitials(username: string): string {
+  const cleanUsername = username.trim()
+
+  if (!cleanUsername) {
+    return 'U'
   }
 
-  return user
+  const parts = cleanUsername
+    .split(/[\s._-]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase()
+  }
+
+  return cleanUsername.slice(0, 2).toUpperCase()
+}
+
+function getProfileTypeLabel(profileType: ProfileType): string {
+  if (profileType === 'student') {
+    return 'Студент'
+  }
+
+  if (profileType === 'teacher') {
+    return 'Преподаватель'
+  }
+
+  if (profileType === 'employee') {
+    return 'Сотрудник'
+  }
+
+  return 'Система'
 }
 @end
 
-@write src/main/ipc/authIpc.ts
-import { ipcMain } from 'electron'
-import type { IpcMainInvokeEvent } from 'electron'
-import type {
-  ChangePasswordParams,
-  CreateUserParams,
-  DeleteUserParams,
-  GetCurrentUserParams,
-  LoginParams,
-  LogoutParams,
-  SetUserActiveParams,
-  UpdateUserParams
-} from '../../shared/types/auth'
-import { AuditRepository } from '../audit/auditRepository'
-import { AuditService } from '../audit/auditService'
-import { AuthRepository } from '../auth/authRepository'
-import { AuthService } from '../auth/authService'
-import {
-  forgetAuthTokenForWebContents,
-  rememberAuthTokenForWebContents
-} from '../auth/sessionContext'
-import { getDatabase } from '../database/connection'
-import { requireModuleAccess } from '../security/ipcAccess'
-import type { AccessAction } from '../security/accessControl'
+@insert-after-once src/renderer/src/shared/navigation/routeAccess.ts
+@find
+  {
+    module: 'people',
+    matches: (pathname) => isExactOrNested(pathname, '/people')
+  },
+@endfind
+@content
+  {
+    module: 'people',
+    matches: (pathname) => isExactOrNested(pathname, '/filters')
+  },
+@endcontent
+@end
 
-export function registerAuthIpcHandlers(): void {
-  const database = getDatabase()
-
-  const auditRepository = new AuditRepository(database)
-  const auditService = new AuditService(auditRepository)
-
-  const authRepository = new AuthRepository(database)
-  const authService = new AuthService(authRepository, auditService)
-
-  function requireAdministrationAccess(event: IpcMainInvokeEvent, action: AccessAction): void {
-    requireModuleAccess(event, authService, 'administration', action)
+@insert-after-once src/preload/api/adminCrudApi.ts
+@find
+  if (isExactOrNested(pathname, '/people')) {
+    return 'people'
   }
+@endfind
+@content
 
-  ipcMain.handle('auth:login', (event, params: LoginParams) => {
-    const result = authService.login(params)
-
-    rememberAuthTokenForWebContents(event.sender.id, result.token)
-
-    return result
-  })
-
-  ipcMain.handle('auth:getCurrentUser', (event, params: GetCurrentUserParams) => {
-    const user = authService.getCurrentUser(params)
-
-    if (user) {
-      rememberAuthTokenForWebContents(event.sender.id, params.token)
-    } else {
-      forgetAuthTokenForWebContents(event.sender.id)
-    }
-
-    return user
-  })
-
-  ipcMain.handle('auth:logout', (event, params: LogoutParams) => {
-    const result = authService.logout(params)
-
-    forgetAuthTokenForWebContents(event.sender.id)
-
-    return result
-  })
-
-  ipcMain.handle('auth:listUsers', (event) => {
-    requireAdministrationAccess(event, 'view')
-
-    return authService.listUsers()
-  })
-
-  ipcMain.handle('auth:createUser', (event, params: CreateUserParams) => {
-    requireAdministrationAccess(event, 'create')
-
-    return authService.createUser(params)
-  })
-
-  ipcMain.handle('auth:updateUser', (event, params: UpdateUserParams) => {
-    requireAdministrationAccess(event, 'update')
-
-    return authService.updateUser(params)
-  })
-
-  ipcMain.handle('auth:setUserActive', (event, params: SetUserActiveParams) => {
-    requireAdministrationAccess(event, 'update')
-
-    return authService.setUserActive(params)
-  })
-
-  ipcMain.handle('auth:deleteUser', (event, params: DeleteUserParams) => {
-    requireAdministrationAccess(event, 'delete')
-
-    return authService.deleteUser(params)
-  })
-
-  ipcMain.handle('auth:changePassword', (event, params: ChangePasswordParams) => {
-    requireAdministrationAccess(event, 'update')
-
-    return authService.changePassword(params)
-  })
-}
-@end
-
-@write src/main/ipc/roleIpc.ts
-import { ipcMain } from 'electron'
-import type { IpcMainInvokeEvent } from 'electron'
-import type {
-  CreateRoleParams,
-  DeleteRoleParams,
-  SetRolePermissionsParams,
-  UpdateRoleParams
-} from '../../shared/types/roles'
-import { AuditRepository } from '../audit/auditRepository'
-import { AuditService } from '../audit/auditService'
-import { AuthRepository } from '../auth/authRepository'
-import { AuthService } from '../auth/authService'
-import { getDatabase } from '../database/connection'
-import { RoleRepository } from '../roles/roleRepository'
-import { RoleService } from '../roles/roleService'
-import { requireModuleAccess } from '../security/ipcAccess'
-import type { AccessAction } from '../security/accessControl'
-
-export function registerRoleIpcHandlers(): void {
-  const database = getDatabase()
-
-  const auditRepository = new AuditRepository(database)
-  const auditService = new AuditService(auditRepository)
-
-  const authRepository = new AuthRepository(database)
-  const authService = new AuthService(authRepository, auditService)
-
-  const roleRepository = new RoleRepository(database)
-  const roleService = new RoleService(roleRepository, auditService)
-
-  function requireAdministrationAccess(event: IpcMainInvokeEvent, action: AccessAction): void {
-    requireModuleAccess(event, authService, 'administration', action)
+  if (isExactOrNested(pathname, '/filters')) {
+    return 'people'
   }
-
-  ipcMain.handle('roles:list', (event) => {
-    requireAdministrationAccess(event, 'view')
-
-    return roleService.listRoles()
-  })
-
-  ipcMain.handle('roles:getDetails', (event, roleId: number) => {
-    requireAdministrationAccess(event, 'view')
-
-    return roleService.getRoleDetails(roleId)
-  })
-
-  ipcMain.handle('roles:listPermissionGroups', (event) => {
-    requireAdministrationAccess(event, 'view')
-
-    return roleService.listPermissionGroups()
-  })
-
-  ipcMain.handle('roles:create', (event, params: CreateRoleParams) => {
-    requireAdministrationAccess(event, 'create')
-
-    return roleService.createRole(params)
-  })
-
-  ipcMain.handle('roles:update', (event, params: UpdateRoleParams) => {
-    requireAdministrationAccess(event, 'update')
-
-    return roleService.updateRole(params)
-  })
-
-  ipcMain.handle('roles:setPermissions', (event, params: SetRolePermissionsParams) => {
-    requireAdministrationAccess(event, 'update')
-
-    return roleService.setRolePermissions(params)
-  })
-
-  ipcMain.handle('roles:delete', (event, params: DeleteRoleParams) => {
-    requireAdministrationAccess(event, 'delete')
-
-    return roleService.deleteRole(params)
-  })
-}
-@end
-
-@write src/main/ipc/settingsIpc.ts
-import { ipcMain } from 'electron'
-import type { UpdateAppSettingsParams } from '../../shared/types/settings'
-import { AuditRepository } from '../audit/auditRepository'
-import { AuditService } from '../audit/auditService'
-import { AuthRepository } from '../auth/authRepository'
-import { AuthService } from '../auth/authService'
-import { getDatabase } from '../database/connection'
-import { SettingsRepository } from '../settings/settingsRepository'
-import { SettingsService } from '../settings/settingsService'
-import { requireModuleAccess } from '../security/ipcAccess'
-
-export function registerSettingsIpcHandlers(): void {
-  const database = getDatabase()
-
-  const auditRepository = new AuditRepository(database)
-  const auditService = new AuditService(auditRepository)
-
-  const authRepository = new AuthRepository(database)
-  const authService = new AuthService(authRepository, auditService)
-
-  const settingsRepository = new SettingsRepository(database)
-  const settingsService = new SettingsService(settingsRepository, auditService)
-
-  ipcMain.handle('settings:get', (event) => {
-    requireModuleAccess(event, authService, 'settings', 'view')
-
-    return settingsService.getSettings()
-  })
-
-  ipcMain.handle('settings:update', (event, params: UpdateAppSettingsParams) => {
-    requireModuleAccess(event, authService, 'settings', 'update')
-
-    return settingsService.updateSettings(params)
-  })
-}
-@end
-
-@write src/main/ipc/systemIpc.ts
-import { ipcMain } from 'electron'
-import { AuditRepository } from '../audit/auditRepository'
-import { AuditService } from '../audit/auditService'
-import { AuthRepository } from '../auth/authRepository'
-import { AuthService } from '../auth/authService'
-import { DataQualityRepository } from '../dataQuality/dataQualityRepository'
-import { DataQualityService } from '../dataQuality/dataQualityService'
-import { getDatabase } from '../database/connection'
-import { DatabaseTransferService } from '../database/databaseTransferService'
-import { HealthRepository } from '../health/healthRepository'
-import { HealthService } from '../health/healthService'
-import { requireAnyModuleAccess, requireModuleAccess } from '../security/ipcAccess'
-
-export function registerSystemIpcHandlers(): void {
-  const database = getDatabase()
-  const databaseTransferService = new DatabaseTransferService(database)
-
-  const auditRepository = new AuditRepository(database)
-  const auditService = new AuditService(auditRepository)
-
-  const authRepository = new AuthRepository(database)
-  const authService = new AuthService(authRepository, auditService)
-
-  const healthRepository = new HealthRepository(database)
-  const healthService = new HealthService(healthRepository)
-
-  const dataQualityRepository = new DataQualityRepository(database)
-  const dataQualityService = new DataQualityService(dataQualityRepository)
-
-  ipcMain.handle('system:getHealthReport', (event) => {
-    requireAnyModuleAccess(event, authService, [
-      { module: 'settings', action: 'view' },
-      { module: 'administration', action: 'view' }
-    ])
-
-    return healthService.getHealthReport()
-  })
-
-  ipcMain.handle('system:getDataQualityReport', (event) => {
-    requireAnyModuleAccess(event, authService, [
-      { module: 'settings', action: 'view' },
-      { module: 'administration', action: 'view' }
-    ])
-
-    return dataQualityService.getReport()
-  })
-
-  ipcMain.handle('system:exportDatabaseToJson', (event) => {
-    requireModuleAccess(event, authService, 'administration', 'view')
-
-    return databaseTransferService.exportToJson()
-  })
-
-  ipcMain.handle('system:importDatabaseFromJson', (event) => {
-    requireModuleAccess(event, authService, 'administration', 'update')
-
-    return databaseTransferService.importFromJson()
-  })
-
-  ipcMain.handle('system:resetDatabase', (event) => {
-    requireModuleAccess(event, authService, 'administration', 'delete')
-
-    return databaseTransferService.resetDatabase()
-  })
-}
+@endcontent
 @end

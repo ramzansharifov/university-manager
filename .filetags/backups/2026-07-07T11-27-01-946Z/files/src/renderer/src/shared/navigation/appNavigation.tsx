@@ -6,10 +6,12 @@ import {
   FiCalendar,
   FiClipboard,
   FiDatabase,
+  FiBriefcase,
   FiFilter,
   FiHome,
   FiSettings,
   FiShield,
+  FiUserCheck,
   FiUsers
 } from 'react-icons/fi'
 import type { AuthUser } from '../../../../shared/types/auth'
@@ -48,13 +50,6 @@ export const mainNavigationItems: AppNavigationItem[] = [
     module: 'people'
   },
   {
-    title: 'Фильтры',
-    description: 'Поиск студентов, преподавателей и сотрудников',
-    path: '/filters',
-    icon: <FiFilter />,
-    module: 'people'
-  },
-  {
     title: 'Учебный процесс',
     description: 'Предметы, учебные планы и дисциплины',
     path: '/academic-process',
@@ -84,6 +79,29 @@ export const mainNavigationItems: AppNavigationItem[] = [
   }
 ]
 
+export const filterNavigationItems: AppNavigationItem[] = [
+  {
+    title: 'Студенты',
+    description: 'Поиск студентов и просмотр полной карточки',
+    path: '/filters/students',
+    icon: <FiFilter />,
+    module: 'people'
+  },
+  {
+    title: 'Преподаватели',
+    description: 'Поиск преподавателей и просмотр полной карточки',
+    path: '/filters/teachers',
+    icon: <FiUserCheck />,
+    module: 'people'
+  },
+  {
+    title: 'Сотрудники',
+    description: 'Поиск сотрудников и просмотр полной карточки',
+    path: '/filters/employees',
+    icon: <FiBriefcase />,
+    module: 'people'
+  }
+]
 export const systemNavigationItems: AppNavigationItem[] = [
   {
     title: 'Администрирование',
@@ -108,7 +126,11 @@ export const systemNavigationItems: AppNavigationItem[] = [
   }
 ]
 
-export const allNavigationItems = [...mainNavigationItems, ...systemNavigationItems]
+export const allNavigationItems = [
+  ...mainNavigationItems,
+  ...filterNavigationItems,
+  ...systemNavigationItems
+]
 
 export function getNavigationItemByPath(pathname: string): AppNavigationItem | undefined {
   return allNavigationItems.find((item) => item.path === pathname)

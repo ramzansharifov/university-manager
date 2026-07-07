@@ -6,7 +6,6 @@ import {
   FiCalendar,
   FiClipboard,
   FiDatabase,
-  FiFilter,
   FiHome,
   FiSettings,
   FiShield,
@@ -45,13 +44,6 @@ export const mainNavigationItems: AppNavigationItem[] = [
     description: 'Студенты, преподаватели и сотрудники',
     path: '/people',
     icon: <FiUsers />,
-    module: 'people'
-  },
-  {
-    title: 'Фильтры',
-    description: 'Поиск студентов, преподавателей и сотрудников',
-    path: '/filters',
-    icon: <FiFilter />,
     module: 'people'
   },
   {

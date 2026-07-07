@@ -72,9 +72,6 @@ function getCurrentAccessModule(): AdminCrudAccessModule | undefined {
   if (isExactOrNested(pathname, '/people')) {
     return 'people'
   }
-  if (isExactOrNested(pathname, '/filters')) {
-    return 'people'
-  }
 
   if (isExactOrNested(pathname, '/academic-process')) {
     return 'academic_process'
