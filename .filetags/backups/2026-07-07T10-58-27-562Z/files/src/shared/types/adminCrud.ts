@@ -1,16 +1,3 @@
-export type AdminCrudAccessModule =
-  | 'university'
-  | 'people'
-  | 'academic_calendar'
-  | 'academic_process'
-  | 'rooms_and_lessons'
-  | 'schedule'
-  | 'learning_journal'
-  | 'reports'
-  | 'administration'
-  | 'audit_log'
-  | 'settings'
-
 export type AdminEntityKey =
   | 'faculties'
   | 'departments'
@@ -55,7 +42,6 @@ export type AdminCrudRecord = Record<string, unknown>
 
 export interface AdminCrudListParams {
   entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
   page?: number
   pageSize?: number
   search?: string
@@ -75,33 +61,27 @@ export interface AdminCrudListResult<TRecord = AdminCrudRecord> {
 
 export interface AdminCrudGetByIdParams {
   entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
   id: number
 }
 
 export interface AdminCrudCreateParams {
   entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
   data: AdminCrudRecord
 }
 
 export interface AdminCrudUpdateParams {
   entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
   id: number
   data: AdminCrudRecord
 }
-
 export interface SaveDepartmentWithFacultiesParams {
   id?: number
-  accessModule?: AdminCrudAccessModule
   data: AdminCrudRecord
   facultyIds: number[]
 }
 
 export interface AdminCrudDeleteParams {
   entity: AdminEntityKey
-  accessModule?: AdminCrudAccessModule
   id: number
 }
 

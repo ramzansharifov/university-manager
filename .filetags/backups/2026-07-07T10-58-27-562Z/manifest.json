@@ -1,0 +1,42 @@
+{
+  "createdAt": "2026-07-07T10:58:27.634Z",
+  "backupPath": ".filetags/backups/2026-07-07T10-58-27-562Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/shared/types/adminCrud.ts",
+      "backupRelativePath": "files/src/shared/types/adminCrud.ts"
+    },
+    {
+      "originalPath": "src/preload/api/adminCrudApi.ts",
+      "backupRelativePath": "files/src/preload/api/adminCrudApi.ts"
+    },
+    {
+      "originalPath": "src/main/ipc/authIpc.ts",
+      "backupRelativePath": "files/src/main/ipc/authIpc.ts"
+    },
+    {
+      "originalPath": "src/main/ipc/adminCrudIpc.ts",
+      "backupRelativePath": "files/src/main/ipc/adminCrudIpc.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Create folder: src/main/security",
+    "Write file: src/main/auth/sessionContext.ts\n   old: missing\n   new: 13 line(s)",
+    "Write file: src/main/security/accessControl.ts\n   old: missing\n   new: 44 line(s)",
+    "Write file: src/main/security/adminCrudAccess.ts\n   old: missing\n   new: 109 line(s)",
+    "Write file: src/shared/types/adminCrud.ts\n   old: 92 line(s)\n   new: 111 line(s)",
+    "Write file: src/preload/api/adminCrudApi.ts\n   old: 40 line(s)\n   new: 122 line(s)",
+    "Write file: src/main/ipc/authIpc.ts\n   old: 62 line(s)\n   new: 82 line(s)",
+    "Write file: src/main/ipc/adminCrudIpc.ts\n   old: 51 line(s)\n   new: 91 line(s)",
+    "Replace file: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1507 line(s)\n   new: 1508 line(s)",
+    "Replace file: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1508 line(s)\n   new: 1508 line(s)",
+    "Replace file: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1508 line(s)\n   new: 1509 line(s)",
+    "Replace file: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1509 line(s)\n   new: 1510 line(s)",
+    "Replace file: src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx\n   found: yes\n   old: 1510 line(s)\n   new: 1511 line(s)"
+  ]
+}

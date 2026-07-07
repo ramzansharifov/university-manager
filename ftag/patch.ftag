@@ -1,199 +1,665 @@
-@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-import { useCallback, useEffect, useMemo, useState } from 'react'
-@endfind
-@content
-import { useLocation } from 'react-router-dom'
-@endcontent
+@folder src/main/security
+
+@write src/main/auth/sessionContext.ts
+const authTokenByWebContentsId = new Map<number, string>()
+
+export function rememberAuthTokenForWebContents(webContentsId: number, token: string): void {
+  authTokenByWebContentsId.set(webContentsId, token)
+}
+
+export function forgetAuthTokenForWebContents(webContentsId: number): void {
+  authTokenByWebContentsId.delete(webContentsId)
+}
+
+export function getAuthTokenForWebContents(webContentsId: number): string | null {
+  return authTokenByWebContentsId.get(webContentsId) ?? null
+}
 @end
 
-@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-import { formatDateForDisplay } from '../../../shared/lib/date'
-@endfind
-@content
-import { useAccessControl } from '../../../shared/auth/useAccessControl'
-import type { AccessModule } from '../../../shared/auth/accessControl'
-import { getRouteAccessModule } from '../../../shared/navigation/routeAccess'
-@endcontent
+@write src/main/security/accessControl.ts
+import type { AdminCrudAccessModule } from '../../shared/types/adminCrud'
+import type { AuthUser } from '../../shared/types/auth'
+
+export type AccessAction = 'view' | 'create' | 'update' | 'delete'
+
+const teacherPermissions = [
+  'academic_process.view',
+  'schedule.view',
+  'learning_journal.view',
+  'learning_journal.create',
+  'learning_journal.update',
+  'reports.view'
+]
+
+const studentPermissions = [
+  'academic_process.view',
+  'schedule.view',
+  'learning_journal.view',
+  'reports.view'
+]
+
+export function canPerformAction(
+  user: AuthUser,
+  module: AdminCrudAccessModule,
+  action: AccessAction
+): boolean {
+  if (user.roleKey === 'super_admin') {
+    return true
+  }
+
+  return getEffectivePermissions(user).includes(`${module}.${action}`)
+}
+
+function getEffectivePermissions(user: AuthUser): string[] {
+  if (user.roleKey === 'teacher' && user.profileType === 'teacher') {
+    return teacherPermissions
+  }
+
+  if (user.roleKey === 'student' && user.profileType === 'student') {
+    return studentPermissions
+  }
+
+  return user.permissions
+}
 @end
 
-@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-  filters?: AdminCrudFilterRecord
-@endfind
-@content
-  accessModule?: AccessModule
-@endcontent
+@write src/main/security/adminCrudAccess.ts
+import type { IpcMainInvokeEvent } from 'electron'
+import type {
+  AdminCrudAccessModule,
+  AdminEntityKey
+} from '../../shared/types/adminCrud'
+import type { AuthService } from '../auth/authService'
+import { getAuthTokenForWebContents } from '../auth/sessionContext'
+import { canPerformAction } from './accessControl'
+import type { AccessAction } from './accessControl'
+
+export type AdminCrudAccessAction = AccessAction
+
+interface AdminCrudAccessParams {
+  entity?: AdminEntityKey
+  accessModule?: AdminCrudAccessModule
+}
+
+const defaultAccessModuleByEntity: Partial<Record<AdminEntityKey, AdminCrudAccessModule>> = {
+  faculties: 'university',
+  departments: 'university',
+  department_faculties: 'university',
+  specialties: 'university',
+  student_groups: 'university',
+  divisions: 'university',
+  positions: 'university',
+
+  students: 'people',
+  teachers: 'people',
+  employees: 'people',
+
+  academic_years: 'academic_process',
+  semesters: 'academic_process',
+  weeks: 'academic_process',
+  academic_vacations: 'academic_process',
+  subjects: 'academic_process',
+  curriculum_plans: 'academic_process',
+  curriculum_items: 'academic_process',
+  disciplines: 'academic_process',
+
+  audience_types: 'schedule',
+  buildings: 'schedule',
+  audiences: 'schedule',
+  lesson_periods: 'schedule',
+  schedule_items: 'schedule',
+  lesson_sessions: 'schedule',
+
+  attendance_records: 'learning_journal',
+  grade_element_types: 'learning_journal',
+  grade_items: 'learning_journal',
+  score_scales: 'learning_journal',
+  grades: 'learning_journal',
+  lesson_completion_records: 'learning_journal',
+
+  dictionary_items: 'settings',
+  roles: 'administration',
+  permissions: 'administration',
+  app_users: 'administration',
+  audit_logs: 'audit_log',
+  app_settings: 'settings'
+}
+
+export function requireAdminCrudAccess(
+  event: IpcMainInvokeEvent,
+  authService: AuthService,
+  params: AdminCrudAccessParams,
+  action: AdminCrudAccessAction,
+  fallbackModule?: AdminCrudAccessModule
+): void {
+  const token = getAuthTokenForWebContents(event.sender.id)
+
+  if (!token) {
+    throw new Error('Требуется авторизация для работы с данными')
+  }
+
+  const user = authService.getCurrentUser({ token })
+
+  if (!user) {
+    throw new Error('Сессия истекла. Войди в систему заново')
+  }
+
+  const module = resolveAccessModule(params, fallbackModule)
+
+  if (!module) {
+    throw new Error('Не удалось определить модуль доступа для операции')
+  }
+
+  if (!canPerformAction(user, module, action)) {
+    throw new Error(`Нет прав на выполнение операции: ${module}.${action}`)
+  }
+}
+
+function resolveAccessModule(
+  params: AdminCrudAccessParams,
+  fallbackModule?: AdminCrudAccessModule
+): AdminCrudAccessModule | null {
+  if (params.accessModule) {
+    return params.accessModule
+  }
+
+  if (fallbackModule) {
+    return fallbackModule
+  }
+
+  if (!params.entity) {
+    return null
+  }
+
+  return defaultAccessModuleByEntity[params.entity] ?? null
+}
 @end
 
-@insert-after-once src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-  filters,
-@endfind
-@content
-  accessModule,
-@endcontent
+@write src/shared/types/adminCrud.ts
+export type AdminCrudAccessModule =
+  | 'university'
+  | 'people'
+  | 'academic_calendar'
+  | 'academic_process'
+  | 'rooms_and_lessons'
+  | 'schedule'
+  | 'learning_journal'
+  | 'reports'
+  | 'administration'
+  | 'audit_log'
+  | 'settings'
+
+export type AdminEntityKey =
+  | 'faculties'
+  | 'departments'
+  | 'department_faculties'
+  | 'specialties'
+  | 'student_groups'
+  | 'divisions'
+  | 'positions'
+  | 'dictionary_items'
+  | 'academic_years'
+  | 'semesters'
+  | 'weeks'
+  | 'academic_vacations'
+  | 'lesson_periods'
+  | 'teachers'
+  | 'employees'
+  | 'students'
+  | 'subjects'
+  | 'curriculum_plans'
+  | 'curriculum_items'
+  | 'disciplines'
+  | 'audience_types'
+  | 'buildings'
+  | 'audiences'
+  | 'schedule_items'
+  | 'lesson_sessions'
+  | 'attendance_records'
+  | 'grade_element_types'
+  | 'grade_items'
+  | 'score_scales'
+  | 'grades'
+  | 'lesson_completion_records'
+  | 'roles'
+  | 'permissions'
+  | 'app_users'
+  | 'audit_logs'
+  | 'app_settings'
+
+export type SortDirection = 'asc' | 'desc'
+
+export type AdminCrudRecord = Record<string, unknown>
+
+export interface AdminCrudListParams {
+  entity: AdminEntityKey
+  accessModule?: AdminCrudAccessModule
+  page?: number
+  pageSize?: number
+  search?: string
+
+  orderBy?: string
+  orderDirection?: SortDirection
+  filters?: Record<string, string | number | boolean | null>
+}
+
+export interface AdminCrudListResult<TRecord = AdminCrudRecord> {
+  items: TRecord[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface AdminCrudGetByIdParams {
+  entity: AdminEntityKey
+  accessModule?: AdminCrudAccessModule
+  id: number
+}
+
+export interface AdminCrudCreateParams {
+  entity: AdminEntityKey
+  accessModule?: AdminCrudAccessModule
+  data: AdminCrudRecord
+}
+
+export interface AdminCrudUpdateParams {
+  entity: AdminEntityKey
+  accessModule?: AdminCrudAccessModule
+  id: number
+  data: AdminCrudRecord
+}
+
+export interface SaveDepartmentWithFacultiesParams {
+  id?: number
+  accessModule?: AdminCrudAccessModule
+  data: AdminCrudRecord
+  facultyIds: number[]
+}
+
+export interface AdminCrudDeleteParams {
+  entity: AdminEntityKey
+  accessModule?: AdminCrudAccessModule
+  id: number
+}
+
+export interface AdminCrudOperationResult<TRecord = AdminCrudRecord> {
+  success: boolean
+  item?: TRecord
+}
+@end
+
+@write src/preload/api/adminCrudApi.ts
+import { ipcRenderer } from 'electron'
+import type {
+  AdminCrudAccessModule,
+  AdminCrudCreateParams,
+  AdminCrudDeleteParams,
+  AdminCrudGetByIdParams,
+  AdminCrudListParams,
+  AdminCrudListResult,
+  AdminCrudOperationResult,
+  AdminCrudRecord,
+  SaveDepartmentWithFacultiesParams,
+  AdminCrudUpdateParams
+} from '../../shared/types/adminCrud'
+
+export const adminCrudApi = {
+  list(params: AdminCrudListParams): Promise<AdminCrudListResult> {
+    return ipcRenderer.invoke('adminCrud:list', withCurrentAccessModule(params))
+  },
+
+  getById(params: AdminCrudGetByIdParams): Promise<AdminCrudRecord | null> {
+    return ipcRenderer.invoke('adminCrud:getById', withCurrentAccessModule(params))
+  },
+
+  create(params: AdminCrudCreateParams): Promise<AdminCrudOperationResult> {
+    return ipcRenderer.invoke('adminCrud:create', withCurrentAccessModule(params))
+  },
+
+  update(params: AdminCrudUpdateParams): Promise<AdminCrudOperationResult> {
+    return ipcRenderer.invoke('adminCrud:update', withCurrentAccessModule(params))
+  },
+
+  saveDepartmentWithFaculties(
+    params: SaveDepartmentWithFacultiesParams
+  ): Promise<AdminCrudOperationResult> {
+    return ipcRenderer.invoke('adminCrud:saveDepartmentWithFaculties', withCurrentAccessModule(params))
+  },
+
+  delete(params: AdminCrudDeleteParams): Promise<AdminCrudOperationResult> {
+    return ipcRenderer.invoke('adminCrud:delete', withCurrentAccessModule(params))
+  }
+}
+
+function withCurrentAccessModule<TParams extends { accessModule?: AdminCrudAccessModule }>(
+  params: TParams
+): TParams {
+  const accessModule = params.accessModule ?? getCurrentAccessModule()
+
+  if (!accessModule) {
+    return params
+  }
+
+  return {
+    ...params,
+    accessModule
+  }
+}
+
+function getCurrentAccessModule(): AdminCrudAccessModule | undefined {
+  const pathname = getCurrentPathname()
+
+  if (pathname === '/') {
+    return 'settings'
+  }
+
+  if (isExactOrNested(pathname, '/university')) {
+    return 'university'
+  }
+
+  if (isExactOrNested(pathname, '/people')) {
+    return 'people'
+  }
+
+  if (isExactOrNested(pathname, '/academic-process')) {
+    return 'academic_process'
+  }
+
+  if (isExactOrNested(pathname, '/schedule')) {
+    return 'schedule'
+  }
+
+  if (isExactOrNested(pathname, '/learning-journal')) {
+    return 'learning_journal'
+  }
+
+  if (isExactOrNested(pathname, '/reports')) {
+    return 'reports'
+  }
+
+  if (isExactOrNested(pathname, '/administration')) {
+    return 'administration'
+  }
+
+  if (isExactOrNested(pathname, '/audit-log')) {
+    return 'audit_log'
+  }
+
+  if (isExactOrNested(pathname, '/settings')) {
+    return 'settings'
+  }
+
+  return undefined
+}
+
+function getCurrentPathname(): string {
+  const runtimeGlobal = globalThis as {
+    location?: {
+      pathname?: string
+    }
+  }
+
+  const pathname = runtimeGlobal.location?.pathname ?? '/'
+
+  if (pathname.length > 1 && pathname.endsWith('/')) {
+    return pathname.slice(0, -1)
+  }
+
+  return pathname
+}
+
+function isExactOrNested(pathname: string, basePath: string): boolean {
+  return pathname === basePath || pathname.startsWith(`${basePath}/`)
+}
+@end
+
+@write src/main/ipc/authIpc.ts
+import { ipcMain } from 'electron'
+import type {
+  ChangePasswordParams,
+  CreateUserParams,
+  DeleteUserParams,
+  GetCurrentUserParams,
+  LoginParams,
+  LogoutParams,
+  SetUserActiveParams,
+  UpdateUserParams
+} from '../../shared/types/auth'
+import { AuditRepository } from '../audit/auditRepository'
+import { AuditService } from '../audit/auditService'
+import { AuthRepository } from '../auth/authRepository'
+import { AuthService } from '../auth/authService'
+import {
+  forgetAuthTokenForWebContents,
+  rememberAuthTokenForWebContents
+} from '../auth/sessionContext'
+import { getDatabase } from '../database/connection'
+
+export function registerAuthIpcHandlers(): void {
+  const database = getDatabase()
+
+  const auditRepository = new AuditRepository(database)
+  const auditService = new AuditService(auditRepository)
+
+  const authRepository = new AuthRepository(database)
+  const authService = new AuthService(authRepository, auditService)
+
+  ipcMain.handle('auth:login', (event, params: LoginParams) => {
+    const result = authService.login(params)
+
+    rememberAuthTokenForWebContents(event.sender.id, result.token)
+
+    return result
+  })
+
+  ipcMain.handle('auth:getCurrentUser', (event, params: GetCurrentUserParams) => {
+    const user = authService.getCurrentUser(params)
+
+    if (user) {
+      rememberAuthTokenForWebContents(event.sender.id, params.token)
+    } else {
+      forgetAuthTokenForWebContents(event.sender.id)
+    }
+
+    return user
+  })
+
+  ipcMain.handle('auth:logout', (event, params: LogoutParams) => {
+    const result = authService.logout(params)
+
+    forgetAuthTokenForWebContents(event.sender.id)
+
+    return result
+  })
+
+  ipcMain.handle('auth:listUsers', () => {
+    return authService.listUsers()
+  })
+
+  ipcMain.handle('auth:createUser', (_event, params: CreateUserParams) => {
+    return authService.createUser(params)
+  })
+
+  ipcMain.handle('auth:updateUser', (_event, params: UpdateUserParams) => {
+    return authService.updateUser(params)
+  })
+
+  ipcMain.handle('auth:setUserActive', (_event, params: SetUserActiveParams) => {
+    return authService.setUserActive(params)
+  })
+
+  ipcMain.handle('auth:deleteUser', (_event, params: DeleteUserParams) => {
+    return authService.deleteUser(params)
+  })
+
+  ipcMain.handle('auth:changePassword', (_event, params: ChangePasswordParams) => {
+    return authService.changePassword(params)
+  })
+}
+@end
+
+@write src/main/ipc/adminCrudIpc.ts
+import { ipcMain } from 'electron'
+import type { IpcMainInvokeEvent } from 'electron'
+import type {
+  AdminCrudAccessModule,
+  AdminCrudCreateParams,
+  AdminCrudDeleteParams,
+  AdminCrudGetByIdParams,
+  AdminCrudListParams,
+  SaveDepartmentWithFacultiesParams,
+  AdminCrudUpdateParams
+} from '../../shared/types/adminCrud'
+import { AuditRepository } from '../audit/auditRepository'
+import { AuditService } from '../audit/auditService'
+import { AuthRepository } from '../auth/authRepository'
+import { AuthService } from '../auth/authService'
+import { getDatabase } from '../database/connection'
+import { AdminCrudRepository } from '../repositories/adminCrudRepository'
+import { AdminCrudService } from '../services/adminCrudService'
+import {
+  requireAdminCrudAccess,
+  type AdminCrudAccessAction
+} from '../security/adminCrudAccess'
+
+type GuardedAdminCrudParams =
+  | AdminCrudListParams
+  | AdminCrudGetByIdParams
+  | AdminCrudCreateParams
+  | AdminCrudUpdateParams
+  | AdminCrudDeleteParams
+  | SaveDepartmentWithFacultiesParams
+
+export function registerAdminCrudIpcHandlers(): void {
+  const database = getDatabase()
+
+  const auditRepository = new AuditRepository(database)
+  const auditService = new AuditService(auditRepository)
+
+  const authRepository = new AuthRepository(database)
+  const authService = new AuthService(authRepository, auditService)
+
+  const repository = new AdminCrudRepository(database)
+  const service = new AdminCrudService(repository, auditService)
+
+  function requireAccess(
+    event: IpcMainInvokeEvent,
+    params: GuardedAdminCrudParams,
+    action: AdminCrudAccessAction,
+    fallbackModule?: AdminCrudAccessModule
+  ): void {
+    requireAdminCrudAccess(event, authService, params, action, fallbackModule)
+  }
+
+  ipcMain.handle('adminCrud:list', (event, params: AdminCrudListParams) => {
+    requireAccess(event, params, 'view')
+
+    return service.list(params)
+  })
+
+  ipcMain.handle('adminCrud:getById', (event, params: AdminCrudGetByIdParams) => {
+    requireAccess(event, params, 'view')
+
+    return service.getById(params)
+  })
+
+  ipcMain.handle('adminCrud:create', (event, params: AdminCrudCreateParams) => {
+    requireAccess(event, params, 'create')
+
+    return service.create(params)
+  })
+
+  ipcMain.handle('adminCrud:update', (event, params: AdminCrudUpdateParams) => {
+    requireAccess(event, params, 'update')
+
+    return service.update(params)
+  })
+
+  ipcMain.handle(
+    'adminCrud:saveDepartmentWithFaculties',
+    (event, params: SaveDepartmentWithFacultiesParams) => {
+      requireAccess(event, params, params.id === undefined ? 'create' : 'update', 'university')
+
+      return service.saveDepartmentWithFaculties(params)
+    }
+  )
+
+  ipcMain.handle('adminCrud:delete', (event, params: AdminCrudDeleteParams) => {
+    requireAccess(event, params, 'delete')
+
+    return service.delete(params)
+  })
+}
 @end
 
 @replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
 @find
-}: AdminCrudEntityPanelProps) {
-  const [items, setItems] = useState<AdminCrudRecord[]>([])
+        orderBy,
+        orderDirection
 @endfind
 @with
-}: AdminCrudEntityPanelProps) {
-  const location = useLocation()
-  const access = useAccessControl()
-
-  const [items, setItems] = useState<AdminCrudRecord[]>([])
+        orderBy,
+        orderDirection,
+        accessModule: currentAccessModule ?? undefined
 @endwith
 @end
 
 @replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
 @find
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const canDeleteRecord = canDelete ?? true
-  const filtersKey = JSON.stringify(filters ?? {})
+  }, [entity, page, search, filtersKey, orderBy, orderDirection])
 @endfind
 @with
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const currentAccessModule = accessModule ?? getRouteAccessModule(location.pathname)
-  const effectiveCanCreate =
-    canCreate && (!currentAccessModule || access.canCreate(currentAccessModule))
-  const effectiveCanEdit =
-    canEdit && (!currentAccessModule || access.canUpdate(currentAccessModule))
-  const canDeleteRecord =
-    (canDelete ?? true) && (!currentAccessModule || access.canDelete(currentAccessModule))
-  const filtersKey = JSON.stringify(filters ?? {})
+  }, [entity, page, search, filtersKey, orderBy, orderDirection, currentAccessModule])
 @endwith
 @end
 
 @replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
 @find
-          {headerActions || canCreate ? (
+        await window.api.adminCrud.create({
+          entity,
+          data: payload
+        })
 @endfind
 @with
-          {headerActions || effectiveCanCreate ? (
+        await window.api.adminCrud.create({
+          entity,
+          accessModule: currentAccessModule ?? undefined,
+          data: payload
+        })
 @endwith
 @end
 
 @replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
 @find
-              {canCreate ? (
+        await window.api.adminCrud.update({
+          entity,
+          id: Number(selectedRecord.id),
+          data: payload
+        })
 @endfind
 @with
-              {effectiveCanCreate ? (
+        await window.api.adminCrud.update({
+          entity,
+          accessModule: currentAccessModule ?? undefined,
+          id: Number(selectedRecord.id),
+          data: payload
+        })
 @endwith
 @end
 
 @replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
 @find
-              canEdit,
+      await window.api.adminCrud.delete({
+        entity,
+        id: Number(deleteRecord.id)
+      })
 @endfind
 @with
-              canEdit: effectiveCanEdit,
-@endwith
-@end
-
-@replace-first src/renderer/src/features/admin-crud/ui/AdminCrudEntityPanel.tsx
-@find
-                            {canEdit ? (
-@endfind
-@with
-                            {effectiveCanEdit ? (
-@endwith
-@end
-
-@insert-after-once src/renderer/src/pages/people/ui/StudentsByGroupPanel.tsx
-@find
-          canEdit={false}
-@endfind
-@content
-          canDelete={false}
-@endcontent
-@end
-
-@insert-after-once src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx
-@find
-          canEdit={false}
-@endfind
-@content
-          canDelete={false}
-@endcontent
-@end
-
-@insert-after-once src/renderer/src/pages/people/ui/EmployeesByDivisionPanel.tsx
-@find
-          canEdit={false}
-@endfind
-@content
-          canDelete={false}
-@endcontent
-@end
-
-@insert-after-once src/renderer/src/pages/academic-process/ui/CurriculumPlansDrilldown.tsx
-@find
-          canEdit={false}
-@endfind
-@content
-          canDelete={false}
-@endcontent
-@end
-
-@insert-after-once src/renderer/src/pages/academic-process/ui/GroupDisciplinesDrilldown.tsx
-@find
-          canEdit={false}
-@endfind
-@content
-          canDelete={false}
-@endcontent
-@end
-
-@replace-first src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx
-@find
-            canCreate={false}
-            canEdit={false}
-
-            orderBy="name"
-@endfind
-@with
-            canCreate={false}
-            canEdit={false}
-            canDelete={false}
-
-            orderBy="name"
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx
-@find
-            canCreate={false}
-            canEdit={false}
-
-            orderBy="name"
-@endfind
-@with
-            canCreate={false}
-            canEdit={false}
-            canDelete={false}
-
-            orderBy="name"
-@endwith
-@end
-
-@replace-first src/renderer/src/pages/people/ui/RequiredStaffPanel.tsx
-@find
-            canCreate={false}
-            canEdit={false}
-
-            orderBy="name"
-@endfind
-@with
-            canCreate={false}
-            canEdit={false}
-            canDelete={false}
-
-            orderBy="name"
+      await window.api.adminCrud.delete({
+        entity,
+        accessModule: currentAccessModule ?? undefined,
+        id: Number(deleteRecord.id)
+      })
 @endwith
 @end

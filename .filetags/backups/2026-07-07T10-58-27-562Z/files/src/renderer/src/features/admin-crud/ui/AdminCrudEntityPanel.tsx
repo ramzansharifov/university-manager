@@ -328,8 +328,7 @@ export function AdminCrudEntityPanel({
         search: search || undefined,
         filters,
         orderBy,
-        orderDirection,
-        accessModule: currentAccessModule ?? undefined
+        orderDirection
       })
 
       setItems(result.items)
@@ -341,7 +340,7 @@ export function AdminCrudEntityPanel({
     }
     // filtersKey intentionally tracks filters by value to avoid unstable object dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity, page, search, filtersKey, orderBy, orderDirection, currentAccessModule])
+  }, [entity, page, search, filtersKey, orderBy, orderDirection])
 
   useEffect(() => {
     setPage(1)
@@ -429,7 +428,6 @@ export function AdminCrudEntityPanel({
       if (dialogMode === 'create') {
         await window.api.adminCrud.create({
           entity,
-          accessModule: currentAccessModule ?? undefined,
           data: payload
         })
       } else {
@@ -439,7 +437,6 @@ export function AdminCrudEntityPanel({
 
         await window.api.adminCrud.update({
           entity,
-          accessModule: currentAccessModule ?? undefined,
           id: Number(selectedRecord.id),
           data: payload
         })
@@ -477,7 +474,6 @@ export function AdminCrudEntityPanel({
     try {
       await window.api.adminCrud.delete({
         entity,
-        accessModule: currentAccessModule ?? undefined,
         id: Number(deleteRecord.id)
       })
 

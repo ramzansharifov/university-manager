@@ -13,10 +13,6 @@ import { AuditRepository } from '../audit/auditRepository'
 import { AuditService } from '../audit/auditService'
 import { AuthRepository } from '../auth/authRepository'
 import { AuthService } from '../auth/authService'
-import {
-  forgetAuthTokenForWebContents,
-  rememberAuthTokenForWebContents
-} from '../auth/sessionContext'
 import { getDatabase } from '../database/connection'
 
 export function registerAuthIpcHandlers(): void {
@@ -28,32 +24,16 @@ export function registerAuthIpcHandlers(): void {
   const authRepository = new AuthRepository(database)
   const authService = new AuthService(authRepository, auditService)
 
-  ipcMain.handle('auth:login', (event, params: LoginParams) => {
-    const result = authService.login(params)
-
-    rememberAuthTokenForWebContents(event.sender.id, result.token)
-
-    return result
+  ipcMain.handle('auth:login', (_event, params: LoginParams) => {
+    return authService.login(params)
   })
 
-  ipcMain.handle('auth:getCurrentUser', (event, params: GetCurrentUserParams) => {
-    const user = authService.getCurrentUser(params)
-
-    if (user) {
-      rememberAuthTokenForWebContents(event.sender.id, params.token)
-    } else {
-      forgetAuthTokenForWebContents(event.sender.id)
-    }
-
-    return user
+  ipcMain.handle('auth:getCurrentUser', (_event, params: GetCurrentUserParams) => {
+    return authService.getCurrentUser(params)
   })
 
-  ipcMain.handle('auth:logout', (event, params: LogoutParams) => {
-    const result = authService.logout(params)
-
-    forgetAuthTokenForWebContents(event.sender.id)
-
-    return result
+  ipcMain.handle('auth:logout', (_event, params: LogoutParams) => {
+    return authService.logout(params)
   })
 
   ipcMain.handle('auth:listUsers', () => {
@@ -71,7 +51,6 @@ export function registerAuthIpcHandlers(): void {
   ipcMain.handle('auth:setUserActive', (_event, params: SetUserActiveParams) => {
     return authService.setUserActive(params)
   })
-
   ipcMain.handle('auth:deleteUser', (_event, params: DeleteUserParams) => {
     return authService.deleteUser(params)
   })
