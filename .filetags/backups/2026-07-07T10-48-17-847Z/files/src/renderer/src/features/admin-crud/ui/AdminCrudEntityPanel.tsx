@@ -1,6 +1,5 @@
 import type { FormEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { Resolver, UseFormReturn } from 'react-hook-form'
 import { Controller, useForm } from 'react-hook-form'
@@ -34,9 +33,6 @@ import {
 } from '../../../shared/ui'
 import { cn } from '../../../shared/lib/cn'
 import { formatDateForDisplay } from '../../../shared/lib/date'
-import { useAccessControl } from '../../../shared/auth/useAccessControl'
-import type { AccessModule } from '../../../shared/auth/accessControl'
-import { getRouteAccessModule } from '../../../shared/navigation/routeAccess'
 
 type AdminCrudListResult = Awaited<ReturnType<Window['api']['adminCrud']['list']>>
 
@@ -130,7 +126,6 @@ interface AdminCrudEntityPanelProps {
   fields: AdminCrudFieldConfig[]
   columns: AdminCrudColumnConfig[]
   filters?: AdminCrudFilterRecord
-  accessModule?: AccessModule
   fixedData?: AdminCrudRecord
   emptyMessage?: string
   canCreate?: boolean
@@ -162,7 +157,6 @@ export function AdminCrudEntityPanel({
   fields,
   columns,
   filters,
-  accessModule,
   fixedData,
   emptyMessage = 'Записей пока нет.',
   canCreate = true,
@@ -182,9 +176,6 @@ export function AdminCrudEntityPanel({
   onCreateClick,
   onEditClick
 }: AdminCrudEntityPanelProps) {
-  const location = useLocation()
-  const access = useAccessControl()
-
   const [items, setItems] = useState<AdminCrudRecord[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -215,13 +206,7 @@ export function AdminCrudEntityPanel({
   const watchedFormValues = form.watch()
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const currentAccessModule = accessModule ?? getRouteAccessModule(location.pathname)
-  const effectiveCanCreate =
-    canCreate && (!currentAccessModule || access.canCreate(currentAccessModule))
-  const effectiveCanEdit =
-    canEdit && (!currentAccessModule || access.canUpdate(currentAccessModule))
-  const canDeleteRecord =
-    (canDelete ?? true) && (!currentAccessModule || access.canDelete(currentAccessModule))
+  const canDeleteRecord = canDelete ?? true
   const filtersKey = JSON.stringify(filters ?? {})
 
   useEffect(() => {
@@ -502,11 +487,11 @@ export function AdminCrudEntityPanel({
             <CardDescription>{description}</CardDescription>
           </div>
 
-          {headerActions || effectiveCanCreate ? (
+          {headerActions || canCreate ? (
             <div className="flex flex-wrap items-center gap-2">
               {headerActions}
 
-              {effectiveCanCreate ? (
+              {canCreate ? (
                 <Button onClick={() => (onCreateClick ? onCreateClick() : openCreateDialog())}>
                   <FiPlus />
                   {createButtonLabel}
@@ -564,7 +549,7 @@ export function AdminCrudEntityPanel({
               columns,
               isLoading,
               emptyMessage,
-              canEdit: effectiveCanEdit,
+              canEdit,
 
               canDelete: canDeleteRecord,
               extraRowActions,
@@ -634,7 +619,7 @@ export function AdminCrudEntityPanel({
                           <div className="flex justify-end gap-2">
                             {extraRowActions?.(record)}
 
-                            {effectiveCanEdit ? (
+                            {canEdit ? (
                               <Button
                                 size="sm"
                                 variant="secondary"

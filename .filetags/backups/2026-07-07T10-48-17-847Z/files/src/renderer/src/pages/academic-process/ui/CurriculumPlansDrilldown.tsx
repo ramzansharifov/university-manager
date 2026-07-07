@@ -227,7 +227,6 @@ export function CurriculumPlansDrilldown() {
           columns={specialtySelectorColumns}
           canCreate={false}
           canEdit={false}
-          canDelete={false}
 
           emptyMessage="Специальности пока не созданы. Создай их в разделе «Университет → Учебная структура»."
           onRowClick={openSpecialty}

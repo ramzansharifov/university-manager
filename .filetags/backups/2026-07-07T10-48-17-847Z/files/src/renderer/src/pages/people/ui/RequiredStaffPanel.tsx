@@ -429,7 +429,6 @@ export function RequiredStaffPanel() {
             columns={facultyColumns}
             canCreate={false}
             canEdit={false}
-            canDelete={false}
 
             orderBy="name"
             orderDirection="asc"
@@ -456,7 +455,6 @@ export function RequiredStaffPanel() {
             columns={departmentColumns}
             canCreate={false}
             canEdit={false}
-            canDelete={false}
 
             orderBy="name"
             orderDirection="asc"
@@ -486,7 +484,6 @@ export function RequiredStaffPanel() {
             columns={groupColumns}
             canCreate={false}
             canEdit={false}
-            canDelete={false}
 
             orderBy="name"
             orderDirection="asc"

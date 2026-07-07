@@ -288,7 +288,6 @@ export function GroupDisciplinesDrilldown() {
           columns={groupSelectorColumns}
           canCreate={false}
           canEdit={false}
-          canDelete={false}
 
           emptyMessage="Группы пока не созданы. Создай их в разделе «Университет → Учебная структура»."
           onRowClick={openGroup}

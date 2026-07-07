@@ -116,7 +116,6 @@ export function EmployeesByDivisionPanel({
           columns={organizationColumns}
           canCreate={false}
           canEdit={false}
-          canDelete={false}
 
           emptyMessage="Подразделения пока не созданы. Создай их в разделе «Университет → Административная структура»."
           onRowClick={openDivision}
