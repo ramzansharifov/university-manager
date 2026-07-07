@@ -6,8 +6,6 @@ import type {
   ChangePasswordResult,
   CreateUserParams,
   CreateUserResult,
-  DeleteUserParams,
-  DeleteUserResult,
   GetCurrentUserParams,
   ListUsersParams,
   LoginParams,
@@ -47,9 +45,6 @@ export const authApi = {
 
   setUserActive(params: SetUserActiveParams): Promise<SetUserActiveResult> {
     return ipcRenderer.invoke('auth:setUserActive', params)
-  },
-  deleteUser(params: DeleteUserParams): Promise<DeleteUserResult> {
-    return ipcRenderer.invoke('auth:deleteUser', params)
   },
 
   changePassword(params: ChangePasswordParams): Promise<ChangePasswordResult> {

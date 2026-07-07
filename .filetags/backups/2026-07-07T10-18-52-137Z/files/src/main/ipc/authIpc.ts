@@ -2,7 +2,6 @@ import { ipcMain } from 'electron'
 import type {
   ChangePasswordParams,
   CreateUserParams,
-  DeleteUserParams,
   GetCurrentUserParams,
   LoginParams,
   LogoutParams,
@@ -50,9 +49,6 @@ export function registerAuthIpcHandlers(): void {
 
   ipcMain.handle('auth:setUserActive', (_event, params: SetUserActiveParams) => {
     return authService.setUserActive(params)
-  })
-  ipcMain.handle('auth:deleteUser', (_event, params: DeleteUserParams) => {
-    return authService.deleteUser(params)
   })
 
   ipcMain.handle('auth:changePassword', (_event, params: ChangePasswordParams) => {

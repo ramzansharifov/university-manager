@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FiEdit2, FiKey, FiRefreshCw, FiSave, FiUserPlus } from 'react-icons/fi'
+import { FiEdit2, FiKey, FiRefreshCw, FiSave, FiTrash2, FiUserPlus } from 'react-icons/fi'
 import type { AuthUserListItem, UserProfileType } from '../../../../../shared/types/auth'
 import type { AdminCrudRecord } from '../../../../../shared/types/adminCrud'
 import type { Role } from '../../../../../shared/types/roles'
@@ -11,6 +11,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Select,
   SelectContent,
@@ -25,6 +31,8 @@ interface ProfileOption {
   label: string
   description: string
 }
+
+type UserDialogMode = 'create' | 'edit'
 
 const profileTypeLabels: Record<UserProfileType, string> = {
   system: 'Системный',
@@ -51,20 +59,14 @@ export function UsersAdministrationPanel() {
     employee: []
   })
 
-  const [createUsername, setCreateUsername] = useState('')
-  const [createPassword, setCreatePassword] = useState('')
-  const [createRoleId, setCreateRoleId] = useState('0')
-  const [createProfileType, setCreateProfileType] = useState<UserProfileType>('system')
-  const [createProfileId, setCreateProfileId] = useState('0')
-  const [createIsActive, setCreateIsActive] = useState(true)
-
+  const [dialogMode, setDialogMode] = useState<UserDialogMode | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
-  const [editUsername, setEditUsername] = useState('')
-  const [editRoleId, setEditRoleId] = useState('0')
-  const [editProfileType, setEditProfileType] = useState<UserProfileType>('system')
-  const [editProfileId, setEditProfileId] = useState('0')
-  const [editIsActive, setEditIsActive] = useState(true)
-  const [editPassword, setEditPassword] = useState('')
+  const [formUsername, setFormUsername] = useState('')
+  const [formPassword, setFormPassword] = useState('')
+  const [formRoleId, setFormRoleId] = useState('0')
+  const [formProfileType, setFormProfileType] = useState<UserProfileType>('system')
+  const [formProfileId, setFormProfileId] = useState('0')
+  const [formIsActive, setFormIsActive] = useState(true)
 
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -76,18 +78,15 @@ export function UsersAdministrationPanel() {
     [selectedUserId, users]
   )
 
-  const createProfileOptions = useMemo(
-    () => getProfileOptionsForType(profileOptions, createProfileType),
-    [createProfileType, profileOptions]
+  const formProfileOptions = useMemo(
+    () => getProfileOptionsForType(profileOptions, formProfileType),
+    [formProfileType, profileOptions]
   )
 
-  const editProfileOptions = useMemo(
-    () => getProfileOptionsForType(profileOptions, editProfileType),
-    [editProfileType, profileOptions]
-  )
-
-  const selectedUserIsProtectedAdmin =
+  const userDialogIsOpen = dialogMode !== null
+  const selectedUserIsProtectedAdmin = Boolean(
     selectedUser?.username === 'admin' && selectedUser.roleKey === 'super_admin'
+  )
 
   const loadUsersData = useCallback(async () => {
     setIsLoading(true)
@@ -139,140 +138,74 @@ export function UsersAdministrationPanel() {
     void loadUsersData()
   }, [loadUsersData])
 
-  useEffect(() => {
-    if (!selectedUser) {
-      return
-    }
-
-    setEditUsername(selectedUser.username)
-    setEditRoleId(String(selectedUser.roleId))
-    setEditProfileType(selectedUser.profileType)
-    setEditProfileId(String(selectedUser.profileId))
-    setEditIsActive(selectedUser.isActive)
-    setEditPassword('')
-  }, [selectedUser])
-
-  function changeCreateProfileType(nextProfileType: UserProfileType) {
-    setCreateProfileType(nextProfileType)
-    setCreateProfileId('0')
+  function resetForm() {
+    setFormUsername('')
+    setFormPassword('')
+    setFormRoleId('0')
+    setFormProfileType('system')
+    setFormProfileId('0')
+    setFormIsActive(true)
   }
 
-  function changeEditProfileType(nextProfileType: UserProfileType) {
-    setEditProfileType(nextProfileType)
-    setEditProfileId('0')
-  }
-
-  function selectUser(userId: number) {
-    setSelectedUserId(userId)
+  function openCreateDialog() {
+    setDialogMode('create')
+    setSelectedUserId(null)
+    resetForm()
     setStatusMessage(null)
     setErrorMessage(null)
   }
 
-  async function createUser() {
-    const trimmedUsername = createUsername.trim()
+  function openEditDialog(user: AuthUserListItem) {
+    setDialogMode('edit')
+    setSelectedUserId(user.id)
+    setFormUsername(user.username)
+    setFormPassword('')
+    setFormRoleId(String(user.roleId))
+    setFormProfileType(user.profileType)
+    setFormProfileId(String(user.profileId))
+    setFormIsActive(user.isActive)
+    setStatusMessage(null)
+    setErrorMessage(null)
+  }
+
+  function closeDialog() {
+    setDialogMode(null)
+    setErrorMessage(null)
+  }
+
+  function changeProfileType(nextProfileType: UserProfileType) {
+    setFormProfileType(nextProfileType)
+    setFormProfileId('0')
+  }
+
+  async function saveUser() {
+    const trimmedUsername = formUsername.trim()
+
+    if (!dialogMode) {
+      return
+    }
 
     if (!trimmedUsername) {
       setErrorMessage('Укажи логин пользователя')
       return
     }
 
-    if (createPassword.length < 4) {
+    if (formRoleId === '0') {
+      setErrorMessage('Выбери роль пользователя')
+      return
+    }
+
+    if (formProfileType !== 'system' && formProfileId === '0') {
+      setErrorMessage(`Выбери профиль: ${profileTypeLabels[formProfileType].toLowerCase()}`)
+      return
+    }
+
+    if (dialogMode === 'create' && formPassword.length < 4) {
       setErrorMessage('Пароль должен содержать не менее 4 символов')
       return
     }
 
-    if (createRoleId === '0') {
-      setErrorMessage('Выбери роль пользователя')
-      return
-    }
-
-    if (createProfileType !== 'system' && createProfileId === '0') {
-      setErrorMessage(`Выбери профиль: ${profileTypeLabels[createProfileType].toLowerCase()}`)
-      return
-    }
-
-    setIsSaving(true)
-    setStatusMessage(null)
-    setErrorMessage(null)
-
-    try {
-      const result = await window.api.auth.createUser({
-        username: trimmedUsername,
-        password: createPassword,
-        roleId: Number(createRoleId),
-        profileType: createProfileType,
-        profileId: createProfileType === 'system' ? 0 : Number(createProfileId),
-        isActive: createIsActive
-      })
-
-      setCreateUsername('')
-      setCreatePassword('')
-      setCreateRoleId('0')
-      setCreateProfileType('system')
-      setCreateProfileId('0')
-      setCreateIsActive(true)
-      setSelectedUserId(result.user.id)
-      await loadUsersData()
-      setStatusMessage('Пользователь создан')
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function saveSelectedUser() {
-    if (!selectedUser) {
-      return
-    }
-
-    const trimmedUsername = editUsername.trim()
-
-    if (!trimmedUsername) {
-      setErrorMessage('Укажи логин пользователя')
-      return
-    }
-
-    if (editRoleId === '0') {
-      setErrorMessage('Выбери роль пользователя')
-      return
-    }
-
-    if (editProfileType !== 'system' && editProfileId === '0') {
-      setErrorMessage(`Выбери профиль: ${profileTypeLabels[editProfileType].toLowerCase()}`)
-      return
-    }
-
-    setIsSaving(true)
-    setStatusMessage(null)
-    setErrorMessage(null)
-
-    try {
-      const result = await window.api.auth.updateUser({
-        userId: selectedUser.id,
-        username: trimmedUsername,
-        roleId: Number(editRoleId),
-        profileType: editProfileType,
-        profileId: editProfileType === 'system' ? 0 : Number(editProfileId),
-        isActive: editIsActive
-      })
-
-      setSelectedUserId(result.user.id)
-      await loadUsersData()
-      setStatusMessage('Пользователь обновлён')
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function changeSelectedUserPassword() {
-    if (!selectedUser) {
-      return
-    }
-
-    if (editPassword.length < 4) {
+    if (dialogMode === 'edit' && formPassword.length > 0 && formPassword.length < 4) {
       setErrorMessage('Новый пароль должен содержать не менее 4 символов')
       return
     }
@@ -282,13 +215,49 @@ export function UsersAdministrationPanel() {
     setErrorMessage(null)
 
     try {
-      await window.api.auth.changePassword({
+      if (dialogMode === 'create') {
+        const result = await window.api.auth.createUser({
+          username: trimmedUsername,
+          password: formPassword,
+          roleId: Number(formRoleId),
+          profileType: formProfileType,
+          profileId: formProfileType === 'system' ? 0 : Number(formProfileId),
+          isActive: formIsActive
+        })
+
+        setSelectedUserId(result.user.id)
+        await loadUsersData()
+        setStatusMessage('Пользователь создан')
+        closeDialog()
+        return
+      }
+
+      if (!selectedUser) {
+        return
+      }
+
+      const result = await window.api.auth.updateUser({
         userId: selectedUser.id,
-        newPassword: editPassword
+        username: trimmedUsername,
+        roleId: Number(formRoleId),
+        profileType: formProfileType,
+        profileId: formProfileType === 'system' ? 0 : Number(formProfileId),
+        isActive: formIsActive
       })
 
-      setEditPassword('')
-      setStatusMessage('Пароль изменён')
+      if (formPassword.length > 0) {
+        await window.api.auth.changePassword({
+          userId: selectedUser.id,
+          newPassword: formPassword
+        })
+      }
+
+      setSelectedUserId(result.user.id)
+      await loadUsersData()
+      setStatusMessage(
+        formPassword.length > 0 ? 'Пользователь и пароль обновлены' : 'Пользователь обновлён'
+      )
+      closeDialog()
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
     } finally {
@@ -321,210 +290,78 @@ export function UsersAdministrationPanel() {
     }
   }
 
+  async function deleteUser(user: AuthUserListItem) {
+    if (user.username === 'admin' && user.roleKey === 'super_admin') {
+      setErrorMessage('Нельзя удалить основного администратора')
+      return
+    }
+
+    const confirmed = window.confirm(`Полностью удалить пользователя «${user.username}»?`)
+
+    if (!confirmed) {
+      return
+    }
+
+    setIsSaving(true)
+    setStatusMessage(null)
+    setErrorMessage(null)
+
+    try {
+      await window.api.auth.deleteUser({ userId: user.id })
+
+      if (selectedUserId === user.id) {
+        setSelectedUserId(null)
+      }
+
+      await loadUsersData()
+      setStatusMessage('Пользователь удалён')
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
-      <div className="grid gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Новый пользователь</CardTitle>
-            <CardDescription>
-              Создай логин, пароль, выбери роль и привяжи аккаунт к студенту, преподавателю или
-              сотруднику.
-            </CardDescription>
-          </CardHeader>
+    <div className="grid gap-4">
+      {statusMessage ? (
+        <div className="rounded-xl border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-4 py-3 text-sm text-[var(--color-success)]">
+          {statusMessage}
+        </div>
+      ) : null}
 
-          <CardContent className="grid gap-4">
-            {statusMessage ? (
-              <div className="rounded-xl border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-4 py-3 text-sm text-[var(--color-success)]">
-                {statusMessage}
-              </div>
-            ) : null}
-
-            {errorMessage ? (
-              <div className="rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)]">
-                {errorMessage}
-              </div>
-            ) : null}
-
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium text-[var(--color-text)]">Логин</span>
-              <Input
-                value={createUsername}
-                autoComplete="off"
-                placeholder="Например: ivanov"
-                onChange={(event) => setCreateUsername(event.target.value)}
-              />
-            </label>
-
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium text-[var(--color-text)]">Пароль</span>
-              <Input
-                value={createPassword}
-                type="password"
-                autoComplete="new-password"
-                placeholder="Минимум 4 символа"
-                onChange={(event) => setCreatePassword(event.target.value)}
-              />
-            </label>
-
-            <RoleSelect value={createRoleId} roles={roles} onValueChange={setCreateRoleId} />
-
-            <ProfileTypeSelect value={createProfileType} onValueChange={changeCreateProfileType} />
-
-            {createProfileType !== 'system' ? (
-              <ProfileSelect
-                value={createProfileId}
-                options={createProfileOptions}
-                onValueChange={setCreateProfileId}
-              />
-            ) : null}
-
-            <label className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm">
-              <span>
-                <span className="block font-medium text-[var(--color-text)]">Аккаунт активен</span>
-                <span className="block text-xs text-[var(--color-text-muted)]">
-                  Неактивный пользователь не сможет войти в приложение.
-                </span>
-              </span>
-
-              <Switch checked={createIsActive} onCheckedChange={setCreateIsActive} />
-            </label>
-
-            <Button disabled={isSaving} onClick={createUser}>
-              <FiUserPlus />
-              Создать пользователя
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Редактирование</CardTitle>
-            <CardDescription>
-              Выбери пользователя из списка, чтобы изменить роль, привязку, активность или пароль.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="grid gap-4">
-            {!selectedUser ? (
-              <div className="rounded-2xl border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
-                Пользователь не выбран.
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] p-4">
-                  <div>
-                    <p className="font-semibold text-[var(--color-text)]">
-                      {selectedUser.username}
-                    </p>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                      {selectedUser.roleName} · {profileTypeLabels[selectedUser.profileType]}
-                    </p>
-                  </div>
-
-                  <Badge variant={selectedUser.isActive ? 'success' : 'muted'}>
-                    {selectedUser.isActive ? 'Активен' : 'Отключён'}
-                  </Badge>
-                </div>
-
-                {selectedUserIsProtectedAdmin ? (
-                  <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-3 text-sm text-[var(--color-warning)]">
-                    Основного администратора нельзя отключить или перевести на другую роль.
-                  </div>
-                ) : null}
-
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium text-[var(--color-text)]">Логин</span>
-                  <Input
-                    value={editUsername}
-                    autoComplete="off"
-                    onChange={(event) => setEditUsername(event.target.value)}
-                  />
-                </label>
-
-                <RoleSelect
-                  value={editRoleId}
-                  roles={roles}
-                  disabled={selectedUserIsProtectedAdmin}
-                  onValueChange={setEditRoleId}
-                />
-
-                <ProfileTypeSelect value={editProfileType} onValueChange={changeEditProfileType} />
-
-                {editProfileType !== 'system' ? (
-                  <ProfileSelect
-                    value={editProfileId}
-                    options={editProfileOptions}
-                    onValueChange={setEditProfileId}
-                  />
-                ) : null}
-
-                <label className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm">
-                  <span>
-                    <span className="block font-medium text-[var(--color-text)]">
-                      Аккаунт активен
-                    </span>
-                    <span className="block text-xs text-[var(--color-text-muted)]">
-                      Отключённый пользователь не сможет войти.
-                    </span>
-                  </span>
-
-                  <Switch
-                    checked={editIsActive}
-                    disabled={selectedUserIsProtectedAdmin}
-                    onCheckedChange={setEditIsActive}
-                  />
-                </label>
-
-                <Button disabled={isSaving} onClick={saveSelectedUser}>
-                  <FiSave />
-                  Сохранить пользователя
-                </Button>
-
-                <div className="grid gap-2 border-t border-[var(--color-border)] pt-4">
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium text-[var(--color-text)]">Новый пароль</span>
-                    <Input
-                      value={editPassword}
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="Минимум 4 символа"
-                      onChange={(event) => setEditPassword(event.target.value)}
-                    />
-                  </label>
-
-                  <Button
-                    variant="secondary"
-                    disabled={isSaving || editPassword.length === 0}
-                    onClick={changeSelectedUserPassword}
-                  >
-                    <FiKey />
-                    Сменить пароль
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {errorMessage && !userDialogIsOpen ? (
+        <div className="rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)]">
+          {errorMessage}
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle>Пользователи</CardTitle>
-              <CardDescription>Список аккаунтов без отображения хэшей паролей.</CardDescription>
+              <CardDescription>
+                Управление аккаунтами, ролями, привязками и паролями без отображения хэшей.
+              </CardDescription>
             </div>
 
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={isLoading}
-              onClick={loadUsersData}
-            >
-              <FiRefreshCw />
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isLoading}
+                onClick={loadUsersData}
+              >
+                <FiRefreshCw />
+                Обновить
+              </Button>
+
+              <Button type="button" onClick={openCreateDialog}>
+                <FiUserPlus />
+                Новый пользователь
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
@@ -538,15 +375,10 @@ export function UsersAdministrationPanel() {
           {users.map((user) => (
             <div
               key={user.id}
-              className={[
-                'rounded-2xl border bg-[var(--color-surface)] p-4',
-                selectedUserId === user.id
-                  ? 'border-[var(--color-primary)]'
-                  : 'border-[var(--color-border)]'
-              ].join(' ')}
+              className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <button type="button" className="text-left" onClick={() => selectUser(user.id)}>
+                <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-[var(--color-text)]">{user.username}</p>
                     <Badge variant={user.isActive ? 'success' : 'muted'}>
@@ -557,7 +389,7 @@ export function UsersAdministrationPanel() {
                   <p className="mt-1 text-sm text-[var(--color-text-muted)]">
                     {user.roleName} · {profileTypeLabels[user.profileType]}
                   </p>
-                </button>
+                </div>
 
                 <Badge variant={user.roleKey === 'super_admin' ? 'success' : 'default'}>
                   {user.roleKey}
@@ -591,7 +423,7 @@ export function UsersAdministrationPanel() {
                   type="button"
                   size="sm"
                   variant="secondary"
-                  onClick={() => selectUser(user.id)}
+                  onClick={() => openEditDialog(user)}
                 >
                   <FiEdit2 />
                   Редактировать
@@ -608,11 +440,123 @@ export function UsersAdministrationPanel() {
                 >
                   {user.isActive ? 'Отключить' : 'Включить'}
                 </Button>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="danger"
+                  disabled={
+                    isSaving || (user.username === 'admin' && user.roleKey === 'super_admin')
+                  }
+                  onClick={() => void deleteUser(user)}
+                >
+                  <FiTrash2 />
+                  Удалить
+                </Button>
               </div>
             </div>
           ))}
         </CardContent>
       </Card>
+
+      <Dialog open={userDialogIsOpen} onOpenChange={(open) => !open && closeDialog()}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {dialogMode === 'create' ? 'Новый пользователь' : 'Редактирование пользователя'}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogMode === 'create'
+                ? 'Создай логин, пароль, выбери роль и привязку к профилю.'
+                : 'Измени роль, привязку, активность или задай новый пароль.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-5 grid gap-4">
+            {errorMessage ? (
+              <div className="rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)]">
+                {errorMessage}
+              </div>
+            ) : null}
+
+            {selectedUserIsProtectedAdmin ? (
+              <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-3 text-sm text-[var(--color-warning)]">
+                Основного администратора нельзя отключить, удалить или перевести на другую роль.
+              </div>
+            ) : null}
+
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">Логин</span>
+              <Input
+                value={formUsername}
+                autoComplete="off"
+                placeholder="Например: ivanov"
+                onChange={(event) => setFormUsername(event.target.value)}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm">
+              <span className="font-medium text-[var(--color-text)]">
+                {dialogMode === 'create' ? 'Пароль' : 'Новый пароль'}
+              </span>
+              <Input
+                value={formPassword}
+                type="password"
+                autoComplete="new-password"
+                placeholder={
+                  dialogMode === 'create'
+                    ? 'Минимум 4 символа'
+                    : 'Оставь пустым, если пароль менять не нужно'
+                }
+                onChange={(event) => setFormPassword(event.target.value)}
+              />
+            </label>
+
+            <RoleSelect
+              value={formRoleId}
+              roles={roles}
+              disabled={selectedUserIsProtectedAdmin}
+              onValueChange={setFormRoleId}
+            />
+
+            <ProfileTypeSelect value={formProfileType} onValueChange={changeProfileType} />
+
+            {formProfileType !== 'system' ? (
+              <ProfileSelect
+                value={formProfileId}
+                options={formProfileOptions}
+                onValueChange={setFormProfileId}
+              />
+            ) : null}
+
+            <label className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm">
+              <span>
+                <span className="block font-medium text-[var(--color-text)]">Аккаунт активен</span>
+                <span className="block text-xs text-[var(--color-text-muted)]">
+                  Неактивный пользователь не сможет войти в приложение.
+                </span>
+              </span>
+
+              <Switch
+                checked={formIsActive}
+                disabled={selectedUserIsProtectedAdmin}
+                onCheckedChange={setFormIsActive}
+              />
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="secondary" disabled={isSaving} onClick={closeDialog}>
+              Отмена
+            </Button>
+
+            <Button type="button" disabled={isSaving} onClick={() => void saveUser()}>
+              {dialogMode === 'create' ? <FiUserPlus /> : <FiSave />}
+              {dialogMode === 'create' ? 'Создать' : 'Сохранить'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

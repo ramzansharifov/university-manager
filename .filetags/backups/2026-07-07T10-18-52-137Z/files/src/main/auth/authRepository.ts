@@ -307,9 +307,6 @@ export class AuthRepository {
 
     return user
   }
-  deleteUser(userId: number): void {
-    this.database.prepare('DELETE FROM app_users WHERE id = ?').run(userId)
-  }
 
   changePassword(userId: number, passwordHash: string): void {
     this.database

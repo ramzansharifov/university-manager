@@ -89,13 +89,6 @@ export interface SetUserActiveResult {
   success: boolean
   user: AuthUser
 }
-export interface DeleteUserParams {
-  userId: number
-}
-
-export interface DeleteUserResult {
-  success: boolean
-}
 
 export interface ChangePasswordParams {
   userId: number

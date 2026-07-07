@@ -7,8 +7,6 @@ import type {
   ChangePasswordResult,
   CreateUserParams,
   CreateUserResult,
-  DeleteUserParams,
-  DeleteUserResult,
   GetCurrentUserParams,
   ListUsersParams,
   LoginParams,
@@ -76,7 +74,6 @@ declare global {
         createUser(params: CreateUserParams): Promise<CreateUserResult>
         updateUser(params: UpdateUserParams): Promise<UpdateUserResult>
         setUserActive(params: SetUserActiveParams): Promise<SetUserActiveResult>
-        deleteUser(params: DeleteUserParams): Promise<DeleteUserResult>
         changePassword(params: ChangePasswordParams): Promise<ChangePasswordResult>
       }
 

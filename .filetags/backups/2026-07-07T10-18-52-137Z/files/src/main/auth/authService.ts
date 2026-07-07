@@ -6,8 +6,6 @@ import type {
   ChangePasswordResult,
   CreateUserParams,
   CreateUserResult,
-  DeleteUserParams,
-  DeleteUserResult,
   GetCurrentUserParams,
   LoginParams,
   LoginResult,
@@ -234,35 +232,6 @@ export class AuthService {
     return {
       success: true,
       user
-    }
-  }
-  deleteUser(params: DeleteUserParams): DeleteUserResult {
-    const before = this.requireExistingUser(params.userId)
-
-    if (isProtectedAdmin(before)) {
-      throw new Error('Нельзя удалить основного администратора')
-    }
-
-    this.authRepository.deleteUser(params.userId)
-
-    this.auditService.write({
-      action: 'delete',
-      module: 'auth',
-      entityName: 'app_users',
-      entityId: before.id,
-      before: {
-        id: before.id,
-        username: before.username,
-        roleId: before.roleId,
-        profileType: before.profileType,
-        profileId: before.profileId,
-        isActive: before.isActive
-      },
-      after: null
-    })
-
-    return {
-      success: true
     }
   }
 
