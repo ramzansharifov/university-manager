@@ -67,6 +67,9 @@ export interface AdminCrudFieldConfig {
     | 'toggle'
   valueType?: 'string' | 'number'
   options?: AdminCrudSelectOption[]
+  optionFilter?: {
+    kind: 'discipline-teacher-scope'
+  }
   disabled?: boolean
   fullWidth?: boolean
   dependsOn?: string
@@ -1296,6 +1299,10 @@ function getAvailableSelectOptions(
 ): AdminCrudSelectOption[] {
   const options = field.options ?? []
 
+  if (field.optionFilter?.kind === 'discipline-teacher-scope') {
+    return options.filter((option) => isDisciplineTeacherOptionAvailable(option, formValues))
+  }
+
   if (!field.dependsOn) {
     return options
   }
@@ -1311,6 +1318,62 @@ function getAvailableSelectOptions(
 
     return String(optionDependencyValue ?? '') === String(dependencyValue)
   })
+}
+
+function isDisciplineTeacherOptionAvailable(
+  option: AdminCrudSelectOption,
+  formValues: Record<string, string>
+): boolean {
+  const selectedSubjectId = formValues.subject_id
+  const selectedDepartmentId = formValues.subject_department_id
+  const selectedFacultyIds = parseMetaIdSet(formValues.subject_faculty_ids)
+  const selectedAppliesToAll = formValues.subject_applies_to_all_faculties === '1'
+
+  if (!selectedSubjectId || !selectedDepartmentId) {
+    return false
+  }
+
+  const teacherSubjectId = option.meta?.subject_id
+  const teacherDepartmentId = option.meta?.subject_department_id
+  const teacherFacultyIds = parseMetaIdSet(option.meta?.subject_faculty_ids)
+  const teacherAppliesToAll = String(option.meta?.subject_applies_to_all_faculties ?? '') === '1'
+
+  if (teacherSubjectId && String(teacherSubjectId) !== String(selectedSubjectId)) {
+    return false
+  }
+
+  if (String(teacherDepartmentId ?? '') !== String(selectedDepartmentId)) {
+    return false
+  }
+
+  if (teacherAppliesToAll || selectedAppliesToAll) {
+    return true
+  }
+
+  if (selectedFacultyIds.size === 0 || teacherFacultyIds.size === 0) {
+    return true
+  }
+
+  return hasSetIntersection(selectedFacultyIds, teacherFacultyIds)
+}
+
+function parseMetaIdSet(value: unknown): Set<string> {
+  return new Set(
+    String(value ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  )
+}
+
+function hasSetIntersection(firstSet: Set<string>, secondSet: Set<string>): boolean {
+  for (const value of firstSet) {
+    if (secondSet.has(value)) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function addMinutesToTime(startValue: string, durationValue: string): string | null {

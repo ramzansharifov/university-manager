@@ -635,6 +635,14 @@ export function createDisciplineFields(options: {
         {
           targetKey: 'subject_faculty_id',
           metaKey: 'subject_faculty_id'
+        },
+        {
+          targetKey: 'subject_faculty_ids',
+          metaKey: 'subject_faculty_ids'
+        },
+        {
+          targetKey: 'subject_applies_to_all_faculties',
+          metaKey: 'subject_applies_to_all_faculties'
         }
       ]
     },
@@ -671,6 +679,18 @@ export function createDisciplineFields(options: {
       hidden: true
     },
     {
+      key: 'subject_faculty_ids',
+      label: 'Факультеты предмета',
+      virtual: true,
+      hidden: true
+    },
+    {
+      key: 'subject_applies_to_all_faculties',
+      label: 'Кафедра предмета доступна всем факультетам',
+      virtual: true,
+      hidden: true
+    },
+    {
       key: 'teacher_id',
       label: 'Преподаватель',
       placeholder: 'Выбери преподавателя кафедры предмета',
@@ -678,6 +698,7 @@ export function createDisciplineFields(options: {
       valueType: 'number',
       options: options.teacherOptions,
       dependsOn: 'subject_id',
+      optionFilter: { kind: 'discipline-teacher-scope' },
       dependencyPlaceholder: 'Сначала выбери пункт учебного плана',
       required: true
     },
