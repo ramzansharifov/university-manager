@@ -1,7 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../providers/AuthProvider'
-import { AccessDenied } from '../../shared/auth/AccessDenied'
-import { canAccessPath, getDefaultAccessiblePath } from '../../shared/navigation/routeAccess'
 
 export function RequireAuth() {
   const auth = useAuth()
@@ -22,16 +20,6 @@ export function RequireAuth() {
 
   if (!auth.isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
-  }
-
-  if (!canAccessPath(auth.user, location.pathname)) {
-    const fallbackPath = getDefaultAccessiblePath(auth.user)
-
-    if (location.pathname === '/' && fallbackPath && fallbackPath !== '/') {
-      return <Navigate to={fallbackPath} replace />
-    }
-
-    return <AccessDenied fallbackPath={fallbackPath} />
   }
 
   return <Outlet />

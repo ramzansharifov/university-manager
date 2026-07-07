@@ -1,0 +1,18 @@
+{
+  "createdAt": "2026-07-07T10:44:20.661Z",
+  "backupPath": ".filetags/backups/2026-07-07T10-44-20-600Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/app/router/RequireAuth.tsx",
+      "backupRelativePath": "files/src/renderer/src/app/router/RequireAuth.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Create folder: src/renderer/src/shared/auth",
+    "Write file: src/renderer/src/shared/auth/AccessDenied.tsx\n   old: missing\n   new: 36 line(s)",
+    "Write file: src/renderer/src/shared/auth/useAccessControl.ts\n   old: missing\n   new: 35 line(s)",
+    "Write file: src/renderer/src/shared/navigation/routeAccess.ts\n   old: missing\n   new: 95 line(s)",
+    "Write file: src/renderer/src/app/router/RequireAuth.tsx\n   old: 27 line(s)\n   new: 38 line(s)"
+  ]
+}
