@@ -9,8 +9,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
-  Switch
+  Input
 } from '../../../shared/ui'
 
 const moduleLabels: Record<string, string> = {
@@ -416,12 +415,12 @@ export function RolesAdministrationPanel() {
                             <p className="text-xs text-[var(--color-text-muted)]">{group.module}</p>
                           </div>
 
-                          <label className="flex items-center gap-3 text-sm text-[var(--color-text-muted)]">
-                            <Switch
+                          <label className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                            <input
+                              type="checkbox"
                               checked={groupIsSelected}
                               disabled={!canEditCurrentRole}
-                              aria-label={`Переключить весь модуль ${moduleLabels[group.module] ?? group.module}`}
-                              onCheckedChange={() => togglePermissionGroup(group)}
+                              onChange={() => togglePermissionGroup(group)}
                             />
                             Весь модуль
                           </label>
@@ -431,13 +430,13 @@ export function RolesAdministrationPanel() {
                           {group.permissions.map((permission) => (
                             <label
                               key={permission.permissionKey}
-                              className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
+                              className="flex items-start gap-2 rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm"
                             >
-                              <Switch
+                              <input
+                                type="checkbox"
                                 checked={permissionKeySet.has(permission.permissionKey)}
                                 disabled={!canEditCurrentRole}
-                                aria-label={`Переключить право ${permission.permissionKey}`}
-                                onCheckedChange={() => togglePermission(permission.permissionKey)}
+                                onChange={() => togglePermission(permission.permissionKey)}
                               />
 
                               <span>

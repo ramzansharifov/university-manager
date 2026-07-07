@@ -1,0 +1,42 @@
+{
+  "createdAt": "2026-07-07T09:52:46.778Z",
+  "backupPath": ".filetags/backups/2026-07-07T09-52-46-719Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/shared/ui/index.ts",
+      "backupRelativePath": "files/src/renderer/src/shared/ui/index.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/administration/ui/RolesAdministrationPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/administration/ui/RolesAdministrationPanel.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/shared/navigation/appNavigation.tsx",
+      "backupRelativePath": "files/src/renderer/src/shared/navigation/appNavigation.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Create folder: src/renderer/src/shared/ui/switch",
+    "Write file: src/renderer/src/shared/ui/switch/Switch.tsx\n   old: missing\n   new: 30 line(s)",
+    "Write file: src/renderer/src/shared/ui/switch/index.ts\n   old: missing\n   new: 1 line(s)",
+    "Insert after: src/renderer/src/shared/ui/index.ts\n   found: yes\n   old: 37 line(s)\n   new: 38 line(s)",
+    "Replace file: src/renderer/src/pages/administration/ui/RolesAdministrationPanel.tsx\n   found: yes\n   old: 527 line(s)\n   new: 528 line(s)",
+    "Replace file: src/renderer/src/pages/administration/ui/RolesAdministrationPanel.tsx\n   found: yes\n   old: 528 line(s)\n   new: 528 line(s)",
+    "Replace file: src/renderer/src/pages/administration/ui/RolesAdministrationPanel.tsx\n   found: yes\n   old: 528 line(s)\n   new: 528 line(s)",
+    "Create folder: src/renderer/src/shared/auth",
+    "Write file: src/renderer/src/shared/auth/accessControl.ts\n   old: missing\n   new: 100 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 121 line(s)\n   new: 123 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 123 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 124 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 124 line(s)\n   new: 135 line(s)"
+  ]
+}

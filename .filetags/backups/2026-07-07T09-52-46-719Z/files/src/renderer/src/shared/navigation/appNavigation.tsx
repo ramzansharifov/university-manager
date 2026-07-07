@@ -12,15 +12,12 @@ import {
   FiUsers
 } from 'react-icons/fi'
 import type { AuthUser } from '../../../../shared/types/auth'
-import { canViewModule } from '../auth/accessControl'
-import type { AccessModule } from '../auth/accessControl'
 
 export interface AppNavigationItem {
   title: string
   description: string
   path: string
   icon: ReactNode
-  module?: AccessModule
   permissions?: string[]
 }
 
@@ -30,49 +27,49 @@ export const mainNavigationItems: AppNavigationItem[] = [
     description: 'Админ-центр и состояние системы',
     path: '/',
     icon: <FiHome />,
-    module: 'settings'
+    permissions: ['settings.view']
   },
   {
     title: 'Университет',
     description: 'Факультеты, кафедры, специальности, группы и подразделения',
     path: '/university',
     icon: <FiDatabase />,
-    module: 'university'
+    permissions: ['university.view']
   },
   {
     title: 'Люди',
     description: 'Студенты, преподаватели и сотрудники',
     path: '/people',
     icon: <FiUsers />,
-    module: 'people'
+    permissions: ['people.view']
   },
   {
     title: 'Учебный процесс',
     description: 'Предметы, учебные планы и дисциплины',
     path: '/academic-process',
     icon: <FiBookOpen />,
-    module: 'academic_process'
+    permissions: ['academic_process.view']
   },
   {
     title: 'Расписание',
     description: 'Пары, аудитории и расписание занятий',
     path: '/schedule',
     icon: <FiCalendar />,
-    module: 'schedule'
+    permissions: ['schedule.view']
   },
   {
     title: 'Журнал обучения',
     description: 'Посещаемость, оценки и проведённые занятия',
     path: '/learning-journal',
     icon: <FiClipboard />,
-    module: 'learning_journal'
+    permissions: ['learning_journal.view']
   },
   {
     title: 'Отчёты',
     description: 'Посещаемость, успеваемость и аналитика',
     path: '/reports',
     icon: <FiBarChart2 />,
-    module: 'reports'
+    permissions: ['reports.view']
   }
 ]
 
@@ -82,21 +79,21 @@ export const systemNavigationItems: AppNavigationItem[] = [
     description: 'Пользователи, роли и права доступа',
     path: '/administration',
     icon: <FiShield />,
-    module: 'administration'
+    permissions: ['administration.view']
   },
   {
     title: 'Журнал действий',
     description: 'История важных изменений',
     path: '/audit-log',
     icon: <FiActivity />,
-    module: 'audit_log'
+    permissions: ['audit_log.view']
   },
   {
     title: 'Настройки',
     description: 'Тема, акцентный цвет и язык интерфейса',
     path: '/settings',
     icon: <FiSettings />,
-    module: 'settings'
+    permissions: ['settings.view']
   }
 ]
 
@@ -110,17 +107,6 @@ export function canAccessNavigationItem(user: AuthUser | null, item: AppNavigati
   if (!user) {
     return false
   }
-
-  if (item.module) {
-    return canViewModule(user, item.module)
-  }
-
-  if (!item.permissions || item.permissions.length === 0) {
-    return true
-  }
-
-  return item.permissions.some((permission) => user.permissions.includes(permission))
-}
 
   if (user.roleKey === 'super_admin') {
     return true
