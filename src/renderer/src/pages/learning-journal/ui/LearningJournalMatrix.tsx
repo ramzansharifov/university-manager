@@ -103,7 +103,7 @@ export function LearningJournalMatrix(): ReactElement {
   const [topicError, setTopicError] = useState<string | null>(null)
   const [selectedIntermediateTypeId, setSelectedIntermediateTypeId] = useState('')
   const [intermediateGradeItemNameDraft, setIntermediateGradeItemNameDraft] = useState('')
-  const [intermediateMaxScoreDraft, setIntermediateMaxScoreDraft] = useState('')
+  const [isSavingIntermediateGradeItem, setIsSavingIntermediateGradeItem] = useState(false)
   const [isSavingGrade, setIsSavingGrade] = useState(false)
   const [gradeError, setGradeError] = useState<string | null>(null)
   const [isSavingAttendance, setIsSavingAttendance] = useState(false)
@@ -832,7 +832,6 @@ export function LearningJournalMatrix(): ReactElement {
   function clearIntermediateGradeDraft(): void {
     setSelectedIntermediateTypeId('')
     setIntermediateGradeItemNameDraft('')
-    setIntermediateMaxScoreDraft('')
     setGradeError(null)
   }
 
@@ -911,7 +910,6 @@ export function LearningJournalMatrix(): ReactElement {
 
     setSelectedIntermediateTypeId(String(gradeItem.grade_element_type_id ?? ''))
     setIntermediateGradeItemNameDraft(String(gradeItem.name ?? ''))
-    setIntermediateMaxScoreDraft(String(gradeItem.max_score ?? ''))
   }
 
   function handleIntermediateTypeChange(value: string): void {
@@ -922,7 +920,6 @@ export function LearningJournalMatrix(): ReactElement {
 
     if (!nextValue || !activeTopicColumn) {
       setIntermediateGradeItemNameDraft('')
-      setIntermediateMaxScoreDraft('')
       return
     }
 
@@ -933,7 +930,6 @@ export function LearningJournalMatrix(): ReactElement {
 
       return trimmed || createDefaultGradeItemName(gradeElementType, activeTopicColumn)
     })
-    setIntermediateMaxScoreDraft(String(getDefaultMaxScore(gradeElementType)))
   }
 
   async function ensureIntermediateGradeItem(
@@ -956,12 +952,7 @@ export function LearningJournalMatrix(): ReactElement {
       throw new Error('Укажи название промежуточной работы')
     }
 
-    const maxScore =
-      gradeElementType.grading_mode === 'pass_fail' ? 1 : Number(intermediateMaxScoreDraft)
-
-    if (!Number.isFinite(maxScore) || maxScore <= 0) {
-      throw new Error('Укажи корректный максимальный балл')
-    }
+    const maxScore = getGradeElementTypeMaxScore(gradeElementType)
 
     const payload = {
       discipline_id: Number(column.scheduleItem.discipline_id),
@@ -999,18 +990,92 @@ export function LearningJournalMatrix(): ReactElement {
     })
   }
 
+  async function ensureLessonSessionForIntermediateGradeItem(
+    column: ScheduleJournalColumn
+  ): Promise<AdminCrudRecord> {
+    const topic = topicDraft.trim() || null
+    const comment = lessonNoteDraft.trim() || null
+    const existingSession = getLessonSession(column)
+
+    if (existingSession?.id) {
+      const result = await window.api.adminCrud.update({
+        entity: 'lesson_sessions',
+        id: Number(existingSession.id),
+        data: {
+          topic,
+          comment,
+          teacher_id: toNumberOrNull(column.scheduleItem.teacher_id)
+        }
+      })
+
+      return result.item ?? { ...existingSession, topic, comment }
+    }
+
+    const weekId = toNumberOrNull(selectedWeek?.id)
+
+    if (weekId === null) {
+      throw new Error('Не удалось определить выбранную неделю')
+    }
+
+    const result = await window.api.adminCrud.create({
+      entity: 'lesson_sessions',
+      data: {
+        schedule_item_id: Number(column.scheduleItem.id),
+        week_id: weekId,
+        lesson_date: column.date,
+        topic,
+        comment,
+        status: 'planned',
+        teacher_id: toNumberOrNull(column.scheduleItem.teacher_id)
+      }
+    })
+
+    if (!result.item?.id) {
+      throw new Error('Не удалось создать занятие для промежуточного элемента')
+    }
+
+    return result.item
+  }
+
+  async function saveIntermediateGradeItemForActiveLesson(): Promise<void> {
+    if (!activeTopicColumn || isSavingIntermediateGradeItem) {
+      return
+    }
+
+    if (!selectedIntermediateTypeId) {
+      setGradeError('Выбери промежуточный оценочный элемент')
+      return
+    }
+
+    setIsSavingIntermediateGradeItem(true)
+    setGradeError(null)
+
+    try {
+      const lessonSession = await ensureLessonSessionForIntermediateGradeItem(activeTopicColumn)
+      await ensureIntermediateGradeItem(activeTopicColumn, lessonSession)
+      await loadData()
+    } catch (error) {
+      setGradeError(
+        getUserFacingError(error, 'Не удалось сохранить промежуточный оценочный элемент')
+      )
+    } finally {
+      setIsSavingIntermediateGradeItem(false)
+    }
+  }
+
   function getGradeItemElementType(gradeItem: AdminCrudRecord): AdminCrudRecord | null {
     return getGradeElementTypeById(gradeItem.grade_element_type_id)
   }
 
   function getGradeItemMaxScore(gradeItem: AdminCrudRecord): number {
-    const itemMaxScore = toNumberOrNull(gradeItem.max_score)
+    const gradeElementType = getGradeItemElementType(gradeItem)
+    const typeMaxScore = toNumberOrNull(gradeElementType?.max_score)
 
-    if (itemMaxScore !== null) {
-      return itemMaxScore
+    if (typeMaxScore !== null) {
+      return typeMaxScore
     }
 
-    return getDefaultMaxScore(getGradeItemElementType(gradeItem))
+    return toNumberOrNull(gradeItem.max_score) ?? 100
   }
 
   function getGradeItemMinScore(gradeItem: AdminCrudRecord): number {
@@ -1018,6 +1083,53 @@ export function LearningJournalMatrix(): ReactElement {
     const minScore = toNumberOrNull(gradeElementType?.min_score)
 
     return minScore ?? 0
+  }
+
+  function getGradeItemPassingScore(gradeItem: AdminCrudRecord): number | null {
+    const gradeElementType = getGradeItemElementType(gradeItem)
+
+    return toNumberOrNull(gradeElementType?.passing_score)
+  }
+
+  function getGradeItemScoreDescription(gradeItem: AdminCrudRecord): string {
+    const gradeElementType = getGradeItemElementType(gradeItem)
+
+    if (gradeElementType?.grading_mode === 'pass_fail') {
+      return 'Сдал / не сдал'
+    }
+
+    const details = [
+      `мин. ${getGradeItemMinScore(gradeItem)}`,
+      `макс. ${getGradeItemMaxScore(gradeItem)}`
+    ]
+    const passingScore = getGradeItemPassingScore(gradeItem)
+
+    if (passingScore !== null) {
+      details.push(`проходной ${passingScore}`)
+    }
+
+    return `Баллы · ${details.join(' · ')}`
+  }
+
+  function getGradeElementTypeScoreDescription(gradeElementType: AdminCrudRecord): string {
+    if (gradeElementType.grading_mode === 'pass_fail') {
+      return 'Тип оценивания: Сдал / не сдал'
+    }
+
+    const minScore = toNumberOrNull(gradeElementType.min_score) ?? 0
+    const maxScore = toNumberOrNull(gradeElementType.max_score)
+    const passingScore = toNumberOrNull(gradeElementType.passing_score)
+    const details = [
+      `Тип оценивания: Баллы`,
+      `мин. ${minScore}`,
+      maxScore !== null && maxScore > 0 ? `макс. ${maxScore}` : 'макс. не задан'
+    ]
+
+    if (passingScore !== null) {
+      details.push(`проходной ${passingScore}`)
+    }
+
+    return details.join(' · ')
   }
 
   function getStudentGradeRecord(
@@ -1153,21 +1265,35 @@ export function LearningJournalMatrix(): ReactElement {
     const selectedGradeElementType = selectedIntermediateTypeId
       ? getGradeElementTypeById(selectedIntermediateTypeId)
       : null
-    const isPassFail = selectedGradeElementType?.grading_mode === 'pass_fail'
 
     return (
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 p-4">
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-semibold text-[var(--color-text)]">
-            Промежуточный оценочный элемент
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Если на занятии была работа, выбери ее тип: после сохранения она появится в
-            мини-журнале.
-          </p>
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[var(--color-text)]">
+              Промежуточный оценочный элемент
+            </p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              Выбери уже созданный тип оценочного элемента и зафиксируй конкретную работу занятия.
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            size="sm"
+            disabled={
+              isSavingIntermediateGradeItem ||
+              isSavingTopic ||
+              isSavingCompletion ||
+              !selectedIntermediateTypeId
+            }
+            onClick={() => void saveIntermediateGradeItemForActiveLesson()}
+          >
+            {isSavingIntermediateGradeItem ? 'Сохранение...' : 'Сохранить промежуточный элемент'}
+          </Button>
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <label className="grid gap-2">
             <span className="text-sm font-medium text-[var(--color-text)]">
               Провели оценочный элемент
@@ -1209,27 +1335,9 @@ export function LearningJournalMatrix(): ReactElement {
                 />
               </label>
 
-              {!isPassFail ? (
-                <label className="grid gap-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">
-                    Максимальный балл
-                  </span>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={intermediateMaxScoreDraft}
-                    onChange={(event) => {
-                      setIntermediateMaxScoreDraft(event.target.value)
-                      setGradeError(null)
-                    }}
-                  />
-                </label>
-              ) : (
-                <div className="flex items-end">
-                  <Badge variant="muted">Сдал / не сдал</Badge>
-                </div>
-              )}
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)]/50 px-3 py-2 text-xs text-[var(--color-text-muted)] lg:col-span-2">
+                {getGradeElementTypeScoreDescription(selectedGradeElementType)}
+              </div>
             </>
           ) : null}
         </div>
@@ -1239,31 +1347,6 @@ export function LearningJournalMatrix(): ReactElement {
             Сначала создай промежуточные оценочные элементы в разделе «Журнал обучения».
           </p>
         ) : null}
-      </div>
-    )
-  }
-
-  function renderIntermediateGradeItemSummary(column: ScheduleJournalColumn): ReactElement | null {
-    const gradeItem = getIntermediateGradeItemForLesson(column)
-
-    if (!gradeItem) {
-      return null
-    }
-
-    const gradeElementType = getGradeItemElementType(gradeItem)
-
-    return (
-      <div className="rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 px-3 py-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-          Промежуточный оценочный элемент
-        </p>
-        <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">
-          {String(gradeItem.name ?? 'Оценочный элемент')}
-        </p>
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-          {gradeElementType ? getRecordName(gradeElementType) : 'Тип не указан'} · максимум{' '}
-          {String(gradeItem.max_score ?? '—')}
-        </p>
       </div>
     )
   }
@@ -1318,7 +1401,7 @@ export function LearningJournalMatrix(): ReactElement {
                       >
                         <span className="block">{String(gradeItem.name ?? 'Оценка')}</span>
                         <span className="mt-1 block text-[10px] font-medium text-[var(--color-text-muted)]">
-                          до {getGradeItemMaxScore(gradeItem)}
+                          {getGradeItemScoreDescription(gradeItem)}
                         </span>
                       </th>
                     )
@@ -1367,24 +1450,12 @@ export function LearningJournalMatrix(): ReactElement {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <Input
-                              key={`${String(student.id)}:${String(gradeItem.id)}:${currentValue}`}
-                              type="number"
+                            <ScoreInput
+                              value={currentValue}
                               min={getGradeItemMinScore(gradeItem)}
                               max={getGradeItemMaxScore(gradeItem)}
-                              step="0.01"
-                              defaultValue={currentValue}
                               disabled={isSavingGrade}
-                              className="h-8 w-24 text-center text-xs"
-                              placeholder="—"
-                              onBlur={(event) =>
-                                handleScoreGradeBlur(student, gradeItem, event.target.value)
-                              }
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  event.currentTarget.blur()
-                                }
-                              }}
+                              onCommit={(value) => handleScoreGradeBlur(student, gradeItem, value)}
                             />
                           )}
                         </td>
@@ -1899,178 +1970,178 @@ export function LearningJournalMatrix(): ReactElement {
                 ) : null}
 
                 {activeTopicColumn ? (
-                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--color-text)]">
-                          Данные занятия
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          {getJournalPairLabel(activeTopicColumn)}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          Преподаватель: {getLessonTeacherName(activeTopicColumn)}
-                        </p>
+                  <div className="grid gap-4">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--color-text)]">
+                            Данные занятия
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                            {getJournalPairLabel(activeTopicColumn)}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                            Преподаватель: {getLessonTeacherName(activeTopicColumn)}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant={activeLessonCompleted ? 'success' : 'warning'}>
+                            {activeLessonCompleted ? 'Проведено' : 'Не проведено'}
+                          </Badge>
+                          <Badge>{activeTopicColumn.disciplineShortName}</Badge>
+                        </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant={activeLessonCompleted ? 'success' : 'warning'}>
-                          {activeLessonCompleted ? 'Проведено' : 'Не проведено'}
-                        </Badge>
-                        <Badge>{activeTopicColumn.disciplineShortName}</Badge>
-                      </div>
-                    </div>
+                      {topicError ? (
+                        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                          {topicError}
+                        </div>
+                      ) : null}
 
-                    {topicError ? (
-                      <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                        {topicError}
-                      </div>
-                    ) : null}
+                      {shouldShowLessonDetailsCard ? (
+                        <div className="mt-4 grid gap-4">
+                          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 p-4">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                              <div className="grid flex-1 gap-4">
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                                    Тема занятия
+                                  </p>
+                                  <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[var(--color-text)]">
+                                    {getLessonTopic(activeTopicColumn) || 'Тема не указана'}
+                                  </p>
+                                </div>
 
-                    {shouldShowLessonDetailsCard ? (
-                      <div className="mt-4 grid gap-4">
-                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 p-4">
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="grid flex-1 gap-4">
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                                  Тема занятия
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[var(--color-text)]">
-                                  {getLessonTopic(activeTopicColumn) || 'Тема не указана'}
-                                </p>
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                                    Заметки
+                                  </p>
+                                  <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">
+                                    {getLessonNote(activeTopicColumn) || 'Заметки не указаны'}
+                                  </p>
+                                </div>
                               </div>
 
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                                  Заметки
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">
-                                  {getLessonNote(activeTopicColumn) || 'Заметки не указаны'}
-                                </p>
-                              </div>
-                              {renderIntermediateGradeItemSummary(activeTopicColumn)}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setIsLessonEditorEditing(true)}
+                              >
+                                <FiEdit2 />
+                                Редактировать
+                              </Button>
                             </div>
+                          </div>
+
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                setActiveTopicColumnId('')
+                                setTopicDraft('')
+                                setLessonNoteDraft('')
+                                setIsLessonEditorEditing(false)
+                                setTopicError(null)
+                              }}
+                            >
+                              Закрыть
+                            </Button>
 
                             <Button
                               type="button"
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setIsLessonEditorEditing(true)}
+                              variant={activeLessonCompleted ? 'secondary' : 'primary'}
+                              disabled={isSavingTopic || isSavingCompletion}
+                              onClick={() =>
+                                void (activeLessonCompleted
+                                  ? cancelLessonCompletion()
+                                  : completeLesson())
+                              }
                             >
-                              <FiEdit2 />
-                              Редактировать
+                              {isSavingCompletion
+                                ? 'Сохранение...'
+                                : activeLessonCompleted
+                                  ? 'Отменить проведение'
+                                  : 'Провести занятие'}
                             </Button>
                           </div>
                         </div>
+                      ) : (
+                        <>
+                          <div className="mt-4 grid gap-4">
+                            <label className="grid gap-2">
+                              <span className="text-sm font-medium text-[var(--color-text)]">
+                                Тема занятия
+                              </span>
+                              <Input
+                                value={topicDraft}
+                                placeholder="Например: Производные и правила дифференцирования"
+                                onChange={(event) => {
+                                  setTopicDraft(event.target.value)
+                                  setTopicError(null)
+                                }}
+                              />
+                            </label>
 
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => {
-                              setActiveTopicColumnId('')
-                              setTopicDraft('')
-                              setLessonNoteDraft('')
-                              setIsLessonEditorEditing(false)
-                              setTopicError(null)
-                            }}
-                          >
-                            Закрыть
-                          </Button>
+                            <label className="grid gap-2">
+                              <span className="text-sm font-medium text-[var(--color-text)]">
+                                Заметки
+                              </span>
+                              <Textarea
+                                value={lessonNoteDraft}
+                                placeholder="Например: что объяснили, что задали, что нужно повторить"
+                                onChange={(event) => setLessonNoteDraft(event.target.value)}
+                              />
+                            </label>
+                          </div>
 
-                          <Button
-                            type="button"
-                            variant={activeLessonCompleted ? 'secondary' : 'primary'}
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() =>
-                              void (activeLessonCompleted
-                                ? cancelLessonCompletion()
-                                : completeLesson())
-                            }
-                          >
-                            {isSavingCompletion
-                              ? 'Сохранение...'
-                              : activeLessonCompleted
-                                ? 'Отменить проведение'
-                                : 'Провести занятие'}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="mt-4 grid gap-4">
-                          <label className="grid gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text)]">
-                              Тема занятия
-                            </span>
-                            <Input
-                              value={topicDraft}
-                              placeholder="Например: Производные и правила дифференцирования"
-                              onChange={(event) => {
-                                setTopicDraft(event.target.value)
+                          <div className="mt-4 flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                setActiveTopicColumnId('')
+                                setTopicDraft('')
+                                setLessonNoteDraft('')
+                                setIsLessonEditorEditing(false)
                                 setTopicError(null)
                               }}
-                            />
-                          </label>
+                            >
+                              Закрыть
+                            </Button>
 
-                          <label className="grid gap-2">
-                            <span className="text-sm font-medium text-[var(--color-text)]">
-                              Заметки
-                            </span>
-                            <Textarea
-                              value={lessonNoteDraft}
-                              placeholder="Например: что объяснили, что задали, что нужно повторить"
-                              onChange={(event) => setLessonNoteDraft(event.target.value)}
-                            />
-                          </label>
+                            <Button
+                              type="button"
+                              variant={activeLessonCompleted ? 'secondary' : 'primary'}
+                              disabled={isSavingTopic || isSavingCompletion}
+                              onClick={() =>
+                                void (activeLessonCompleted
+                                  ? cancelLessonCompletion()
+                                  : completeLesson())
+                              }
+                            >
+                              {isSavingCompletion
+                                ? 'Сохранение...'
+                                : activeLessonCompleted
+                                  ? 'Отменить проведение'
+                                  : 'Провести занятие'}
+                            </Button>
 
-                          {renderIntermediateGradeItemEditor()}
-                        </div>
+                            <Button
+                              type="button"
+                              disabled={isSavingTopic || isSavingCompletion}
+                              onClick={() => void saveTopic()}
+                            >
+                              {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
 
-                        <div className="mt-4 flex flex-wrap justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => {
-                              setActiveTopicColumnId('')
-                              setTopicDraft('')
-                              setLessonNoteDraft('')
-                              setIsLessonEditorEditing(false)
-                              setTopicError(null)
-                            }}
-                          >
-                            Закрыть
-                          </Button>
-
-                          <Button
-                            type="button"
-                            variant={activeLessonCompleted ? 'secondary' : 'primary'}
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() =>
-                              void (activeLessonCompleted
-                                ? cancelLessonCompletion()
-                                : completeLesson())
-                            }
-                          >
-                            {isSavingCompletion
-                              ? 'Сохранение...'
-                              : activeLessonCompleted
-                                ? 'Отменить проведение'
-                                : 'Провести занятие'}
-                          </Button>
-
-                          <Button
-                            type="button"
-                            disabled={isSavingTopic || isSavingCompletion}
-                            onClick={() => void saveTopic()}
-                          >
-                            {isSavingTopic ? 'Сохранение...' : 'Сохранить занятие'}
-                          </Button>
-                        </div>
-                      </>
-                    )}
-
+                    {renderIntermediateGradeItemEditor()}
                     {renderIntermediateGradesJournal()}
                   </div>
                 ) : (
@@ -2134,6 +2205,44 @@ function EmptyState({ text }: { text: string }): ReactElement {
     <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-10 text-center text-sm text-[var(--color-text-muted)]">
       {text}
     </div>
+  )
+}
+
+function ScoreInput({
+  value,
+  disabled,
+  onCommit
+}: {
+  value: string
+  min: number
+  max: number
+  disabled?: boolean
+  onCommit: (value: string) => void
+}): ReactElement {
+  const [draft, setDraft] = useState(value)
+
+  useEffect(() => {
+    setDraft(value)
+  }, [value])
+
+  return (
+    <Input
+      value={draft}
+      inputMode="decimal"
+      pattern="[0-9]*[.,]?[0-9]*"
+      disabled={disabled}
+      className="h-8 w-24 text-center text-xs"
+      placeholder="—"
+      onChange={(event) => {
+        setDraft(sanitizeScoreInput(event.target.value))
+      }}
+      onBlur={() => onCommit(draft)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.currentTarget.blur()
+        }
+      }}
+    />
   )
 }
 
@@ -2284,14 +2393,29 @@ function createDefaultGradeItemName(
   return `${gradeElementName} - ${formatJournalDate(column.date)}`
 }
 
-function getDefaultMaxScore(gradeElementType: AdminCrudRecord | null): number {
+function getGradeElementTypeMaxScore(gradeElementType: AdminCrudRecord | null): number {
   if (gradeElementType?.grading_mode === 'pass_fail') {
     return 1
   }
 
   const maxScore = toNumberOrNull(gradeElementType?.max_score)
 
-  return maxScore !== null && maxScore > 0 ? maxScore : 100
+  if (maxScore === null || maxScore <= 0) {
+    throw new Error('У выбранного оценочного элемента некорректно задан максимальный балл')
+  }
+
+  return maxScore
+}
+
+function sanitizeScoreInput(value: string): string {
+  const normalized = value.replace(/[^\d.,]/g, '').replace(',', '.')
+  const parts = normalized.split('.')
+
+  if (parts.length <= 1) {
+    return normalized
+  }
+
+  return `${parts[0]}.${parts.slice(1).join('')}`
 }
 
 function getRecordName(record: AdminCrudRecord): string {
