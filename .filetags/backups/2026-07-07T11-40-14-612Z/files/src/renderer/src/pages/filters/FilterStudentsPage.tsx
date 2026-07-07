@@ -163,6 +163,11 @@ export function FilterStudentsPage() {
     () => createOptionsMap(academicYearOptions),
     [academicYearOptions]
   )
+  const educationFormNameById = useMemo(
+    () => createOptionsMap(educationFormOptions),
+    [educationFormOptions]
+  )
+
   const availableSpecialties = useMemo(() => {
     if (!filters.facultyId) {
       return specialties
@@ -411,7 +416,7 @@ export function FilterStudentsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={activeFilterCount > 0 ? 'default' : 'muted'}>
+              <Badge variant={activeFilterCount > 0 ? 'primary' : 'muted'}>
                 Активных фильтров: {activeFilterCount}
               </Badge>
 
