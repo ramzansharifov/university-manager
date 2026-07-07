@@ -4,6 +4,7 @@ import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/a
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { resolveGroupAcademicYearId } from '../../../shared/lib/academicYear'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
+import { createDisciplineProgressMap } from '../lib/disciplineProgress'
 import {
   createCurriculumItemOptions,
   createDisciplineColumns,
@@ -23,9 +24,12 @@ export function GroupDisciplinesDrilldown() {
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
   const [semesterOptions, setSemesterOptions] = useState<AdminCrudSelectOption[]>([])
 
+  const [disciplines, setDisciplines] = useState<AdminCrudRecord[]>([])
   const [curriculumItems, setCurriculumItems] = useState<AdminCrudRecord[]>([])
   const [curriculumPlans, setCurriculumPlans] = useState<AdminCrudRecord[]>([])
   const [academicYears, setAcademicYears] = useState<AdminCrudRecord[]>([])
+  const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
+  const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
   const [subjectDepartmentIdById, setSubjectDepartmentIdById] = useState<Map<number, number>>(
     new Map()
   )
@@ -38,10 +42,13 @@ export function GroupDisciplinesDrilldown() {
       subjects,
       teachers,
       semesters,
+      disciplinesResult,
       curriculumItemsResult,
       curriculumPlansResult,
       departments,
-      academicYearsResult
+      academicYearsResult,
+      scheduleItemsResult,
+      lessonSessionsResult
     ] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'subjects',
@@ -62,6 +69,13 @@ export function GroupDisciplinesDrilldown() {
         page: 1,
         pageSize: 100,
         orderBy: 'number',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'disciplines',
+        page: 1,
+        pageSize: 5000,
+        orderBy: 'id',
         orderDirection: 'asc'
       }),
       window.api.adminCrud.list({
@@ -91,6 +105,20 @@ export function GroupDisciplinesDrilldown() {
         pageSize: 500,
         orderBy: 'starts_at',
         orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'schedule_items',
+        page: 1,
+        pageSize: 10000,
+        orderBy: 'id',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'lesson_sessions',
+        page: 1,
+        pageSize: 10000,
+        orderBy: 'id',
+        orderDirection: 'asc'
       })
     ])
 
@@ -102,9 +130,12 @@ export function GroupDisciplinesDrilldown() {
       createTeacherOptions(teachers.items, nextDepartmentFacultyIdById, subjects.items)
     )
     setSemesterOptions(createOptions(semesters.items, getSemesterName))
+    setDisciplines(disciplinesResult.items)
     setCurriculumItems(curriculumItemsResult.items)
     setCurriculumPlans(curriculumPlansResult.items)
     setAcademicYears(academicYearsResult.items)
+    setScheduleItems(scheduleItemsResult.items)
+    setLessonSessions(lessonSessionsResult.items)
     setSubjectDepartmentIdById(nextSubjectDepartmentIdById)
     setDepartmentFacultyIdById(nextDepartmentFacultyIdById)
   }, [])
@@ -173,6 +204,17 @@ export function GroupDisciplinesDrilldown() {
     [curriculumItemOptions]
   )
 
+  const disciplineProgressById = useMemo(
+    () =>
+      createDisciplineProgressMap({
+        disciplines,
+        curriculumItems,
+        scheduleItems,
+        lessonSessions
+      }),
+    [curriculumItems, disciplines, lessonSessions, scheduleItems]
+  )
+
   const disciplineFields = useMemo(
     () =>
       createDisciplineFields({
@@ -190,9 +232,16 @@ export function GroupDisciplinesDrilldown() {
         curriculumItemNameById,
         subjectNameById,
         teacherNameById,
-        semesterNameById
+        semesterNameById,
+        disciplineProgressById
       }),
-    [curriculumItemNameById, semesterNameById, subjectNameById, teacherNameById]
+    [
+      curriculumItemNameById,
+      disciplineProgressById,
+      semesterNameById,
+      subjectNameById,
+      teacherNameById
+    ]
   )
 
   const disciplineFilters = useMemo(
@@ -254,6 +303,17 @@ export function GroupDisciplinesDrilldown() {
           columns={disciplineColumns}
           filters={disciplineFilters}
           fixedData={disciplineFixedData}
+          orderBy="semester_id"
+          orderDirection="asc"
+          rowGroupBy={(record) => String(record.semester_id ?? 'without_semester')}
+          renderRowGroupHeader={(semesterId, records) => (
+            <div className="flex items-center justify-between gap-3">
+              <span>{getSemesterGroupTitle(semesterId, semesterNameById)}</span>
+              <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">
+                {records.length} {getDisciplinesCountText(records.length)}
+              </span>
+            </div>
+          )}
           emptyMessage="У этой группы пока нет дисциплин."
           onAfterMutation={loadOptions}
         />
@@ -397,4 +457,33 @@ function toNumberOrNull(value: unknown): number | null {
   const numberValue = Number(value)
 
   return Number.isFinite(numberValue) ? numberValue : null
+}
+
+function getSemesterGroupTitle(groupKey: string, semesterNameById: Map<number, string>): string {
+  if (groupKey === 'without_semester') {
+    return 'Без семестра'
+  }
+
+  const semesterId = Number(groupKey)
+
+  if (!Number.isFinite(semesterId)) {
+    return groupKey
+  }
+
+  return semesterNameById.get(semesterId) ?? `${semesterId} семестр`
+}
+
+function getDisciplinesCountText(count: number): string {
+  const lastDigit = count % 10
+  const lastTwoDigits = count % 100
+
+  if (lastDigit === 1 && lastTwoDigits !== 11) {
+    return 'дисциплина'
+  }
+
+  if ([2, 3, 4].includes(lastDigit) && ![12, 13, 14].includes(lastTwoDigits)) {
+    return 'дисциплины'
+  }
+
+  return 'дисциплин'
 }

@@ -23,9 +23,12 @@ export function CurriculumPlansDrilldown() {
   const [educationFormOptions, setEducationFormOptions] = useState<AdminCrudSelectOption[]>([])
   const [subjectOptions, setSubjectOptions] = useState<AdminCrudSelectOption[]>([])
   const [semesterOptions, setSemesterOptions] = useState<AdminCrudSelectOption[]>([])
+  const [finalGradeElementTypeOptions, setFinalGradeElementTypeOptions] = useState<
+    AdminCrudSelectOption[]
+  >([])
 
   const loadOptions = useCallback(async () => {
-    const [academicYears, educationForms, subjects] = await Promise.all([
+    const [academicYears, educationForms, subjects, gradeElementTypes] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'academic_years',
         page: 1,
@@ -47,12 +50,20 @@ export function CurriculumPlansDrilldown() {
         pageSize: 100,
         orderBy: 'name',
         orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'grade_element_types',
+        page: 1,
+        pageSize: 100,
+        orderBy: 'name',
+        orderDirection: 'asc'
       })
     ])
 
     setAcademicYearOptions(createOptions(academicYears.items, getRecordName))
     setEducationFormOptions(createOptions(educationForms.items, getRecordName))
     setSubjectOptions(createOptions(subjects.items, getRecordName))
+    setFinalGradeElementTypeOptions(createFinalGradeElementTypeOptions(gradeElementTypes.items))
   }, [])
 
   const loadSemestersForPlan = useCallback(async (plan: AdminCrudRecord) => {
@@ -142,9 +153,10 @@ export function CurriculumPlansDrilldown() {
     () =>
       createCurriculumItemFields({
         subjectOptions,
-        semesterOptions
+        semesterOptions,
+        finalGradeElementTypeOptions
       }),
-    [semesterOptions, subjectOptions]
+    [finalGradeElementTypeOptions, semesterOptions, subjectOptions]
   )
 
   const curriculumItemColumns = useMemo(
@@ -358,4 +370,18 @@ function getCurriculumItemsCountText(count: number): string {
   }
 
   return 'пунктов'
+}
+
+function createFinalGradeElementTypeOptions(items: AdminCrudRecord[]): AdminCrudSelectOption[] {
+  return items
+    .filter((item) => Number(item.is_final) === 1)
+    .map((item) => {
+      const name = String(item.name ?? '').trim()
+
+      return {
+        value: name,
+        label: name
+      }
+    })
+    .filter((option) => option.value.length > 0)
 }

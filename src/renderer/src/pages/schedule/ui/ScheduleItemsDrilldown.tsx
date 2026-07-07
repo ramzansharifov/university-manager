@@ -4,6 +4,7 @@ import { FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiTrash2, FiUser } fr
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { resolveGroupAcademicYearId } from '../../../shared/lib/academicYear'
+import { createDisciplineProgressMap } from '../../academic-process/lib/disciplineProgress'
 import {
   Badge,
   Button,
@@ -94,6 +95,9 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
   const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
   const [academicYears, setAcademicYears] = useState<AdminCrudRecord[]>([])
+  const [curriculumItems, setCurriculumItems] = useState<AdminCrudRecord[]>([])
+  const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
+  const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
 
   const [semesterOptions, setSemesterOptions] = useState<AdminCrudSelectOption[]>([])
   const [weekOptions, setWeekOptions] = useState<AdminCrudSelectOption[]>([])
@@ -120,7 +124,10 @@ export function ScheduleItemsDrilldown(): ReactElement {
       lessonTypesResult,
       gradeElementTypesResult,
       gradeItemsResult,
-      academicYearsResult
+      academicYearsResult,
+      curriculumItemsResult,
+      scheduleItemsResult,
+      lessonSessionsResult
     ] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'faculties',
@@ -220,6 +227,27 @@ export function ScheduleItemsDrilldown(): ReactElement {
         pageSize: 500,
         orderBy: 'starts_at',
         orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'curriculum_items',
+        page: 1,
+        pageSize: 5000,
+        orderBy: 'id',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'schedule_items',
+        page: 1,
+        pageSize: 10000,
+        orderBy: 'id',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'lesson_sessions',
+        page: 1,
+        pageSize: 10000,
+        orderBy: 'id',
+        orderDirection: 'asc'
       })
     ])
 
@@ -232,6 +260,9 @@ export function ScheduleItemsDrilldown(): ReactElement {
     setGradeElementTypes(gradeElementTypesResult.items)
     setGradeItems(gradeItemsResult.items)
     setAcademicYears(academicYearsResult.items)
+    setCurriculumItems(curriculumItemsResult.items)
+    setScheduleItems(scheduleItemsResult.items)
+    setLessonSessions(lessonSessionsResult.items)
 
     setSemesterOptions(createOptions(semestersResult.items, getSemesterName))
     setSemesters(semestersResult.items)
@@ -427,6 +458,27 @@ export function ScheduleItemsDrilldown(): ReactElement {
 
   const selectedWeekDisciplines = selectedSemesterDisciplines
 
+  const disciplineProgressById = useMemo(
+    () =>
+      createDisciplineProgressMap({
+        disciplines,
+        curriculumItems,
+        scheduleItems,
+        lessonSessions
+      }),
+    [curriculumItems, disciplines, lessonSessions, scheduleItems]
+  )
+
+  const fullyScheduledDisciplines = useMemo(
+    () =>
+      selectedWeekDisciplines.filter((discipline) => {
+        const progress = disciplineProgressById.get(Number(discipline.id))
+
+        return progress?.isFullyScheduled === true
+      }),
+    [disciplineProgressById, selectedWeekDisciplines]
+  )
+
   const disciplineOptions = useMemo(
     () =>
       createDisciplineOptions(selectedSemesterDisciplines, {
@@ -437,11 +489,11 @@ export function ScheduleItemsDrilldown(): ReactElement {
   )
   const gradeDisciplineOptions = useMemo(
     () =>
-      createDisciplineOptions(selectedWeekDisciplines, {
+      createDisciplineOptions(fullyScheduledDisciplines, {
         subjectNameById,
         groupNameById
       }),
-    [groupNameById, selectedWeekDisciplines, subjectNameById]
+    [fullyScheduledDisciplines, groupNameById, subjectNameById]
   )
 
   const semesterNameById = useMemo(() => createOptionsMap(semesterOptions), [semesterOptions])
@@ -458,13 +510,21 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
   const audienceNameById = useMemo(() => createOptionsMap(audienceOptions), [audienceOptions])
   const lessonTypeNameById = useMemo(() => createOptionsMap(lessonTypeOptions), [lessonTypeOptions])
+  const finalGradeElementTypes = useMemo(
+    () => gradeElementTypes.filter((gradeElementType) => Number(gradeElementType.is_final) === 1),
+    [gradeElementTypes]
+  )
   const gradeElementTypeOptions = useMemo(
+    () => createOptions(finalGradeElementTypes, getRecordName),
+    [finalGradeElementTypes]
+  )
+  const allGradeElementTypeOptions = useMemo(
     () => createOptions(gradeElementTypes, getRecordName),
     [gradeElementTypes]
   )
   const gradeElementTypeNameById = useMemo(
-    () => createOptionsMap(gradeElementTypeOptions),
-    [gradeElementTypeOptions]
+    () => createOptionsMap(allGradeElementTypeOptions),
+    [allGradeElementTypeOptions]
   )
   const dayOfWeekNameById = useMemo(() => createOptionsMap(dayOfWeekOptions), [])
   const weekTypeNameByValue = useMemo(() => createWeekTypeMap(), [])
@@ -613,14 +673,17 @@ export function ScheduleItemsDrilldown(): ReactElement {
 
   const canShowSchedule = Boolean(selectedGroup && selectedSemesterId && selectedWeek)
   const canCreateScheduleItem = canShowSchedule && selectedSemesterDisciplines.length > 0
-  const canCreateGradeItem = canShowSchedule && selectedWeekDisciplines.length > 0
+  const canCreateGradeItem =
+    canShowSchedule && fullyScheduledDisciplines.length > 0 && gradeElementTypeOptions.length > 0
 
   function openGradeItemDialog(): void {
     setGradeDialogError(null)
     setGradeForm({
       day_of_week: '1',
-      discipline_id: selectedWeekDisciplines[0]?.id ? String(selectedWeekDisciplines[0].id) : '',
-      grade_element_type_id: gradeElementTypes[0]?.id ? String(gradeElementTypes[0].id) : '',
+      discipline_id: fullyScheduledDisciplines[0]?.id
+        ? String(fullyScheduledDisciplines[0].id)
+        : '',
+      grade_element_type_id: gradeElementTypeOptions[0]?.value ?? '',
       name: '',
       max_score: '',
       description: ''
@@ -655,6 +718,25 @@ export function ScheduleItemsDrilldown(): ReactElement {
 
     if (!gradeForm.grade_element_type_id) {
       setGradeDialogError('Выбери тип оценочного элемента')
+      return
+    }
+
+    if (
+      !gradeElementTypeOptions.some((option) => option.value === gradeForm.grade_element_type_id)
+    ) {
+      setGradeDialogError('Выбери итоговый тип оценочного элемента')
+      return
+    }
+
+    const selectedDisciplineProgress = disciplineProgressById.get(Number(gradeForm.discipline_id))
+
+    if (!selectedDisciplineProgress?.isFullyScheduled) {
+      const scheduledPairs = selectedDisciplineProgress?.scheduledPairs ?? 0
+      const requiredPairs = selectedDisciplineProgress?.requiredPairs ?? 0
+
+      setGradeDialogError(
+        `Нельзя добавить итоговый оценочный элемент: по дисциплине ещё не заполнены все пары расписания. Запланировано ${scheduledPairs} из ${requiredPairs}.`
+      )
       return
     }
 
@@ -812,10 +894,18 @@ export function ScheduleItemsDrilldown(): ReactElement {
                 Добавь контрольную, лабораторную, зачёт или другой элемент, чтобы он появился в
                 журнале обучения.
               </p>
-              {gradeElementTypes.length === 0 ? (
+              {gradeElementTypeOptions.length === 0 ? (
                 <p className="mt-2 text-xs font-medium text-[var(--color-warning)]">
                   Сначала создай типы оценочных элементов в разделе «Журнал обучения → Оценочные
                   элементы».
+                </p>
+              ) : null}
+              {gradeElementTypeOptions.length > 0 &&
+              selectedWeekDisciplines.length > 0 &&
+              fullyScheduledDisciplines.length === 0 ? (
+                <p className="mt-2 text-xs font-medium text-[var(--color-warning)]">
+                  Итоговый элемент можно добавить после того, как все пары дисциплины будут внесены
+                  в расписание.
                 </p>
               ) : null}
             </div>
@@ -823,7 +913,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
             <Button
               type="button"
               variant="secondary"
-              disabled={!canCreateGradeItem || gradeElementTypes.length === 0}
+              disabled={!canCreateGradeItem}
               onClick={openGradeItemDialog}
             >
               Добавить оценочный элемент
@@ -946,6 +1036,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
               value={gradeForm.discipline_id}
               placeholder="Выбери дисциплину"
               options={gradeDisciplineOptions}
+              hint="Доступны только дисциплины, по которым расписание заполнено полностью."
               onChange={(value) => updateGradeFormField('discipline_id', value)}
             />
 
@@ -1048,12 +1139,14 @@ function GradeItemSelectField({
   value,
   placeholder,
   options,
+  hint,
   onChange
 }: {
   label: string
   value: string
   placeholder: string
   options: AdminCrudSelectOption[]
+  hint?: string
   onChange: (value: string) => void
 }): ReactElement {
   return (
@@ -1073,6 +1166,8 @@ function GradeItemSelectField({
           ))}
         </SelectContent>
       </Select>
+
+      {hint ? <span className="text-xs text-[var(--color-text-muted)]">{hint}</span> : null}
     </label>
   )
 }

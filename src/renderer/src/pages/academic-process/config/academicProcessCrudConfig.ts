@@ -5,6 +5,7 @@ import type {
   AdminCrudSelectOption
 } from '../../../features/admin-crud'
 import { formatDateRangeForDisplay } from '../../../shared/lib/date'
+import type { DisciplineProgress } from '../lib/disciplineProgress'
 
 export interface AcademicProcessColumnMaps {
   departmentNameById: Map<number, string>
@@ -208,6 +209,7 @@ export function createCurriculumPlanColumns(maps: {
 export function createCurriculumItemFields(options: {
   subjectOptions: AdminCrudSelectOption[]
   semesterOptions: AdminCrudSelectOption[]
+  finalGradeElementTypeOptions: AdminCrudSelectOption[]
 }): AdminCrudFieldConfig[] {
   return [
     {
@@ -265,9 +267,14 @@ export function createCurriculumItemFields(options: {
     },
     {
       key: 'control_form',
-      label: 'Формы контроля',
-      placeholder: 'Например: экзамен',
-      type: 'multiText',
+      label: 'Форма контроля',
+      placeholder:
+        options.finalGradeElementTypeOptions.length > 0
+          ? 'Выбери форму контроля'
+          : 'Сначала создай итоговые оценочные элементы в разделе «Журнал обучения»',
+      type: 'select',
+      options: options.finalGradeElementTypeOptions,
+      required: true,
       fullWidth: true
     }
   ]
@@ -678,6 +685,7 @@ export function createDisciplineColumns(maps: {
   subjectNameById: Map<number, string>
   teacherNameById: Map<number, string>
   semesterNameById: Map<number, string>
+  disciplineProgressById?: Map<number, DisciplineProgress>
 }): AdminCrudColumnConfig[] {
   return [
     {
@@ -703,6 +711,11 @@ export function createDisciplineColumns(maps: {
       key: 'semester_id',
       label: 'Семестр',
       render: (record) => renderRelation(record.semester_id, maps.semesterNameById)
+    },
+    {
+      key: 'progress',
+      label: 'Выполнение',
+      render: (record) => renderDisciplineProgress(record, maps.disciplineProgressById)
     },
     {
       key: 'name',
@@ -736,6 +749,28 @@ export function formatControlForms(value: unknown): string {
     .map((item) => item.trim())
     .filter(Boolean)
     .join(', ')
+}
+
+function renderDisciplineProgress(
+  record: AdminCrudRecord,
+  disciplineProgressById: Map<number, DisciplineProgress> | undefined
+): string {
+  const disciplineId = toNumberOrNull(record.id)
+  const progress = disciplineId === null ? undefined : disciplineProgressById?.get(disciplineId)
+
+  if (!progress?.hasCurriculumItem) {
+    return 'План не связан'
+  }
+
+  if (progress.requiredPairs <= 0) {
+    return 'Аудиторная нагрузка не задана'
+  }
+
+  const statusText = progress.isFullyScheduled
+    ? 'расписание заполнено'
+    : `осталось ${progress.remainingPairs}`
+
+  return `Запланировано ${progress.scheduledPairs}/${progress.requiredPairs} пар · проведено ${progress.conductedPairs} · ${statusText}`
 }
 
 function toNumberOrNull(value: unknown): number | null {
