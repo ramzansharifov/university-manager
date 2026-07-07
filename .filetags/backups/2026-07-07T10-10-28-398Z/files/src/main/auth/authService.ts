@@ -11,10 +11,6 @@ import type {
   LoginResult,
   LogoutParams,
   LogoutResult,
-  SetUserActiveParams,
-  SetUserActiveResult,
-  UpdateUserParams,
-  UpdateUserResult,
   UserProfileType
 } from '../../shared/types/auth'
 import type { AuditService } from '../audit/auditService'
@@ -123,20 +119,14 @@ export class AuthService {
   listUsers(): AuthUserListItem[] {
     return this.authRepository.listUsers()
   }
-
   createUser(params: CreateUserParams): CreateUserResult {
-    const normalizedParams = {
-      ...params,
-      username: params.username.trim(),
-      profileId: params.profileType === 'system' ? 0 : params.profileId
-    }
-
-    this.validateUserParams(normalizedParams)
+    this.validateCreateUserParams(params)
 
     const passwordHash = hashPassword(params.password)
 
     const user = this.authRepository.createUser({
-      ...normalizedParams,
+      ...params,
+      username: params.username.trim(),
       passwordHash
     })
 
@@ -152,80 +142,6 @@ export class AuthService {
         roleId: user.roleId,
         profileType: user.profileType,
         profileId: user.profileId
-      }
-    })
-
-    return {
-      success: true,
-      user
-    }
-  }
-
-  updateUser(params: UpdateUserParams): UpdateUserResult {
-    const before = this.requireExistingUser(params.userId)
-    const normalizedParams = {
-      ...params,
-      username: params.username.trim(),
-      profileId: params.profileType === 'system' ? 0 : params.profileId
-    }
-
-    this.validateUserParams(normalizedParams)
-    this.ensureProtectedAdminCanBeChanged(before, normalizedParams)
-
-    const user = this.authRepository.updateUser(normalizedParams)
-
-    this.auditService.write({
-      action: 'update',
-      module: 'auth',
-      entityName: 'app_users',
-      entityId: user.id,
-      before: {
-        id: before.id,
-        username: before.username,
-        roleId: before.roleId,
-        profileType: before.profileType,
-        profileId: before.profileId,
-        isActive: before.isActive
-      },
-      after: {
-        id: user.id,
-        username: user.username,
-        roleId: user.roleId,
-        profileType: user.profileType,
-        profileId: user.profileId,
-        isActive: user.isActive
-      }
-    })
-
-    return {
-      success: true,
-      user
-    }
-  }
-
-  setUserActive(params: SetUserActiveParams): SetUserActiveResult {
-    const before = this.requireExistingUser(params.userId)
-
-    if (isProtectedAdmin(before) && !params.isActive) {
-      throw new Error('Нельзя отключить основного администратора')
-    }
-
-    const user = this.authRepository.setUserActive(params.userId, params.isActive)
-
-    this.auditService.write({
-      action: 'update',
-      module: 'auth',
-      entityName: 'app_users.is_active',
-      entityId: user.id,
-      before: {
-        id: before.id,
-        username: before.username,
-        isActive: before.isActive
-      },
-      after: {
-        id: user.id,
-        username: user.username,
-        isActive: user.isActive
       }
     })
 
@@ -264,14 +180,14 @@ export class AuthService {
     }
   }
 
-  private validateUserParams(params: CreateUserParams | UpdateUserParams): void {
+  private validateCreateUserParams(params: CreateUserParams): void {
     const username = params.username.trim()
 
     if (!username) {
       throw new Error('Укажите логин')
     }
 
-    if ('password' in params && (!params.password || params.password.length < 4)) {
+    if (!params.password || params.password.length < 4) {
       throw new Error('Пароль должен содержать не менее 4 символов')
     }
 
@@ -287,32 +203,4 @@ export class AuthService {
       throw new Error('Некорректный идентификатор профиля')
     }
   }
-
-  private requireExistingUser(userId: number): AuthUser {
-    const user = this.authRepository.getAuthUserById(userId)
-
-    if (!user) {
-      throw new Error('Пользователь не найден')
-    }
-
-    return user
-  }
-
-  private ensureProtectedAdminCanBeChanged(before: AuthUser, after: UpdateUserParams): void {
-    if (!isProtectedAdmin(before)) {
-      return
-    }
-
-    if (!after.isActive) {
-      throw new Error('Нельзя отключить основного администратора')
-    }
-
-    if (after.roleId !== before.roleId) {
-      throw new Error('Нельзя менять роль основного администратора')
-    }
-  }
-}
-
-function isProtectedAdmin(user: AuthUser): boolean {
-  return user.username === 'admin' && user.roleKey === 'super_admin'
 }

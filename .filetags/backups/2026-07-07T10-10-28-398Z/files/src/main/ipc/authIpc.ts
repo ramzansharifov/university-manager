@@ -4,9 +4,7 @@ import type {
   CreateUserParams,
   GetCurrentUserParams,
   LoginParams,
-  LogoutParams,
-  SetUserActiveParams,
-  UpdateUserParams
+  LogoutParams
 } from '../../shared/types/auth'
 import { AuditRepository } from '../audit/auditRepository'
 import { AuditService } from '../audit/auditService'
@@ -38,17 +36,8 @@ export function registerAuthIpcHandlers(): void {
   ipcMain.handle('auth:listUsers', () => {
     return authService.listUsers()
   })
-
   ipcMain.handle('auth:createUser', (_event, params: CreateUserParams) => {
     return authService.createUser(params)
-  })
-
-  ipcMain.handle('auth:updateUser', (_event, params: UpdateUserParams) => {
-    return authService.updateUser(params)
-  })
-
-  ipcMain.handle('auth:setUserActive', (_event, params: SetUserActiveParams) => {
-    return authService.setUserActive(params)
   })
 
   ipcMain.handle('auth:changePassword', (_event, params: ChangePasswordParams) => {

@@ -1,10 +1,5 @@
 import type Database from 'better-sqlite3'
-import type {
-  AuthUser,
-  AuthUserListItem,
-  CreateUserParams,
-  UpdateUserParams
-} from '../../shared/types/auth'
+import type { AuthUser, AuthUserListItem, CreateUserParams } from '../../shared/types/auth'
 
 interface UserCredentialsRow {
   id: number
@@ -248,61 +243,6 @@ export class AuthRepository {
 
     if (!user) {
       throw new Error('Created user not found')
-    }
-
-    return user
-  }
-
-  updateUser(params: UpdateUserParams): AuthUser {
-    this.database
-      .prepare(
-        `
-        UPDATE app_users
-        SET
-          username = @username,
-          role_id = @roleId,
-          profile_type = @profileType,
-          profile_id = @profileId,
-          is_active = @isActive,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = @userId
-      `
-      )
-      .run({
-        userId: params.userId,
-        username: params.username,
-        roleId: params.roleId,
-        profileType: params.profileType,
-        profileId: params.profileId,
-        isActive: params.isActive ? 1 : 0
-      })
-
-    const user = this.getAuthUserById(params.userId)
-
-    if (!user) {
-      throw new Error('Updated user not found')
-    }
-
-    return user
-  }
-
-  setUserActive(userId: number, isActive: boolean): AuthUser {
-    this.database
-      .prepare(
-        `
-        UPDATE app_users
-        SET
-          is_active = ?,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `
-      )
-      .run(isActive ? 1 : 0, userId)
-
-    const user = this.getAuthUserById(userId)
-
-    if (!user) {
-      throw new Error('Updated user not found')
     }
 
     return user

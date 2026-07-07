@@ -66,30 +66,6 @@ export interface CreateUserResult {
   user: AuthUser
 }
 
-export interface UpdateUserParams {
-  userId: number
-  username: string
-  roleId: number
-  profileType: UserProfileType
-  profileId: number
-  isActive: boolean
-}
-
-export interface UpdateUserResult {
-  success: boolean
-  user: AuthUser
-}
-
-export interface SetUserActiveParams {
-  userId: number
-  isActive: boolean
-}
-
-export interface SetUserActiveResult {
-  success: boolean
-  user: AuthUser
-}
-
 export interface ChangePasswordParams {
   userId: number
   newPassword: string

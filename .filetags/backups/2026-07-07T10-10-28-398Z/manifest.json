@@ -1,0 +1,44 @@
+{
+  "createdAt": "2026-07-07T10:10:28.471Z",
+  "backupPath": ".filetags/backups/2026-07-07T10-10-28-398Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/shared/types/auth.ts",
+      "backupRelativePath": "files/src/shared/types/auth.ts"
+    },
+    {
+      "originalPath": "src/main/auth/authRepository.ts",
+      "backupRelativePath": "files/src/main/auth/authRepository.ts"
+    },
+    {
+      "originalPath": "src/main/auth/authService.ts",
+      "backupRelativePath": "files/src/main/auth/authService.ts"
+    },
+    {
+      "originalPath": "src/main/ipc/authIpc.ts",
+      "backupRelativePath": "files/src/main/ipc/authIpc.ts"
+    },
+    {
+      "originalPath": "src/preload/api/authApi.ts",
+      "backupRelativePath": "files/src/preload/api/authApi.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/env.d.ts",
+      "backupRelativePath": "files/src/renderer/src/env.d.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Write file: src/shared/types/auth.ts\n   old: 77 line(s)\n   new: 100 line(s)",
+    "Write file: src/main/auth/authRepository.ts\n   old: 309 line(s)\n   new: 368 line(s)",
+    "Write file: src/main/auth/authService.ts\n   old: 207 line(s)\n   new: 318 line(s)",
+    "Write file: src/main/ipc/authIpc.ts\n   old: 47 line(s)\n   new: 57 line(s)",
+    "Write file: src/preload/api/authApi.ts\n   old: 42 line(s)\n   new: 53 line(s)",
+    "Write file: src/renderer/src/env.d.ts\n   old: 102 line(s)\n   new: 107 line(s)",
+    "Write file: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   old: 439 line(s)\n   new: 772 line(s)"
+  ]
+}

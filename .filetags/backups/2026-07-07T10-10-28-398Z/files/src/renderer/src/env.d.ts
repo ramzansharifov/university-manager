@@ -12,11 +12,7 @@ import type {
   LoginParams,
   LoginResult,
   LogoutParams,
-  LogoutResult,
-  SetUserActiveParams,
-  SetUserActiveResult,
-  UpdateUserParams,
-  UpdateUserResult
+  LogoutResult
 } from '../../shared/types/auth'
 import type {
   AdminCrudCreateParams,
@@ -72,8 +68,6 @@ declare global {
         logout(params: LogoutParams): Promise<LogoutResult>
         listUsers(params?: ListUsersParams): Promise<AuthUserListItem[]>
         createUser(params: CreateUserParams): Promise<CreateUserResult>
-        updateUser(params: UpdateUserParams): Promise<UpdateUserResult>
-        setUserActive(params: SetUserActiveParams): Promise<SetUserActiveResult>
         changePassword(params: ChangePasswordParams): Promise<ChangePasswordResult>
       }
 

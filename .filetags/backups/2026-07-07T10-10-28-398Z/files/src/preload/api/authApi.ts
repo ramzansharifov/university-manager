@@ -11,11 +11,7 @@ import type {
   LoginParams,
   LoginResult,
   LogoutParams,
-  LogoutResult,
-  SetUserActiveParams,
-  SetUserActiveResult,
-  UpdateUserParams,
-  UpdateUserResult
+  LogoutResult
 } from '../../shared/types/auth'
 
 export const authApi = {
@@ -37,14 +33,6 @@ export const authApi = {
 
   createUser(params: CreateUserParams): Promise<CreateUserResult> {
     return ipcRenderer.invoke('auth:createUser', params)
-  },
-
-  updateUser(params: UpdateUserParams): Promise<UpdateUserResult> {
-    return ipcRenderer.invoke('auth:updateUser', params)
-  },
-
-  setUserActive(params: SetUserActiveParams): Promise<SetUserActiveResult> {
-    return ipcRenderer.invoke('auth:setUserActive', params)
   },
 
   changePassword(params: ChangePasswordParams): Promise<ChangePasswordResult> {
