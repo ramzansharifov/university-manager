@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { FiDownload, FiRefreshCcw } from 'react-icons/fi'
 import type { AdminCrudRecord } from '../../features/admin-crud'
 import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -954,9 +955,7 @@ function createStudentReportRow({
     passFail:
       passFailGradeItems.length === 0
         ? '—'
-        : `Сдано ${
-            passFailGrades.filter((grade) => Number(grade.score) >= 1).length
-          }/${passFailGradeItems.length}`,
+        : `Сдано ${passFailGrades.filter((grade) => Number(grade.score) >= 1).length}/${passFailGradeItems.length}`,
     attendance: `${presentMarks}/${groupLessonSessions.length}`
   }
 }
