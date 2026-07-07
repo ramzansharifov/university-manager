@@ -576,6 +576,39 @@ export function UsersAdministrationPanel() {
   )
 }
 
+interface DialogOutsideEvent {
+  target: EventTarget | null
+  detail?: {
+    originalEvent?: Event
+  }
+  preventDefault(): void
+}
+
+function preventDialogCloseFromRadixSelect(event: DialogOutsideEvent): void {
+  const originalTarget = event.detail?.originalEvent?.target
+
+  if (
+    targetIsInsideRadixSelectPortal(event.target) ||
+    targetIsInsideRadixSelectPortal(originalTarget) ||
+    document.querySelector('[data-university-manager-select-content]')
+  ) {
+    event.preventDefault()
+  }
+}
+
+function targetIsInsideRadixSelectPortal(target: EventTarget | null | undefined): boolean {
+  const element =
+    target instanceof Element ? target : target instanceof Node ? target.parentElement : null
+
+  if (!element) {
+    return false
+  }
+
+  return Boolean(
+    element.closest('[data-university-manager-select-content]') ||
+    element.querySelector('[data-university-manager-select-content]')
+  )
+}
 function RoleSelect({
   value,
   roles,
