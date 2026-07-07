@@ -1,50 +1,1111 @@
-@replace-all src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx
+@replace-all src/renderer/src/pages/reports/ReportsPage.tsx
 @find
-    const passFailGrades = studentGrades.filter((grade) => {
-      const gradeItem = selectedDisciplineGradeItems.find(
-        (item) => Number(item.id) === Number(grade.grade_item_id)
+import { PlaceholderPage } from '../placeholder/PlaceholderPage'
+
+export function ReportsPage() {
+  return (
+    <PlaceholderPage
+      title="Отчёты"
+      description="Аналитика по посещаемости, успеваемости и итогам обучения."
+      items={['Посещаемость', 'Успеваемость', 'Пропуски', 'Итоги по группе']}
+    />
+  )
+}
+@endfind
+@with
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ReactElement } from 'react'
+import { FiDownload, FiRefreshCcw } from 'react-icons/fi'
+import type { AdminCrudRecord } from '../../features/admin-crud'
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '../../shared/ui'
+import { createDisciplineProgressMap } from '../academic-process/lib/disciplineProgress'
+
+const emptySelectValue = '__empty__'
+
+type FilterOption = {
+  value: string
+  label: string
+}
+
+type ReportBarItem = {
+  label: string
+  value: number
+  suffix?: string
+  description?: string
+}
+
+type StudentReportRow = {
+  studentName: string
+  gradesCount: number
+  averageScore: string
+  passFail: string
+  attendance: string
+}
+
+export function ReportsPage(): ReactElement {
+  const [faculties, setFaculties] = useState<AdminCrudRecord[]>([])
+  const [specialties, setSpecialties] = useState<AdminCrudRecord[]>([])
+  const [groups, setGroups] = useState<AdminCrudRecord[]>([])
+  const [students, setStudents] = useState<AdminCrudRecord[]>([])
+  const [subjects, setSubjects] = useState<AdminCrudRecord[]>([])
+  const [disciplines, setDisciplines] = useState<AdminCrudRecord[]>([])
+  const [curriculumItems, setCurriculumItems] = useState<AdminCrudRecord[]>([])
+  const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
+  const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
+  const [attendanceRecords, setAttendanceRecords] = useState<AdminCrudRecord[]>([])
+  const [attendanceStatuses, setAttendanceStatuses] = useState<AdminCrudRecord[]>([])
+  const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
+  const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
+  const [grades, setGrades] = useState<AdminCrudRecord[]>([])
+
+  const [selectedFacultyId, setSelectedFacultyId] = useState('')
+  const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
+  const [selectedGroupId, setSelectedGroupId] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const loadData = useCallback(async (): Promise<void> => {
+    setIsLoading(true)
+    setLoadError(null)
+
+    try {
+      const [
+        facultiesResult,
+        specialtiesResult,
+        groupsResult,
+        studentsResult,
+        subjectsResult,
+        disciplinesResult,
+        curriculumItemsResult,
+        scheduleItemsResult,
+        lessonSessionsResult,
+        attendanceRecordsResult,
+        attendanceStatusesResult,
+        gradeElementTypesResult,
+        gradeItemsResult,
+        gradesResult
+      ] = await Promise.all([
+        window.api.adminCrud.list({
+          entity: 'faculties',
+          page: 1,
+          pageSize: 500,
+          orderBy: 'name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'specialties',
+          page: 1,
+          pageSize: 500,
+          orderBy: 'name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'student_groups',
+          page: 1,
+          pageSize: 500,
+          orderBy: 'name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'students',
+          page: 1,
+          pageSize: 5000,
+          orderBy: 'last_name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'subjects',
+          page: 1,
+          pageSize: 5000,
+          orderBy: 'name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'disciplines',
+          page: 1,
+          pageSize: 5000,
+          orderBy: 'semester_id',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'curriculum_items',
+          page: 1,
+          pageSize: 5000,
+          orderBy: 'semester_id',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'schedule_items',
+          page: 1,
+          pageSize: 10000,
+          orderBy: 'day_of_week',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'lesson_sessions',
+          page: 1,
+          pageSize: 10000,
+          orderBy: 'lesson_date',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'attendance_records',
+          page: 1,
+          pageSize: 20000,
+          orderBy: 'id',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'dictionary_items',
+          page: 1,
+          pageSize: 100,
+          filters: { dictionary_key: 'attendance_statuses' },
+          orderBy: 'sort_order',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'grade_element_types',
+          page: 1,
+          pageSize: 500,
+          orderBy: 'name',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'grade_items',
+          page: 1,
+          pageSize: 10000,
+          orderBy: 'grade_date',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'grades',
+          page: 1,
+          pageSize: 20000,
+          orderBy: 'id',
+          orderDirection: 'asc'
+        })
+      ])
+
+      setFaculties(facultiesResult.items)
+      setSpecialties(specialtiesResult.items)
+      setGroups(groupsResult.items)
+      setStudents(studentsResult.items)
+      setSubjects(subjectsResult.items)
+      setDisciplines(disciplinesResult.items)
+      setCurriculumItems(curriculumItemsResult.items)
+      setScheduleItems(scheduleItemsResult.items)
+      setLessonSessions(lessonSessionsResult.items)
+      setAttendanceRecords(attendanceRecordsResult.items)
+      setAttendanceStatuses(attendanceStatusesResult.items)
+      setGradeElementTypes(gradeElementTypesResult.items)
+      setGradeItems(gradeItemsResult.items)
+      setGrades(gradesResult.items)
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Не удалось загрузить отчёты')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
+
+  const selectedGroup = useMemo(
+    () => groups.find((group) => String(group.id) === selectedGroupId) ?? null,
+    [groups, selectedGroupId]
+  )
+
+  const filteredSpecialties = useMemo(() => {
+    if (!selectedFacultyId) {
+      return []
+    }
+
+    return specialties.filter(
+      (specialty) => Number(specialty.faculty_id) === Number(selectedFacultyId)
+    )
+  }, [selectedFacultyId, specialties])
+
+  const filteredGroups = useMemo(() => {
+    if (!selectedSpecialtyId) {
+      return []
+    }
+
+    return groups.filter((group) => Number(group.specialty_id) === Number(selectedSpecialtyId))
+  }, [groups, selectedSpecialtyId])
+
+  const subjectNameById = useMemo(() => createRecordNameMap(subjects), [subjects])
+  const gradeElementTypeById = useMemo(
+    () => createRecordMap(gradeElementTypes),
+    [gradeElementTypes]
+  )
+  const attendanceStatusById = useMemo(
+    () => createRecordMap(attendanceStatuses),
+    [attendanceStatuses]
+  )
+
+  const groupStudents = useMemo(() => {
+    if (!selectedGroupId) {
+      return []
+    }
+
+    return students
+      .filter((student) => Number(student.group_id) === Number(selectedGroupId))
+      .sort((firstStudent, secondStudent) =>
+        getPersonFullName(firstStudent).localeCompare(getPersonFullName(secondStudent), 'ru')
       )
+  }, [selectedGroupId, students])
+
+  const groupDisciplines = useMemo(() => {
+    if (!selectedGroupId) {
+      return []
+    }
+
+    return disciplines.filter(
+      (discipline) => Number(discipline.group_id) === Number(selectedGroupId)
+    )
+  }, [disciplines, selectedGroupId])
+
+  const groupDisciplineIds = useMemo(
+    () => new Set(groupDisciplines.map((discipline) => Number(discipline.id))),
+    [groupDisciplines]
+  )
+
+  const groupScheduleItems = useMemo(
+    () =>
+      scheduleItems.filter((scheduleItem) =>
+        groupDisciplineIds.has(Number(scheduleItem.discipline_id))
+      ),
+    [groupDisciplineIds, scheduleItems]
+  )
+
+  const groupScheduleItemIds = useMemo(
+    () => new Set(groupScheduleItems.map((scheduleItem) => Number(scheduleItem.id))),
+    [groupScheduleItems]
+  )
+
+  const groupLessonSessions = useMemo(
+    () =>
+      lessonSessions.filter((session) => groupScheduleItemIds.has(Number(session.schedule_item_id))),
+    [groupScheduleItemIds, lessonSessions]
+  )
+
+  const groupLessonSessionIds = useMemo(
+    () => new Set(groupLessonSessions.map((session) => Number(session.id))),
+    [groupLessonSessions]
+  )
+
+  const groupGradeItems = useMemo(
+    () => gradeItems.filter((gradeItem) => groupDisciplineIds.has(Number(gradeItem.discipline_id))),
+    [gradeItems, groupDisciplineIds]
+  )
+
+  const groupGradeItemIds = useMemo(
+    () => new Set(groupGradeItems.map((gradeItem) => Number(gradeItem.id))),
+    [groupGradeItems]
+  )
+
+  const groupGrades = useMemo(
+    () => grades.filter((grade) => groupGradeItemIds.has(Number(grade.grade_item_id))),
+    [grades, groupGradeItemIds]
+  )
+
+  const groupAttendanceRecords = useMemo(
+    () =>
+      attendanceRecords.filter((record) =>
+        groupLessonSessionIds.has(Number(record.lesson_session_id))
+      ),
+    [attendanceRecords, groupLessonSessionIds]
+  )
+
+  const disciplineProgressById = useMemo(
+    () =>
+      createDisciplineProgressMap({
+        disciplines: groupDisciplines,
+        curriculumItems,
+        scheduleItems,
+        lessonSessions
+      }),
+    [curriculumItems, groupDisciplines, lessonSessions, scheduleItems]
+  )
+
+  const attendanceReport = useMemo(
+    () =>
+      createAttendanceReport({
+        groupDisciplines,
+        groupScheduleItems,
+        groupLessonSessions,
+        attendanceRecords,
+        attendanceStatusById,
+        subjectNameById
+      }),
+    [
+      attendanceRecords,
+      attendanceStatusById,
+      groupDisciplines,
+      groupLessonSessions,
+      groupScheduleItems,
+      subjectNameById
+    ]
+  )
+
+  const progressReport = useMemo(
+    () =>
+      groupDisciplines
+        .map((discipline) => {
+          const progress = disciplineProgressById.get(Number(discipline.id))
+
+          return {
+            label: getDisciplineName(discipline, subjectNameById),
+            value: progress?.conductedPairs ?? 0,
+            scheduledPairs: progress?.scheduledPairs ?? 0,
+            requiredPairs: progress?.requiredPairs ?? 0
+          }
+        })
+        .sort((firstItem, secondItem) => secondItem.value - firstItem.value)
+        .slice(0, 8),
+    [disciplineProgressById, groupDisciplines, subjectNameById]
+  )
+
+  const scoreReport = useMemo(
+    () =>
+      createScoreReport({
+        groupDisciplines,
+        groupGradeItems,
+        groupGrades,
+        gradeElementTypeById,
+        subjectNameById
+      }),
+    [gradeElementTypeById, groupDisciplines, groupGradeItems, groupGrades, subjectNameById]
+  )
+
+  const studentReportRows = useMemo(
+    () =>
+      groupStudents.map((student) =>
+        createStudentReportRow({
+          student,
+          groupGradeItems,
+          groupGrades,
+          groupLessonSessions,
+          groupAttendanceRecords,
+          gradeElementTypeById,
+          attendanceStatusById
+        })
+      ),
+    [
+      attendanceStatusById,
+      gradeElementTypeById,
+      groupAttendanceRecords,
+      groupGradeItems,
+      groupGrades,
+      groupLessonSessions,
+      groupStudents
+    ]
+  )
+
+  const totalConductedLessons = groupLessonSessions.filter(
+    (session) => String(session.status ?? '') === 'conducted'
+  ).length
+  const attendanceRate = calculateAttendanceRate(groupAttendanceRecords, attendanceStatusById)
+  const scoreValues = groupGrades
+    .filter((grade) => {
+      const gradeItem = groupGradeItems.find((item) => Number(item.id) === Number(grade.grade_item_id))
       const gradeElementType = gradeItem
         ? getGradeElementType(gradeItem, gradeElementTypeById)
         : null
 
-      return (
-        gradeElementType?.grading_mode === 'pass_fail' && Number(gradeElementType?.is_final) !== 1
-      )
+      return gradeElementType?.grading_mode !== 'pass_fail'
     })
-@endfind
-@with
-    const passFailGradeItems = selectedDisciplineGradeItems.filter((gradeItem) => {
-      const gradeElementType = getGradeElementType(gradeItem, gradeElementTypeById)
+    .map((grade) => toNumberOrNull(grade.score))
+    .filter((score): score is number => score !== null)
+  const groupAverageScore = scoreValues.length === 0 ? null : calculateAverage(scoreValues)
+  const completedDisciplinesCount = groupDisciplines.filter(
+    (discipline) => disciplineProgressById.get(Number(discipline.id))?.isFullyScheduled
+  ).length
 
-      return (
-        gradeElementType?.grading_mode === 'pass_fail' && Number(gradeElementType?.is_final) !== 1
+  function handleFacultyChange(value: string): void {
+    setSelectedFacultyId(value)
+    setSelectedSpecialtyId('')
+    setSelectedGroupId('')
+  }
+
+  function handleSpecialtyChange(value: string): void {
+    setSelectedSpecialtyId(value)
+    setSelectedGroupId('')
+  }
+
+  function handleExportSummary(): void {
+    const rows = [
+      {
+        report: 'Сводка по группе',
+        group: selectedGroup ? getRecordName(selectedGroup) : 'Не выбрана',
+        students: groupStudents.length,
+        disciplines: groupDisciplines.length,
+        conductedLessons: totalConductedLessons,
+        attendanceRate: `${attendanceRate}%`,
+        averageScore: groupAverageScore === null ? '—' : formatScoreValue(groupAverageScore),
+        completedDisciplines: completedDisciplinesCount
+      }
+    ]
+
+    downloadCsv('group-summary-report.csv', rows)
+  }
+
+  function handleExportStudents(): void {
+    downloadCsv('students-report.csv', studentReportRows)
+  }
+
+  return (
+    <div className="grid gap-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Отчёты</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          Сводная аналитика по посещаемости, успеваемости, занятиям и результатам группы.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <CardTitle>Параметры отчёта</CardTitle>
+              <CardDescription>
+                Выбери факультет, специальность и группу. Отчёты строятся по всем дисциплинам выбранной группы.
+              </CardDescription>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" disabled={isLoading} onClick={() => void loadData()}>
+                <FiRefreshCcw />
+                {isLoading ? 'Загрузка...' : 'Обновить'}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={!selectedGroup}
+                onClick={handleExportSummary}
+              >
+                <FiDownload />
+                CSV сводка
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={!selectedGroup || studentReportRows.length === 0}
+                onClick={handleExportStudents}
+              >
+                <FiDownload />
+                CSV студенты
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <ReportFilterSelect
+              label="Факультет"
+              value={selectedFacultyId}
+              placeholder="Выбери факультет"
+              options={faculties.map(toFilterOption)}
+              onChange={handleFacultyChange}
+            />
+
+            <ReportFilterSelect
+              label="Специальность"
+              value={selectedSpecialtyId}
+              placeholder={selectedFacultyId ? 'Выбери специальность' : 'Сначала факультет'}
+              disabled={!selectedFacultyId}
+              options={filteredSpecialties.map(toFilterOption)}
+              onChange={handleSpecialtyChange}
+            />
+
+            <ReportFilterSelect
+              label="Группа"
+              value={selectedGroupId}
+              placeholder={selectedSpecialtyId ? 'Выбери группу' : 'Сначала специальность'}
+              disabled={!selectedSpecialtyId}
+              options={filteredGroups.map(toFilterOption)}
+              onChange={setSelectedGroupId}
+            />
+          </div>
+
+          {loadError ? (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {loadError}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {!selectedGroup ? (
+        <Card>
+          <CardContent>
+            <EmptyState text="Выбери группу, чтобы построить отчёты." />
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard title="Студентов" value={String(groupStudents.length)} />
+            <MetricCard title="Дисциплин" value={String(groupDisciplines.length)} />
+            <MetricCard title="Проведено занятий" value={String(totalConductedLessons)} />
+            <MetricCard title="Посещаемость" value={`${attendanceRate}%`} />
+            <MetricCard
+              title="Средний балл"
+              value={groupAverageScore === null ? '—' : formatScoreValue(groupAverageScore)}
+            />
+            <MetricCard title="Оценок" value={String(groupGrades.length)} />
+            <MetricCard
+              title="Заполнено расписаний"
+              value={`${completedDisciplinesCount}/${groupDisciplines.length}`}
+            />
+            <MetricCard title="Отметок посещаемости" value={String(groupAttendanceRecords.length)} />
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Посещаемость по дисциплинам</CardTitle>
+                <CardDescription>
+                  Доля присутствий, опозданий и дистанционных посещений среди заполненных отметок.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ReportBarList
+                  emptyText="По выбранной группе пока нет отметок посещаемости."
+                  items={attendanceReport.map((item) => ({
+                    label: item.label,
+                    value: item.attendanceRate,
+                    suffix: '%',
+                    description: `${item.presentMarks}/${item.totalMarks} отметок`
+                  }))}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Средний балл по дисциплинам</CardTitle>
+                <CardDescription>
+                  Среднее по балльным оценкам без элементов «Сдал / не сдал».
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ReportBarList
+                  emptyText="По выбранной группе пока нет балльных оценок."
+                  items={scoreReport.map((item) => ({
+                    label: item.label,
+                    value: item.averageScore,
+                    description: `${item.gradesCount} оценок`
+                  }))}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="xl:col-span-2">
+              <CardHeader>
+                <CardTitle>Проведённые занятия</CardTitle>
+                <CardDescription>
+                  Сравнение проведённых занятий по дисциплинам. Рядом указано, сколько пар уже добавлено в расписание.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ReportBarList
+                  emptyText="По выбранной группе пока нет проведённых занятий."
+                  items={progressReport.map((item) => ({
+                    label: item.label,
+                    value: item.value,
+                    description: `В расписании ${item.scheduledPairs}/${item.requiredPairs}`
+                  }))}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Студенты и результаты</CardTitle>
+              <CardDescription>
+                Сводная таблица по оценкам, pass/fail работам и посещаемости студентов выбранной группы.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {studentReportRows.length === 0 ? (
+                <EmptyState text="В выбранной группе пока нет студентов." />
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+                  <table className="w-full min-w-max border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[var(--color-surface-muted)]">
+                        <th className="border-b border-r border-[var(--color-border)] px-3 py-2 text-left font-semibold text-[var(--color-text-muted)]">
+                          Студент
+                        </th>
+                        <th className="border-b border-r border-[var(--color-border)] px-3 py-2 text-center">
+                          Оценок
+                        </th>
+                        <th className="border-b border-r border-[var(--color-border)] px-3 py-2 text-center">
+                          Средний балл
+                        </th>
+                        <th className="border-b border-r border-[var(--color-border)] px-3 py-2 text-center">
+                          Сдал / не сдал
+                        </th>
+                        <th className="border-b border-[var(--color-border)] px-3 py-2 text-center">
+                          Посещаемость
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {studentReportRows.map((row) => (
+                        <tr
+                          key={row.studentName}
+                          className="border-b border-[var(--color-border)] last:border-b-0"
+                        >
+                          <td className="border-r border-[var(--color-border)] px-3 py-2 text-[var(--color-text)]">
+                            {row.studentName}
+                          </td>
+                          <td className="border-r border-[var(--color-border)] px-3 py-2 text-center">
+                            {row.gradesCount}
+                          </td>
+                          <td className="border-r border-[var(--color-border)] px-3 py-2 text-center">
+                            {row.averageScore}
+                          </td>
+                          <td className="border-r border-[var(--color-border)] px-3 py-2 text-center">
+                            {row.passFail}
+                          </td>
+                          <td className="px-3 py-2 text-center">{row.attendance}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ReportFilterSelect({
+  label,
+  value,
+  options,
+  placeholder,
+  disabled,
+  onChange
+}: {
+  label: string
+  value: string
+  options: FilterOption[]
+  placeholder: string
+  disabled?: boolean
+  onChange: (value: string) => void
+}): ReactElement {
+  return (
+    <label className="grid min-w-0 gap-2">
+      <span className="text-sm font-medium text-[var(--color-text)]">{label}</span>
+      <Select
+        value={value || emptySelectValue}
+        disabled={disabled}
+        onValueChange={(nextValue) => onChange(nextValue === emptySelectValue ? '' : nextValue)}
+      >
+        <SelectTrigger className="min-w-0">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+
+        <SelectContent>
+          <SelectItem value={emptySelectValue}>Не выбрано</SelectItem>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  )
+}
+
+function MetricCard({ title, value }: { title: string; value: string }): ReactElement {
+  return (
+    <Card>
+      <CardContent>
+        <p className="text-sm text-[var(--color-text-muted)]">{title}</p>
+        <p className="mt-2 text-2xl font-bold text-[var(--color-text)]">{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ReportBarList({
+  items,
+  emptyText
+}: {
+  items: ReportBarItem[]
+  emptyText: string
+}): ReactElement {
+  if (items.length === 0) {
+    return <EmptyState text={emptyText} />
+  }
+
+  const maxValue = Math.max(...items.map((item) => item.value), 1)
+
+  return (
+    <div className="grid gap-3">
+      {items.map((item) => {
+        const percent = Math.min(Math.round((item.value / maxValue) * 100), 100)
+
+        return (
+          <div key={item.label} className="grid gap-1">
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <span className="truncate font-medium text-[var(--color-text)]" title={item.label}>
+                {item.label}
+              </span>
+              <span className="shrink-0 text-[var(--color-text-muted)]">
+                {formatScoreValue(item.value)}
+                {item.suffix ?? ''}
+              </span>
+            </div>
+
+            <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-muted)]">
+              <div
+                className="h-full rounded-full bg-[var(--color-primary)]"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+
+            {item.description ? (
+              <p className="text-[11px] text-[var(--color-text-muted)]">{item.description}</p>
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function EmptyState({ text }: { text: string }): ReactElement {
+  return (
+    <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-6 text-center text-sm text-[var(--color-text-muted)]">
+      {text}
+    </div>
+  )
+}
+
+function createAttendanceReport({
+  groupDisciplines,
+  groupScheduleItems,
+  groupLessonSessions,
+  attendanceRecords,
+  attendanceStatusById,
+  subjectNameById
+}: {
+  groupDisciplines: AdminCrudRecord[]
+  groupScheduleItems: AdminCrudRecord[]
+  groupLessonSessions: AdminCrudRecord[]
+  attendanceRecords: AdminCrudRecord[]
+  attendanceStatusById: Map<number, AdminCrudRecord>
+  subjectNameById: Map<number, string>
+}): Array<{
+  label: string
+  attendanceRate: number
+  presentMarks: number
+  totalMarks: number
+}> {
+  return groupDisciplines
+    .map((discipline) => {
+      const disciplineScheduleItemIds = new Set(
+        groupScheduleItems
+          .filter((scheduleItem) => Number(scheduleItem.discipline_id) === Number(discipline.id))
+          .map((scheduleItem) => Number(scheduleItem.id))
       )
-    })
-    const passFailGradeItemIds = new Set(
-      passFailGradeItems
-        .map((gradeItem) => toNumberOrNull(gradeItem.id))
-        .filter((id): id is number => id !== null)
-    )
-    const passFailGrades = studentGrades.filter((grade) =>
-      passFailGradeItemIds.has(Number(grade.grade_item_id))
-    )
-@endwith
-@end
+      const disciplineLessonSessionIds = new Set(
+        groupLessonSessions
+          .filter((session) => disciplineScheduleItemIds.has(Number(session.schedule_item_id)))
+          .map((session) => Number(session.id))
+      )
+      const disciplineAttendanceRecords = attendanceRecords.filter((record) =>
+        disciplineLessonSessionIds.has(Number(record.lesson_session_id))
+      )
+      const presentMarks = disciplineAttendanceRecords.filter((record) =>
+        isPresentAttendanceRecord(record, attendanceStatusById)
+      ).length
+      const attendanceRate =
+        disciplineAttendanceRecords.length === 0
+          ? 0
+          : Math.round((presentMarks / disciplineAttendanceRecords.length) * 100)
 
-@replace-all src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx
-@find
-      passFail:
-        passFailGrades.length === 0
-          ? '—'
-          : `Сдано ${passFailGrades.filter((grade) => Number(grade.score) >= 1).length}/${passFailGrades.length}`,
-@endfind
-@with
-      passFail:
-        passFailGradeItems.length === 0
-          ? '—'
-          : `Сдано ${
-              passFailGrades.filter((grade) => Number(grade.score) >= 1).length
-            }/${passFailGradeItems.length}`,
+      return {
+        label: getDisciplineName(discipline, subjectNameById),
+        attendanceRate,
+        presentMarks,
+        totalMarks: disciplineAttendanceRecords.length
+      }
+    })
+    .filter((item) => item.totalMarks > 0)
+    .sort((firstItem, secondItem) => secondItem.attendanceRate - firstItem.attendanceRate)
+    .slice(0, 8)
+}
+
+function createScoreReport({
+  groupDisciplines,
+  groupGradeItems,
+  groupGrades,
+  gradeElementTypeById,
+  subjectNameById
+}: {
+  groupDisciplines: AdminCrudRecord[]
+  groupGradeItems: AdminCrudRecord[]
+  groupGrades: AdminCrudRecord[]
+  gradeElementTypeById: Map<number, AdminCrudRecord>
+  subjectNameById: Map<number, string>
+}): Array<{
+  label: string
+  averageScore: number
+  gradesCount: number
+}> {
+  return groupDisciplines
+    .map((discipline) => {
+      const disciplineGradeItems = groupGradeItems.filter(
+        (gradeItem) => Number(gradeItem.discipline_id) === Number(discipline.id)
+      )
+      const scoreGradeItemIds = new Set(
+        disciplineGradeItems
+          .filter((gradeItem) => {
+            const gradeElementType = getGradeElementType(gradeItem, gradeElementTypeById)
+
+            return gradeElementType?.grading_mode !== 'pass_fail'
+          })
+          .map((gradeItem) => Number(gradeItem.id))
+      )
+      const scores = groupGrades
+        .filter((grade) => scoreGradeItemIds.has(Number(grade.grade_item_id)))
+        .map((grade) => toNumberOrNull(grade.score))
+        .filter((score): score is number => score !== null)
+
+      return {
+        label: getDisciplineName(discipline, subjectNameById),
+        averageScore: scores.length === 0 ? 0 : calculateAverage(scores),
+        gradesCount: scores.length
+      }
+    })
+    .filter((item) => item.gradesCount > 0)
+    .sort((firstItem, secondItem) => secondItem.averageScore - firstItem.averageScore)
+    .slice(0, 8)
+}
+
+function createStudentReportRow({
+  student,
+  groupGradeItems,
+  groupGrades,
+  groupLessonSessions,
+  groupAttendanceRecords,
+  gradeElementTypeById,
+  attendanceStatusById
+}: {
+  student: AdminCrudRecord
+  groupGradeItems: AdminCrudRecord[]
+  groupGrades: AdminCrudRecord[]
+  groupLessonSessions: AdminCrudRecord[]
+  groupAttendanceRecords: AdminCrudRecord[]
+  gradeElementTypeById: Map<number, AdminCrudRecord>
+  attendanceStatusById: Map<number, AdminCrudRecord>
+}): StudentReportRow {
+  const studentGrades = groupGrades.filter((grade) => Number(grade.student_id) === Number(student.id))
+  const scoreGrades = studentGrades
+    .filter((grade) => {
+      const gradeItem = groupGradeItems.find((item) => Number(item.id) === Number(grade.grade_item_id))
+      const gradeElementType = gradeItem
+        ? getGradeElementType(gradeItem, gradeElementTypeById)
+        : null
+
+      return gradeElementType?.grading_mode !== 'pass_fail'
+    })
+    .map((grade) => toNumberOrNull(grade.score))
+    .filter((score): score is number => score !== null)
+  const passFailGradeItems = groupGradeItems.filter((gradeItem) => {
+    const gradeElementType = getGradeElementType(gradeItem, gradeElementTypeById)
+
+    return gradeElementType?.grading_mode === 'pass_fail'
+  })
+  const passFailGradeItemIds = new Set(passFailGradeItems.map((gradeItem) => Number(gradeItem.id)))
+  const passFailGrades = studentGrades.filter((grade) =>
+    passFailGradeItemIds.has(Number(grade.grade_item_id))
+  )
+  const studentAttendanceRecords = groupAttendanceRecords.filter(
+    (record) => Number(record.student_id) === Number(student.id)
+  )
+  const presentMarks = studentAttendanceRecords.filter((record) =>
+    isPresentAttendanceRecord(record, attendanceStatusById)
+  ).length
+
+  return {
+    studentName: getPersonFullName(student),
+    gradesCount: studentGrades.length,
+    averageScore: scoreGrades.length === 0 ? '—' : formatScoreValue(calculateAverage(scoreGrades)),
+    passFail:
+      passFailGradeItems.length === 0
+        ? '—'
+        : `Сдано ${passFailGrades.filter((grade) => Number(grade.score) >= 1).length}/${passFailGradeItems.length}`,
+    attendance: `${presentMarks}/${groupLessonSessions.length}`
+  }
+}
+
+function calculateAttendanceRate(
+  records: AdminCrudRecord[],
+  attendanceStatusById: Map<number, AdminCrudRecord>
+): number {
+  if (records.length === 0) {
+    return 0
+  }
+
+  const presentCount = records.filter((record) =>
+    isPresentAttendanceRecord(record, attendanceStatusById)
+  ).length
+
+  return Math.round((presentCount / records.length) * 100)
+}
+
+function isPresentAttendanceRecord(
+  record: AdminCrudRecord,
+  attendanceStatusById: Map<number, AdminCrudRecord>
+): boolean {
+  const status = attendanceStatusById.get(Number(record.attendance_status_id))
+  const key = String(status?.item_key ?? '')
+
+  return key === 'present' || key === 'late' || key === 'online'
+}
+
+function getGradeElementType(
+  gradeItem: AdminCrudRecord,
+  gradeElementTypeById: Map<number, AdminCrudRecord>
+): AdminCrudRecord | null {
+  const gradeElementTypeId = toNumberOrNull(gradeItem.grade_element_type_id)
+
+  return gradeElementTypeId === null ? null : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
+}
+
+function toFilterOption(record: AdminCrudRecord): FilterOption {
+  return {
+    value: String(record.id),
+    label: getRecordName(record)
+  }
+}
+
+function createRecordMap(records: AdminCrudRecord[]): Map<number, AdminCrudRecord> {
+  return new Map(
+    records
+      .map((record) => [toNumberOrNull(record.id), record] as const)
+      .filter((entry): entry is readonly [number, AdminCrudRecord] => entry[0] !== null)
+  )
+}
+
+function createRecordNameMap(records: AdminCrudRecord[]): Map<number, string> {
+  return new Map(
+    records
+      .map((record) => [toNumberOrNull(record.id), getRecordName(record)] as const)
+      .filter((entry): entry is readonly [number, string] => entry[0] !== null)
+  )
+}
+
+function getDisciplineName(
+  discipline: AdminCrudRecord,
+  subjectNameById: Map<number, string>
+): string {
+  if (discipline.name) {
+    return String(discipline.name)
+  }
+
+  const subjectId = toNumberOrNull(discipline.subject_id)
+
+  return subjectId === null
+    ? getRecordName(discipline)
+    : (subjectNameById.get(subjectId) ?? `#${subjectId}`)
+}
+
+function getRecordName(record: AdminCrudRecord): string {
+  return record.name ? String(record.name) : `#${String(record.id)}`
+}
+
+function getPersonFullName(record: AdminCrudRecord): string {
+  const fullName = [record.last_name, record.first_name, record.middle_name]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)
+    .join(' ')
+
+  return fullName || getRecordName(record)
+}
+
+function calculateAverage(values: number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
+function formatScoreValue(value: number): string {
+  if (Number.isInteger(value)) {
+    return String(value)
+  }
+
+  return value.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function downloadCsv(filename: string, rows: Array<Record<string, unknown>>): void {
+  if (rows.length === 0) {
+    return
+  }
+
+  const headers = Object.keys(rows[0])
+  const lines = [
+    headers.join(';'),
+    ...rows.map((row) =>
+      headers
+        .map((header) => escapeCsvCell(row[header]))
+        .join(';')
+    )
+  ]
+  const blob = new Blob([`\uFEFF${lines.join('\n')}`], {
+    type: 'text/csv;charset=utf-8;'
+  })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = filename
+  link.click()
+  window.URL.revokeObjectURL(url)
+}
+
+function escapeCsvCell(value: unknown): string {
+  const text = String(value ?? '')
+
+  if (/[;"\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`
+  }
+
+  return text
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numberValue = Number(value)
+
+  return Number.isFinite(numberValue) ? numberValue : null
+}
 @endwith
 @end
