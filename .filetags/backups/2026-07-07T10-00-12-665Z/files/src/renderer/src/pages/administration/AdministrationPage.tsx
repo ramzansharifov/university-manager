@@ -26,7 +26,6 @@ import {
   TabsTrigger
 } from '../../shared/ui'
 import { RolesAdministrationPanel } from './ui/RolesAdministrationPanel'
-import { UsersAdministrationPanel } from './ui/UsersAdministrationPanel'
 
 export function AdministrationPage() {
   return (
@@ -54,7 +53,22 @@ export function AdministrationPage() {
         </TabsContent>
 
         <TabsContent value="users">
-          <UsersAdministrationPanel />
+          <Card>
+            <CardHeader>
+              <CardTitle>Пользователи</CardTitle>
+              <CardDescription>
+                Создание пользователей, привязку к студентам, преподавателям и сотрудникам добавим
+                следующим этапом.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Сначала завершаем роли и матрицу прав, затем подключим создание пользователей через
+                защищённый auth API.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

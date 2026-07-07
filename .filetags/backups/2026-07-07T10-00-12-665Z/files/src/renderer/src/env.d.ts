@@ -2,13 +2,11 @@
 
 import type {
   AuthUser,
-  AuthUserListItem,
   ChangePasswordParams,
   ChangePasswordResult,
   CreateUserParams,
   CreateUserResult,
   GetCurrentUserParams,
-  ListUsersParams,
   LoginParams,
   LoginResult,
   LogoutParams,
@@ -66,7 +64,6 @@ declare global {
         login(params: LoginParams): Promise<LoginResult>
         getCurrentUser(params: GetCurrentUserParams): Promise<AuthUser | null>
         logout(params: LogoutParams): Promise<LogoutResult>
-        listUsers(params?: ListUsersParams): Promise<AuthUserListItem[]>
         createUser(params: CreateUserParams): Promise<CreateUserResult>
         changePassword(params: ChangePasswordParams): Promise<ChangePasswordResult>
       }

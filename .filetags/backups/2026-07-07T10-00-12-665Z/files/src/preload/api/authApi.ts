@@ -1,13 +1,11 @@
 import { ipcRenderer } from 'electron'
 import type {
   AuthUser,
-  AuthUserListItem,
   ChangePasswordParams,
   ChangePasswordResult,
   CreateUserParams,
   CreateUserResult,
   GetCurrentUserParams,
-  ListUsersParams,
   LoginParams,
   LoginResult,
   LogoutParams,
@@ -25,10 +23,6 @@ export const authApi = {
 
   logout(params: LogoutParams): Promise<LogoutResult> {
     return ipcRenderer.invoke('auth:logout', params)
-  },
-
-  listUsers(params?: ListUsersParams): Promise<AuthUserListItem[]> {
-    return ipcRenderer.invoke('auth:listUsers', params)
   },
 
   createUser(params: CreateUserParams): Promise<CreateUserResult> {

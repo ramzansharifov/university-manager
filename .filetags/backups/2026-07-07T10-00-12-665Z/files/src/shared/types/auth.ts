@@ -12,21 +12,6 @@ export interface AuthUser {
   permissions: string[]
 }
 
-export interface AuthUserListItem {
-  id: number
-  username: string
-  roleId: number
-  roleKey: string
-  roleName: string
-  profileType: UserProfileType
-  profileId: number
-  profileName: string | null
-  isActive: boolean
-  lastLoginAt: string | null
-  createdAt: string
-  updatedAt: string
-}
-
 export interface LoginParams {
   username: string
   password: string
@@ -49,8 +34,6 @@ export interface LogoutParams {
 export interface LogoutResult {
   success: boolean
 }
-
-export type ListUsersParams = Record<string, never>
 
 export interface CreateUserParams {
   username: string

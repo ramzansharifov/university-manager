@@ -1,7 +1,6 @@
 import { randomBytes } from 'crypto'
 import type {
   AuthUser,
-  AuthUserListItem,
   ChangePasswordParams,
   ChangePasswordResult,
   CreateUserParams,
@@ -116,9 +115,6 @@ export class AuthService {
     }
   }
 
-  listUsers(): AuthUserListItem[] {
-    return this.authRepository.listUsers()
-  }
   createUser(params: CreateUserParams): CreateUserResult {
     this.validateCreateUserParams(params)
 

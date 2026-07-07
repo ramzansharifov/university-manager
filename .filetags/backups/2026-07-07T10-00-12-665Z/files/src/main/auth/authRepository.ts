@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import type { AuthUser, AuthUserListItem, CreateUserParams } from '../../shared/types/auth'
+import type { AuthUser, CreateUserParams } from '../../shared/types/auth'
 
 interface UserCredentialsRow {
   id: number
@@ -9,21 +9,6 @@ interface UserCredentialsRow {
   profile_type: string
   profile_id: number
   is_active: number
-}
-
-interface UserListRow {
-  id: number
-  username: string
-  roleId: number
-  roleKey: string
-  roleName: string
-  profileType: AuthUserListItem['profileType']
-  profileId: number
-  profileName: string | null
-  isActive: number
-  lastLoginAt: string | null
-  createdAt: string
-  updatedAt: string
 }
 
 interface SessionRow {
@@ -59,53 +44,6 @@ export class AuthRepository {
       .get(username) as UserCredentialsRow | undefined
 
     return row ?? null
-  }
-
-  listUsers(): AuthUserListItem[] {
-    const rows = this.database
-      .prepare(
-        `
-        SELECT
-          app_users.id,
-          app_users.username,
-          app_users.role_id as roleId,
-          roles.role_key as roleKey,
-          roles.name as roleName,
-          app_users.profile_type as profileType,
-          app_users.profile_id as profileId,
-          CASE app_users.profile_type
-            WHEN 'student' THEN (
-              SELECT trim(students.last_name || ' ' || students.first_name || ' ' || coalesce(students.middle_name, ''))
-              FROM students
-              WHERE students.id = app_users.profile_id
-              LIMIT 1
-            )
-            WHEN 'teacher' THEN (
-              SELECT trim(teachers.last_name || ' ' || teachers.first_name || ' ' || coalesce(teachers.middle_name, ''))
-              FROM teachers
-              WHERE teachers.id = app_users.profile_id
-              LIMIT 1
-            )
-            WHEN 'employee' THEN (
-              SELECT trim(employees.last_name || ' ' || employees.first_name || ' ' || coalesce(employees.middle_name, ''))
-              FROM employees
-              WHERE employees.id = app_users.profile_id
-              LIMIT 1
-            )
-            ELSE 'Системный пользователь'
-          END as profileName,
-          app_users.is_active as isActive,
-          app_users.last_login_at as lastLoginAt,
-          app_users.created_at as createdAt,
-          app_users.updated_at as updatedAt
-        FROM app_users
-        JOIN roles ON roles.id = app_users.role_id
-        ORDER BY app_users.created_at DESC, app_users.username ASC
-      `
-      )
-      .all() as UserListRow[]
-
-    return rows.map(mapUserListRow)
   }
 
   getAuthUserById(userId: number): AuthUser | null {
@@ -287,22 +225,5 @@ export class AuthRepository {
       .all(roleId) as Array<{ permission_key: string }>
 
     return rows.map((row) => row.permission_key)
-  }
-}
-
-function mapUserListRow(row: UserListRow): AuthUserListItem {
-  return {
-    id: row.id,
-    username: row.username,
-    roleId: row.roleId,
-    roleKey: row.roleKey,
-    roleName: row.roleName,
-    profileType: row.profileType,
-    profileId: row.profileId,
-    profileName: row.profileName,
-    isActive: row.isActive === 1,
-    lastLoginAt: row.lastLoginAt,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt
   }
 }

@@ -33,9 +33,6 @@ export function registerAuthIpcHandlers(): void {
     return authService.logout(params)
   })
 
-  ipcMain.handle('auth:listUsers', () => {
-    return authService.listUsers()
-  })
   ipcMain.handle('auth:createUser', (_event, params: CreateUserParams) => {
     return authService.createUser(params)
   })
