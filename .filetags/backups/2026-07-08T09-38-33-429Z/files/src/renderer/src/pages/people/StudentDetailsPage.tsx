@@ -1010,116 +1010,119 @@ function EmptyState({ children }: { children: React.ReactNode }) {
   )
 }
 
-function FilterButton({
-  active,
-  children,
-  onClick
-}: {
-  active: boolean
-  children: React.ReactNode
-  onClick: () => void
-}) {
-  return (
-    <Button type="button" size="sm" variant={active ? 'primary' : 'secondary'} onClick={onClick}>
-      {children}
-    </Button>
-  )
-}
-
-function SemesterDisciplineSection({ group }: { group: DisciplineSemesterGroup }) {
-  return (
-    <section className="overflow-hidden rounded-xl border border-[var(--color-border)]">
-      <div className="flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-[var(--color-text)]">{group.title}</h3>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Дисциплины, преподаватели и статус изучения в этом семестре.
-          </p>
-        </div>
-
-        <Badge variant="muted">Дисциплин: {group.rows.length}</Badge>
-      </div>
-
-      <table className="w-full border-collapse text-sm">
-        <thead className="bg-[var(--color-surface)]">
-          <tr>
-            <TableHead>Дисциплина</TableHead>
-            <TableHead>Предмет</TableHead>
-            <TableHead>Преподаватель</TableHead>
-            <TableHead>Статус</TableHead>
-          </tr>
-        </thead>
-        <tbody>
-          {group.rows.map((row) => (
-            <tr key={row.id} className="border-t border-[var(--color-border)]">
-              <TableCell>{row.name}</TableCell>
-              <TableCell>{row.subject}</TableCell>
-              <TableCell>{row.teacher}</TableCell>
-              <TableCell>
-                <Badge variant={row.status === '—' ? 'muted' : 'default'}>{row.status}</Badge>
-              </TableCell>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  )
-}
-
-function RecordBookSemesterSection({ group }: { group: RecordBookSemesterGroup }) {
-  return (
-    <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-base font-bold text-[var(--color-text)]">{group.title}</h3>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Итоговые результаты по дисциплинам семестра.
-          </p>
-        </div>
-
-        <Badge variant="muted">Записей: {group.rows.length}</Badge>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        {group.rows.map((row) => (
-          <article
-            key={row.id}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-[var(--color-text)]">{row.discipline}</p>
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">{row.type}</p>
-              </div>
-
-              <Badge variant={getGradeBadgeVariant(row)}>{row.score}</Badge>
-            </div>
-
-            <div className="mt-3 grid gap-2 text-xs text-[var(--color-text-muted)]">
-              <div className="flex justify-between gap-3">
-                <span>Оценочный элемент</span>
-                <span className="text-right font-medium text-[var(--color-text)]">{row.work}</span>
-              </div>
-
-              <div className="flex justify-between gap-3">
-                <span>Дата</span>
-                <span className="text-right font-medium text-[var(--color-text)]">{row.date}</span>
-              </div>
-
-              {row.comment !== '—' ? (
-                <div className="rounded-lg bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]">
-                  {row.comment}
-                </div>
-              ) : null}
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
 function createAttendanceRows(data: StudentRelatedData): AttendanceRow[] {
+  function FilterButton({
+    active,
+    children,
+    onClick
+  }: {
+    active: boolean
+    children: React.ReactNode
+    onClick: () => void
+  }) {
+    return (
+      <Button type="button" size="sm" variant={active ? 'primary' : 'secondary'} onClick={onClick}>
+        {children}
+      </Button>
+    )
+  }
+
+  function SemesterDisciplineSection({ group }: { group: DisciplineSemesterGroup }) {
+    return (
+      <section className="overflow-hidden rounded-xl border border-[var(--color-border)]">
+        <div className="flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-[var(--color-text)]">{group.title}</h3>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Дисциплины, преподаватели и статус изучения в этом семестре.
+            </p>
+          </div>
+
+          <Badge variant="muted">Дисциплин: {group.rows.length}</Badge>
+        </div>
+
+        <table className="w-full border-collapse text-sm">
+          <thead className="bg-[var(--color-surface)]">
+            <tr>
+              <TableHead>Дисциплина</TableHead>
+              <TableHead>Предмет</TableHead>
+              <TableHead>Преподаватель</TableHead>
+              <TableHead>Статус</TableHead>
+            </tr>
+          </thead>
+          <tbody>
+            {group.rows.map((row) => (
+              <tr key={row.id} className="border-t border-[var(--color-border)]">
+                <TableCell>{row.name}</TableCell>
+                <TableCell>{row.subject}</TableCell>
+                <TableCell>{row.teacher}</TableCell>
+                <TableCell>
+                  <Badge variant={row.status === '—' ? 'muted' : 'default'}>{row.status}</Badge>
+                </TableCell>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    )
+  }
+
+  function RecordBookSemesterSection({ group }: { group: RecordBookSemesterGroup }) {
+    return (
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-base font-bold text-[var(--color-text)]">{group.title}</h3>
+            <p className="text-sm text-[var(--color-text-muted)]">
+              Итоговые результаты по дисциплинам семестра.
+            </p>
+          </div>
+
+          <Badge variant="muted">Записей: {group.rows.length}</Badge>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {group.rows.map((row) => (
+            <article
+              key={row.id}
+              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-[var(--color-text)]">{row.discipline}</p>
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">{row.type}</p>
+                </div>
+
+                <Badge variant={getGradeBadgeVariant(row)}>{row.score}</Badge>
+              </div>
+
+              <div className="mt-3 grid gap-2 text-xs text-[var(--color-text-muted)]">
+                <div className="flex justify-between gap-3">
+                  <span>Оценочный элемент</span>
+                  <span className="text-right font-medium text-[var(--color-text)]">
+                    {row.work}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-3">
+                  <span>Дата</span>
+                  <span className="text-right font-medium text-[var(--color-text)]">
+                    {row.date}
+                  </span>
+                </div>
+
+                {row.comment !== '—' ? (
+                  <div className="rounded-lg bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]">
+                    {row.comment}
+                  </div>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    )
+  }
   const statusById = createRecordMap(data.attendanceStatuses)
   const sessionById = createRecordMap(data.lessonSessions)
   const scheduleItemById = createRecordMap(data.scheduleItems)

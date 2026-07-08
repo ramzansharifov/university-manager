@@ -27,7 +27,6 @@ export function LearningJournalPage() {
           <LearningJournalMatrix />
         </TabsContent>
 
-
         <TabsContent value="final-grade-elements">
           <FinalGradeElementsMatrix />
         </TabsContent>

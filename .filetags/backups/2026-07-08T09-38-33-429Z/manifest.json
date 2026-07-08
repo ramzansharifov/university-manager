@@ -1,6 +1,6 @@
 {
-  "createdAt": "2026-07-08T09:36:09.165Z",
-  "backupPath": ".filetags/backups/2026-07-08T09-36-09-126Z",
+  "createdAt": "2026-07-08T09:38:33.451Z",
+  "backupPath": ".filetags/backups/2026-07-08T09-38-33-429Z",
   "filesBackedUp": [
     {
       "originalPath": "src/renderer/src/pages/people/StudentDetailsPage.tsx",
@@ -9,6 +9,6 @@
   ],
   "directoriesRecorded": [],
   "plannedChanges": [
-    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1588 line(s)\n   new: 1589 line(s)"
+    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1589 line(s)\n   new: 1590 line(s)"
   ]
 }
