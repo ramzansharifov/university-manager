@@ -906,84 +906,12 @@ export function LearningJournalMatrix(): ReactElement {
     const hasSavedDetails = hasSavedLessonDetails(column)
 
     setActiveTopicColumnId(column.id)
-    setActiveFinalAssessmentRoundId('')
     setTopicDraft(getLessonTopic(column))
     setLessonNoteDraft(getLessonNote(column))
     setIsLessonEditorEditing(!hasSavedDetails)
     setTopicError(null)
     setGradeError(null)
     initializeIntermediateGradeDraft(column)
-  }
-  function openFinalAssessmentInfo(round: AdminCrudRecord): void {
-    setActiveFinalAssessmentRoundId(String(round.id))
-    setActiveTopicColumnId('')
-    setTopicDraft('')
-    setLessonNoteDraft('')
-    setIsLessonEditorEditing(false)
-    setTopicError(null)
-    clearIntermediateGradeDraft()
-  }
-
-  function getFinalAssessmentRoundForColumn(column: JournalColumn): AdminCrudRecord | null {
-    const lessonPeriod = getLessonPeriodByNumber(column.lessonNumber, lessonPeriods)
-
-    if (!lessonPeriod?.starts_at || !lessonPeriod.ends_at) {
-      return null
-    }
-
-    return (
-      selectedWeekFinalAssessmentRounds.find((round) => {
-        if (normalizeDayOfWeek(round.day_of_week) !== column.dayOfWeek) {
-          return false
-        }
-
-        return doTimeRangesOverlapByText(
-          round.starts_at,
-          round.ends_at,
-          lessonPeriod.starts_at,
-          lessonPeriod.ends_at
-        )
-      }) ?? null
-    )
-  }
-
-  function createFinalAssessmentColumnTitle(round: AdminCrudRecord): string {
-    const assessment = getFinalAssessmentForRound(round, finalAssessments)
-    const gradeElementTypeId = toNumberOrNull(assessment?.grade_element_type_id)
-    const gradeElementType =
-      gradeElementTypeId === null ? null : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
-    const disciplineId = toNumberOrNull(assessment?.discipline_id)
-    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
-    const teacherId = toNumberOrNull(round.teacher_id)
-    const teacher = teacherId === null ? null : (teacherById.get(teacherId) ?? null)
-    const audienceId = toNumberOrNull(round.audience_id)
-    const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
-
-    return [
-      'Итоговая аттестация',
-      `${gradeElementType ? getRecordName(gradeElementType) : 'Итог'} · ${
-        discipline
-          ? getDisciplineName(discipline, subjectNameById)
-          : getRecordName(assessment ?? round)
-      }`,
-      `${String(round.round_number ?? '—')} тур — ${getRoundLabel(round.round_type)}`,
-      formatFinalAssessmentRoundDateTime(round),
-      `Преподаватель: ${teacher ? getPersonFullName(teacher) : '—'}`,
-      `Аудитория: ${audience ? getRecordName(audience) : '—'}`,
-      'Редактируется во вкладке «Итоговая аттестация»'
-    ].join('\n')
-  }
-
-  function getFinalAssessmentColumnLabel(round: AdminCrudRecord): string {
-    const assessment = getFinalAssessmentForRound(round, finalAssessments)
-    const disciplineId = toNumberOrNull(assessment?.discipline_id)
-    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
-
-    if (!discipline) {
-      return 'Ит.'
-    }
-
-    return getDisciplineShortName(getDisciplineName(discipline, subjectNameById))
   }
 
   function clearIntermediateGradeDraft(): void {
@@ -2228,6 +2156,8 @@ export function LearningJournalMatrix(): ReactElement {
 
             {groupStudents.length > 0 ? (
               <div className="grid gap-4">
+                {renderFinalAssessmentWeekNotice()}
+
                 <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
                   <table className="w-full table-fixed border-collapse text-[11px]">
                     <colgroup>

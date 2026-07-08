@@ -605,7 +605,7 @@ export function FinalAssessmentSchedule(): ReactElement {
               assessment_date: null,
               starts_at: null,
               ends_at: null,
-              lesson_period_id: null,
+              lesson_period_id: startLessonPeriodId,
               teacher_id: defaultTeacherId,
               audience_id: null,
               status: 'not_scheduled',

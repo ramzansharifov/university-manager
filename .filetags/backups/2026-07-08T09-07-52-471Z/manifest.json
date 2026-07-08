@@ -1,0 +1,21 @@
+{
+  "createdAt": "2026-07-08T09:07:52.510Z",
+  "backupPath": ".filetags/backups/2026-07-08T09-07-52-471Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3258 line(s)\n   new: 3256 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3256 line(s)\n   new: 3257 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3257 line(s)\n   new: 3326 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx\n   found: yes\n   old: 1910 line(s)\n   new: 1910 line(s)"
+  ]
+}

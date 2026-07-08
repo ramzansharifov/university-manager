@@ -1,72 +1,142 @@
-@replace-block src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@from
-  function renderActiveFinalAssessmentDetails(): ReactElement | null {
-@endfrom
-@to
-    <div className="grid gap-4">
-@endto
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+              <div className="grid gap-4">
+                {renderFinalAssessmentWeekNotice()}
+
+                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+@endfind
 @with
-  function renderActiveFinalAssessmentDetails(): ReactElement | null {
-    if (!activeFinalAssessmentRound) {
+              <div className="grid gap-4">
+                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    const hasSavedDetails = hasSavedLessonDetails(column)
+
+    setActiveTopicColumnId(column.id)
+    setTopicDraft(getLessonTopic(column))
+    setLessonNoteDraft(getLessonNote(column))
+    setIsLessonEditorEditing(!hasSavedDetails)
+    setTopicError(null)
+    setGradeError(null)
+    initializeIntermediateGradeDraft(column)
+  }
+@endfind
+@with
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    const hasSavedDetails = hasSavedLessonDetails(column)
+
+    setActiveTopicColumnId(column.id)
+    setActiveFinalAssessmentRoundId('')
+    setTopicDraft(getLessonTopic(column))
+    setLessonNoteDraft(getLessonNote(column))
+    setIsLessonEditorEditing(!hasSavedDetails)
+    setTopicError(null)
+    setGradeError(null)
+    initializeIntermediateGradeDraft(column)
+  }
+@endwith
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    const hasSavedDetails = hasSavedLessonDetails(column)
+
+    setActiveTopicColumnId(column.id)
+    setActiveFinalAssessmentRoundId('')
+    setTopicDraft(getLessonTopic(column))
+    setLessonNoteDraft(getLessonNote(column))
+    setIsLessonEditorEditing(!hasSavedDetails)
+    setTopicError(null)
+    setGradeError(null)
+    initializeIntermediateGradeDraft(column)
+  }
+@endfind
+@content
+
+  function openFinalAssessmentInfo(round: AdminCrudRecord): void {
+    setActiveFinalAssessmentRoundId(String(round.id))
+    setActiveTopicColumnId('')
+    setTopicDraft('')
+    setLessonNoteDraft('')
+    setIsLessonEditorEditing(false)
+    setTopicError(null)
+    clearIntermediateGradeDraft()
+  }
+
+  function getFinalAssessmentRoundForColumn(column: JournalColumn): AdminCrudRecord | null {
+    const lessonPeriod = getLessonPeriodByNumber(column.lessonNumber, lessonPeriods)
+
+    if (!lessonPeriod?.starts_at || !lessonPeriod.ends_at) {
       return null
     }
 
-    const gradeElementTypeId = toNumberOrNull(activeFinalAssessment?.grade_element_type_id)
-    const gradeElementType =
-      gradeElementTypeId === null ? null : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
-    const disciplineId = toNumberOrNull(activeFinalAssessment?.discipline_id)
-    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
-    const teacherId = toNumberOrNull(activeFinalAssessmentRound.teacher_id)
-    const teacher = teacherId === null ? null : (teacherById.get(teacherId) ?? null)
-    const audienceId = toNumberOrNull(activeFinalAssessmentRound.audience_id)
-    const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
-
     return (
-      <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">
-              Справка по итоговой аттестации
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Это read-only событие из расписания итоговой аттестации. Посещаемость, тема занятия и
-              проведение пары здесь не редактируются.
-            </p>
-          </div>
-          <Badge variant="warning">Итог</Badge>
-        </div>
+      selectedWeekFinalAssessmentRounds.find((round) => {
+        if (normalizeDayOfWeek(round.day_of_week) !== column.dayOfWeek) {
+          return false
+        }
 
-        <div className="mt-3 grid gap-2 text-sm text-[var(--color-text)]">
-          <p className="font-semibold">
-            {gradeElementType ? getRecordName(gradeElementType) : 'Итоговая аттестация'} ·{' '}
-            {discipline
-              ? getDisciplineName(discipline, subjectNameById)
-              : getRecordName(activeFinalAssessment ?? activeFinalAssessmentRound)}
-          </p>
-          <p>
-            {String(activeFinalAssessmentRound.round_number ?? '—')} тур —{' '}
-            {getRoundLabel(activeFinalAssessmentRound.round_type)}
-          </p>
-          <p>{formatFinalAssessmentRoundDateTime(activeFinalAssessmentRound)}</p>
-          <p>Преподаватель: {teacher ? getPersonFullName(teacher) : '—'}</p>
-          <p>Аудитория: {audience ? getRecordName(audience) : '—'}</p>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setActiveFinalAssessmentRoundId('')}
-          >
-            Закрыть справку
-          </Button>
-        </div>
-      </div>
+        return doTimeRangesOverlapByText(
+          round.starts_at,
+          round.ends_at,
+          lessonPeriod.starts_at,
+          lessonPeriod.ends_at
+        )
+      }) ?? null
     )
   }
 
-  return (
-    <div className="grid gap-4">
+  function createFinalAssessmentColumnTitle(round: AdminCrudRecord): string {
+    const assessment = getFinalAssessmentForRound(round, finalAssessments)
+    const gradeElementTypeId = toNumberOrNull(assessment?.grade_element_type_id)
+    const gradeElementType =
+      gradeElementTypeId === null ? null : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
+    const disciplineId = toNumberOrNull(assessment?.discipline_id)
+    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
+    const teacherId = toNumberOrNull(round.teacher_id)
+    const teacher = teacherId === null ? null : (teacherById.get(teacherId) ?? null)
+    const audienceId = toNumberOrNull(round.audience_id)
+    const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
+
+    return [
+      'Итоговая аттестация',
+      `${gradeElementType ? getRecordName(gradeElementType) : 'Итог'} · ${
+        discipline ? getDisciplineName(discipline, subjectNameById) : getRecordName(assessment ?? round)
+      }`,
+      `${String(round.round_number ?? '—')} тур — ${getRoundLabel(round.round_type)}`,
+      formatFinalAssessmentRoundDateTime(round),
+      `Преподаватель: ${teacher ? getPersonFullName(teacher) : '—'}`,
+      `Аудитория: ${audience ? getRecordName(audience) : '—'}`,
+      'Редактируется во вкладке «Итоговая аттестация»'
+    ].join('\n')
+  }
+
+  function getFinalAssessmentColumnLabel(round: AdminCrudRecord): string {
+    const assessment = getFinalAssessmentForRound(round, finalAssessments)
+    const disciplineId = toNumberOrNull(assessment?.discipline_id)
+    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
+
+    if (!discipline) {
+      return 'Ит.'
+    }
+
+    return getDisciplineShortName(getDisciplineName(discipline, subjectNameById))
+  }
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
+@find
+              lesson_period_id: startLessonPeriodId,
+              teacher_id: defaultTeacherId,
+@endfind
+@with
+              lesson_period_id: null,
+              teacher_id: defaultTeacherId,
 @endwith
 @end
