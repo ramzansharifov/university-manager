@@ -2589,7 +2589,7 @@ export function LearningJournalMatrix(): ReactElement {
                     Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто. Тема
                     занятия редактируется через сокращение предмета в нижней строке.
                   </div>
-                ) : null}
+                )}
               </div>
             ) : null}
           </CardContent>
