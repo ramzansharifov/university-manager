@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { FiArrowRight } from 'react-icons/fi'
+import { FiArrowRight, FiEye } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
@@ -21,6 +22,7 @@ export function EmployeesByDivisionPanel({
   positionOptions
 }: EmployeesByDivisionPanelProps) {
   const [selectedDivision, setSelectedDivision] = useState<AdminCrudRecord | null>(null)
+  const navigate = useNavigate()
 
   const employeeFilters = useMemo(
     () => (selectedDivision ? { division_id: Number(selectedDivision.id) } : undefined),
@@ -101,6 +103,13 @@ export function EmployeesByDivisionPanel({
   function backToDivisions() {
     setSelectedDivision(null)
   }
+  function openEmployeeDetails(record: AdminCrudRecord) {
+    if (!record.id) {
+      return
+    }
+
+    navigate(`/people/employees/${String(record.id)}`)
+  }
 
   return (
     <div className="grid gap-4">
@@ -140,6 +149,17 @@ export function EmployeesByDivisionPanel({
           filters={employeeFilters}
           fixedData={employeeFixedData}
           emptyMessage="В этом подразделении пока нет сотрудников."
+          extraRowActions={(record) => (
+            <Button
+              size="sm"
+              variant="ghost"
+              title="Открыть карточку"
+              aria-label="Открыть карточку сотрудника"
+              onClick={() => openEmployeeDetails(record)}
+            >
+              <FiEye />
+            </Button>
+          )}
         />
       ) : null}
     </div>

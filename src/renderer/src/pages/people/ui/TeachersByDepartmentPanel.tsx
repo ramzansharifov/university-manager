@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FiArrowRight } from 'react-icons/fi'
+import { FiArrowRight, FiEye } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { Badge, Button, Card, CardContent } from '../../../shared/ui'
@@ -27,6 +28,7 @@ export function TeachersByDepartmentPanel({
   teacherStatusOptions
 }: TeachersByDepartmentPanelProps) {
   const [selectedDepartment, setSelectedDepartment] = useState<AdminCrudRecord | null>(null)
+  const navigate = useNavigate()
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
   const [subjectOptions, setSubjectOptions] = useState<AdminCrudSelectOption[]>([])
 
@@ -140,6 +142,13 @@ export function TeachersByDepartmentPanel({
   function backToDepartments() {
     setSelectedDepartment(null)
   }
+  function openTeacherDetails(record: AdminCrudRecord) {
+    if (!record.id) {
+      return
+    }
+
+    navigate(`/people/teachers/${String(record.id)}`)
+  }
 
   return (
     <div className="grid gap-4">
@@ -183,6 +192,17 @@ export function TeachersByDepartmentPanel({
           filters={teacherFilters}
           fixedData={teacherFixedData}
           emptyMessage="На этой кафедре пока нет преподавателей."
+          extraRowActions={(record) => (
+            <Button
+              size="sm"
+              variant="ghost"
+              title="Открыть карточку"
+              aria-label="Открыть карточку преподавателя"
+              onClick={() => openTeacherDetails(record)}
+            >
+              <FiEye />
+            </Button>
+          )}
         />
       ) : null}
     </div>
