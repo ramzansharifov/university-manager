@@ -2143,8 +2143,6 @@ export function LearningJournalMatrix(): ReactElement {
 
             {groupStudents.length > 0 ? (
               <div className="grid gap-4">
-                {renderFinalAssessmentWeekNotice()}
-
                 <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
                   <table className="w-full table-fixed border-collapse text-[11px]">
                     <colgroup>
@@ -2176,14 +2174,6 @@ export function LearningJournalMatrix(): ReactElement {
                             <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
                               ({dayGroup.dayLabel})
                             </span>
-                            {hasFinalAssessmentRoundForDay(
-                              selectedWeekFinalAssessmentRounds,
-                              dayGroup.dayOfWeek
-                            ) ? (
-                              <div className="mt-1">
-                                <Badge variant="warning">Итог</Badge>
-                              </div>
-                            ) : null}
                           </th>
                         ))}
                       </tr>
