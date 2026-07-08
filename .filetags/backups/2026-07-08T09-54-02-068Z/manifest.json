@@ -1,0 +1,29 @@
+{
+  "createdAt": "2026-07-08T09:54:02.116Z",
+  "backupPath": ".filetags/backups/2026-07-08T09-54-02-068Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/people/ui/EmployeesByDivisionPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/people/ui/EmployeesByDivisionPanel.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/filters/FilterTeachersPage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/filters/FilterTeachersPage.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/filters/FilterEmployeesPage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/filters/FilterEmployeesPage.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/people/ui/TeachersByDepartmentPanel.tsx\n   found: yes\n   old: 240 line(s)\n   new: 242 line(s)",
+    "Replace file: src/renderer/src/pages/people/ui/EmployeesByDivisionPanel.tsx\n   found: yes\n   old: 197 line(s)\n   new: 199 line(s)",
+    "Write file: src/renderer/src/pages/filters/FilterTeachersPage.tsx\n   old: 27 line(s)\n   new: 482 line(s)",
+    "Write file: src/renderer/src/pages/filters/FilterEmployeesPage.tsx\n   old: 26 line(s)\n   new: 463 line(s)"
+  ]
+}

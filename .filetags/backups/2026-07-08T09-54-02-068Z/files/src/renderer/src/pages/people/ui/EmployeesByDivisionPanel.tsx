@@ -149,17 +149,15 @@ export function EmployeesByDivisionPanel({
           filters={employeeFilters}
           fixedData={employeeFixedData}
           emptyMessage="В этом подразделении пока нет сотрудников."
-          onRowClick={openEmployeeDetails}
           extraRowActions={(record) => (
             <Button
               size="sm"
-              variant="primary"
+              variant="ghost"
               title="Открыть карточку"
               aria-label="Открыть карточку сотрудника"
               onClick={() => openEmployeeDetails(record)}
             >
               <FiEye />
-              Карточка
             </Button>
           )}
         />

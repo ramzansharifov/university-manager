@@ -192,17 +192,15 @@ export function TeachersByDepartmentPanel({
           filters={teacherFilters}
           fixedData={teacherFixedData}
           emptyMessage="На этой кафедре пока нет преподавателей."
-          onRowClick={openTeacherDetails}
           extraRowActions={(record) => (
             <Button
               size="sm"
-              variant="primary"
+              variant="ghost"
               title="Открыть карточку"
               aria-label="Открыть карточку преподавателя"
               onClick={() => openTeacherDetails(record)}
             >
               <FiEye />
-              Карточка
             </Button>
           )}
         />
