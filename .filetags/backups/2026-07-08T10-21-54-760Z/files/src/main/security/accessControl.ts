@@ -13,13 +13,10 @@ const teacherPermissions = [
 ]
 
 const studentPermissions = [
-  'university.view',
-  'people.view',
   'academic_process.view',
   'schedule.view',
   'learning_journal.view',
-  'reports.view',
-  'settings.view'
+  'reports.view'
 ]
 
 export function canPerformAction(

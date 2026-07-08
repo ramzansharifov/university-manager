@@ -1,134 +1,86 @@
-@write src/renderer/src/shared/ui/input/Input.tsx
-import type { InputHTMLAttributes } from 'react'
-import { forwardRef } from 'react'
-import { cn } from '../../lib/cn'
+@replace-first src/main/security/accessControl.ts
+@find
+const studentPermissions = [
+  'academic_process.view',
+  'schedule.view',
+  'learning_journal.view',
+  'reports.view'
+]
+@endfind
+@with
+const studentPermissions = [
+  'university.view',
+  'people.view',
+  'academic_process.view',
+  'schedule.view',
+  'learning_journal.view',
+  'reports.view',
+  'settings.view'
+]
+@endwith
+@end
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  error?: boolean
+@replace-first src/renderer/src/shared/auth/accessControl.ts
+@find
+const studentPermissions = [
+  'academic_process.view',
+  'schedule.view',
+  'learning_journal.view',
+  'reports.view'
+]
+@endfind
+@with
+const studentPermissions = [
+  'university.view',
+  'people.view',
+  'academic_process.view',
+  'schedule.view',
+  'learning_journal.view',
+  'reports.view',
+  'settings.view'
+]
+@endwith
+@end
+
+@replace-first src/renderer/src/shared/navigation/routeAccess.ts
+@find
+export function canAccessPath(user: AuthUser | null, pathname: string): boolean {
+  if (!user) {
+    return false
+  }
+
+  const module = getRouteAccessModule(pathname)
+
+  if (!module) {
+    return true
+  }
+
+  return canViewModule(user, module)
 }
-
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, error = false, ...props },
-  ref
-) {
-  return (
-    <input
-      ref={ref}
-      className={cn(
-        'h-10 w-full rounded-lg border bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition-colors',
-        'placeholder:text-[var(--color-text-muted)]',
-        'focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20',
-        error ? 'border-[var(--color-danger)]' : 'border-[var(--color-border)]',
-        className
-      )}
-      {...props}
-    />
-  )
-})
-@end
-
-@replace-first src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
-@find
-import { useCallback, useEffect, useMemo, useState } from 'react'
 @endfind
 @with
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-@endwith
-@end
+export function canAccessPath(user: AuthUser | null, pathname: string): boolean {
+  if (!user) {
+    return false
+  }
 
-@insert-after-once src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
-@find
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-@endfind
-@content
-  const usernameInputRef = useRef<HTMLInputElement | null>(null)
-@endcontent
-@end
+  const normalizedPathname = normalizePathname(pathname)
 
-@replace-first src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
-@find
-        <DialogContent
-          className="max-h-[90vh] max-w-3xl overflow-y-auto"
-          onPointerDownOutside={(event) => {
-            event.preventDefault()
-          }}
-@endfind
-@with
-        <DialogContent
-          className="z-[60] max-h-[90vh] max-w-3xl overflow-y-auto"
-          onOpenAutoFocus={(event) => {
-            event.preventDefault()
+  if (user.profileType === 'student') {
+    if (normalizedPathname === '/') {
+      return false
+    }
 
-            window.setTimeout(() => {
-              usernameInputRef.current?.focus()
-            }, 0)
-          }}
-          onPointerDownOutside={(event) => {
-            event.preventDefault()
-          }}
-@endwith
-@end
+    return isExactOrNested(normalizedPathname, '/student')
+  }
 
-@replace-first src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
-@find
-              <Input
-                value={formUsername}
-                autoComplete="off"
-                placeholder="Например: ivanov"
-                onChange={(event) => setFormUsername(event.target.value)}
-              />
-@endfind
-@with
-              <Input
-                ref={usernameInputRef}
-                value={formUsername}
-                autoComplete="username"
-                placeholder="Например: ivanov"
-                error={Boolean(errorMessage && !formUsername.trim())}
-                onChange={(event) => {
-                  setFormUsername(event.target.value)
+  const module = getRouteAccessModule(normalizedPathname)
 
-                  if (errorMessage) {
-                    setErrorMessage(null)
-                  }
-                }}
-              />
-@endwith
-@end
+  if (!module) {
+    return true
+  }
 
-@replace-first src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
-@find
-              <Input
-                value={formPassword}
-                type="password"
-                autoComplete="new-password"
-                placeholder={
-                  dialogMode === 'create'
-                    ? 'Минимум 4 символа'
-                    : 'Оставь пустым, если пароль менять не нужно'
-                }
-                onChange={(event) => setFormPassword(event.target.value)}
-              />
-@endfind
-@with
-              <Input
-                value={formPassword}
-                type="password"
-                autoComplete="new-password"
-                placeholder={
-                  dialogMode === 'create'
-                    ? 'Минимум 4 символа'
-                    : 'Оставь пустым, если пароль менять не нужно'
-                }
-                error={Boolean(errorMessage && dialogMode === 'create' && formPassword.length < 4)}
-                onChange={(event) => {
-                  setFormPassword(event.target.value)
-
-                  if (errorMessage) {
-                    setErrorMessage(null)
-                  }
-                }}
-              />
+  return canViewModule(user, module)
+}
 @endwith
 @end

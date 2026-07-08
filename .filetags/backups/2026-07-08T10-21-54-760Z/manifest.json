@@ -1,0 +1,24 @@
+{
+  "createdAt": "2026-07-08T10:21:54.819Z",
+  "backupPath": ".filetags/backups/2026-07-08T10-21-54-760Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/main/security/accessControl.ts",
+      "backupRelativePath": "files/src/main/security/accessControl.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/shared/auth/accessControl.ts",
+      "backupRelativePath": "files/src/renderer/src/shared/auth/accessControl.ts"
+    },
+    {
+      "originalPath": "src/renderer/src/shared/navigation/routeAccess.ts",
+      "backupRelativePath": "files/src/renderer/src/shared/navigation/routeAccess.ts"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/main/security/accessControl.ts\n   found: yes\n   old: 45 line(s)\n   new: 48 line(s)",
+    "Replace file: src/renderer/src/shared/auth/accessControl.ts\n   found: yes\n   old: 101 line(s)\n   new: 104 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/routeAccess.ts\n   found: yes\n   old: 108 line(s)\n   new: 118 line(s)"
+  ]
+}

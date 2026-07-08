@@ -75,17 +75,7 @@ export function canAccessPath(user: AuthUser | null, pathname: string): boolean 
     return false
   }
 
-  const normalizedPathname = normalizePathname(pathname)
-
-  if (user.profileType === 'student') {
-    if (normalizedPathname === '/') {
-      return false
-    }
-
-    return isExactOrNested(normalizedPathname, '/student')
-  }
-
-  const module = getRouteAccessModule(normalizedPathname)
+  const module = getRouteAccessModule(pathname)
 
   if (!module) {
     return true
