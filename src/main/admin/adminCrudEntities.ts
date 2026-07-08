@@ -267,7 +267,7 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
   ),
   grades: entity(
     'grades',
-    ['grade_item_id', 'student_id', 'score', 'comment', 'graded_by_user_id'],
+    ['grade_item_id', 'student_id', 'score', 'result_status', 'comment', 'graded_by_user_id'],
     ['comment'],
     {}
   ),

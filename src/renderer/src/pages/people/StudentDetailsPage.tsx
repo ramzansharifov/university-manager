@@ -956,7 +956,8 @@ function createGradeRows(data: StudentRelatedData): GradeRow[] {
       const gradeElementType = gradeItem
         ? getRecordById(gradeItem.grade_element_type_id, gradeElementTypeById)
         : null
-      const numericScore = toNumberOrNull(grade.score)
+      const resultStatus = getGradeResultStatus(grade, gradeElementType)
+      const numericScore = resultStatus === 'absent' ? null : toNumberOrNull(grade.score)
 
       return {
         id: String(grade.id ?? index),
@@ -964,7 +965,7 @@ function createGradeRows(data: StudentRelatedData): GradeRow[] {
         work: gradeItem ? getRecordName(gradeItem) : `Работа #${String(grade.grade_item_id ?? '')}`,
         type: gradeElementType ? getRecordName(gradeElementType) : '—',
         date: formatDateForDisplay(gradeItem?.grade_date),
-        score: getScoreLabel(grade, gradeItem),
+        score: getScoreLabel(grade, gradeItem, gradeElementType),
         numericScore,
         comment: formatValue(grade.comment)
       }
@@ -1011,7 +1012,25 @@ function getLessonLabel(
   return `${day}, ${periodLabel}`
 }
 
-function getScoreLabel(grade: AdminCrudRecord, gradeItem: AdminCrudRecord | null): string {
+function getScoreLabel(
+  grade: AdminCrudRecord,
+  gradeItem: AdminCrudRecord | null,
+  gradeElementType: AdminCrudRecord | null
+): string {
+  const resultStatus = getGradeResultStatus(grade, gradeElementType)
+
+  if (resultStatus === 'absent') {
+    return 'Неявка'
+  }
+
+  if (resultStatus === 'passed') {
+    return 'Сдал'
+  }
+
+  if (resultStatus === 'failed') {
+    return 'Не сдал'
+  }
+
   const score = formatValue(grade.score)
 
   if (!gradeItem?.max_score) {
@@ -1019,6 +1038,23 @@ function getScoreLabel(grade: AdminCrudRecord, gradeItem: AdminCrudRecord | null
   }
 
   return `${score} / ${formatValue(gradeItem.max_score)}`
+}
+
+function getGradeResultStatus(
+  grade: AdminCrudRecord,
+  gradeElementType: AdminCrudRecord | null
+): 'graded' | 'passed' | 'failed' | 'absent' {
+  const resultStatus = String(grade.result_status ?? '')
+
+  if (resultStatus === 'absent' || resultStatus === 'passed' || resultStatus === 'failed') {
+    return resultStatus
+  }
+
+  if (gradeElementType?.grading_mode === 'pass_fail') {
+    return Number(grade.score) >= 1 ? 'passed' : 'failed'
+  }
+
+  return 'graded'
 }
 
 function getEducationLine(data: StudentRelatedData): string {

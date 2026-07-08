@@ -455,17 +455,21 @@ export function LearningJournalDisciplineGroup(): ReactElement {
         Number(grade.student_id) === Number(student.id) &&
         disciplineGradeItemIds.has(Number(grade.grade_item_id))
     )
+    const getGradeElementTypeForGrade = (grade: AdminCrudRecord): AdminCrudRecord | null => {
+      const gradeItem = selectedDisciplineGradeItems.find(
+        (item) => Number(item.id) === Number(grade.grade_item_id)
+      )
+
+      return gradeItem ? getGradeElementType(gradeItem, gradeElementTypeById) : null
+    }
     const scoreGrades = studentGrades
       .filter((grade) => {
-        const gradeItem = selectedDisciplineGradeItems.find(
-          (item) => Number(item.id) === Number(grade.grade_item_id)
-        )
-        const gradeElementType = gradeItem
-          ? getGradeElementType(gradeItem, gradeElementTypeById)
-          : null
+        const gradeElementType = getGradeElementTypeForGrade(grade)
 
         return (
-          gradeElementType?.grading_mode !== 'pass_fail' && Number(gradeElementType?.is_final) !== 1
+          getGradeResultStatus(grade, gradeElementType) !== 'absent' &&
+          gradeElementType?.grading_mode !== 'pass_fail' &&
+          Number(gradeElementType?.is_final) !== 1
         )
       })
       .map((grade) => toNumberOrNull(grade.score))
@@ -487,11 +491,16 @@ export function LearningJournalDisciplineGroup(): ReactElement {
     )
     const finalScores = studentGrades
       .filter((grade) => {
+        const gradeElementType = getGradeElementTypeForGrade(grade)
         const gradeItem = selectedDisciplineGradeItems.find(
           (item) => Number(item.id) === Number(grade.grade_item_id)
         )
 
-        return gradeItem ? isFinalGradeItem(gradeItem, gradeElementTypeById) : false
+        return (
+          getGradeResultStatus(grade, gradeElementType) !== 'absent' &&
+          gradeElementType?.grading_mode !== 'pass_fail' &&
+          (gradeItem ? isFinalGradeItem(gradeItem, gradeElementTypeById) : false)
+        )
       })
       .map((grade) => toNumberOrNull(grade.score))
       .filter((score): score is number => score !== null)
@@ -518,7 +527,10 @@ export function LearningJournalDisciplineGroup(): ReactElement {
         passFailGradeItems.length === 0
           ? '—'
           : `Сдано ${
-              passFailGrades.filter((grade) => Number(grade.score) >= 1).length
+              passFailGrades.filter(
+                (grade) =>
+                  getGradeResultStatus(grade, getGradeElementTypeForGrade(grade)) === 'passed'
+              ).length
             }/${passFailGradeItems.length}`,
       finalAverage:
         finalScores.length === 0 ? '—' : formatScoreValue(calculateAverage(finalScores)),
@@ -1225,16 +1237,36 @@ function getGradeItemStatsText({
   groupStudentsCount: number
 }): string {
   if (gradeElementType?.grading_mode === 'pass_fail') {
-    const passedCount = grades.filter((grade) => Number(grade.score) >= 1).length
+    const passedCount = grades.filter(
+      (grade) => getGradeResultStatus(grade, gradeElementType) === 'passed'
+    ).length
 
     return grades.length === 0 ? '—' : `Сдано ${passedCount}/${groupStudentsCount}`
   }
 
   const scores = grades
+    .filter((grade) => getGradeResultStatus(grade, gradeElementType) !== 'absent')
     .map((grade) => toNumberOrNull(grade.score))
     .filter((score): score is number => score !== null)
 
   return scores.length === 0 ? '—' : `Средний балл ${formatScoreValue(calculateAverage(scores))}`
+}
+
+function getGradeResultStatus(
+  grade: AdminCrudRecord,
+  gradeElementType: AdminCrudRecord | null
+): 'graded' | 'passed' | 'failed' | 'absent' {
+  const resultStatus = String(grade.result_status ?? '')
+
+  if (resultStatus === 'absent' || resultStatus === 'passed' || resultStatus === 'failed') {
+    return resultStatus
+  }
+
+  if (gradeElementType?.grading_mode === 'pass_fail') {
+    return Number(grade.score) >= 1 ? 'passed' : 'failed'
+  }
+
+  return 'graded'
 }
 
 function compareGradeItems(firstItem: AdminCrudRecord, secondItem: AdminCrudRecord): number {

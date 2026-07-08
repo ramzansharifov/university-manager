@@ -25,7 +25,21 @@ type FilterOption = {
   label: string
 }
 
-type GradeTone = 'empty' | 'minimum' | 'belowPassing' | 'passing' | 'maximum'
+type GradeTone = 'empty' | 'minimum' | 'belowPassing' | 'passing' | 'maximum' | 'absent'
+type GradeResultStatus = 'graded' | 'passed' | 'failed' | 'absent'
+
+type DisciplineCompletionSummary = {
+  total: number
+  conducted: number
+  completed: number
+  remaining: number
+  isCompleted: boolean
+}
+
+type GradeSaveValue = {
+  score: number
+  resultStatus: GradeResultStatus
+}
 
 export function FinalGradeElementsMatrix(): ReactElement {
   const [faculties, setFaculties] = useState<AdminCrudRecord[]>([])
@@ -36,6 +50,10 @@ export function FinalGradeElementsMatrix(): ReactElement {
   const [disciplines, setDisciplines] = useState<AdminCrudRecord[]>([])
   const [academicYears, setAcademicYears] = useState<AdminCrudRecord[]>([])
   const [semesters, setSemesters] = useState<AdminCrudRecord[]>([])
+  const [weeks, setWeeks] = useState<AdminCrudRecord[]>([])
+  const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
+  const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
+  const [lessonCompletionRecords, setLessonCompletionRecords] = useState<AdminCrudRecord[]>([])
   const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
   const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
   const [grades, setGrades] = useState<AdminCrudRecord[]>([])
@@ -66,6 +84,10 @@ export function FinalGradeElementsMatrix(): ReactElement {
         disciplinesResult,
         academicYearsResult,
         semestersResult,
+        weeksResult,
+        scheduleItemsResult,
+        lessonSessionsResult,
+        lessonCompletionRecordsResult,
         gradeElementTypesResult,
         gradeItemsResult,
         gradesResult,
@@ -128,6 +150,34 @@ export function FinalGradeElementsMatrix(): ReactElement {
           orderDirection: 'asc'
         }),
         window.api.adminCrud.list({
+          entity: 'weeks',
+          page: 1,
+          pageSize: 2000,
+          orderBy: 'number',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'schedule_items',
+          page: 1,
+          pageSize: 10000,
+          orderBy: 'day_of_week',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'lesson_sessions',
+          page: 1,
+          pageSize: 10000,
+          orderBy: 'lesson_date',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'lesson_completion_records',
+          page: 1,
+          pageSize: 10000,
+          orderBy: 'id',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
           entity: 'grade_element_types',
           page: 1,
           pageSize: 500,
@@ -166,12 +216,16 @@ export function FinalGradeElementsMatrix(): ReactElement {
       setDisciplines(disciplinesResult.items)
       setAcademicYears(academicYearsResult.items)
       setSemesters(semestersResult.items)
+      setWeeks(weeksResult.items)
+      setScheduleItems(scheduleItemsResult.items)
+      setLessonSessions(lessonSessionsResult.items)
+      setLessonCompletionRecords(lessonCompletionRecordsResult.items)
       setGradeElementTypes(gradeElementTypesResult.items)
       setGradeItems(gradeItemsResult.items)
       setGrades(gradesResult.items)
       setGradeCategories(gradeCategoriesResult.items)
     } catch (error) {
-      setLoadError(getUserFacingError(error, 'Не удалось загрузить итоговые оценки'))
+      setLoadError(getUserFacingError(error, 'Не удалось загрузить итоговую ведомость'))
     } finally {
       setIsLoading(false)
     }
@@ -298,6 +352,37 @@ export function FinalGradeElementsMatrix(): ReactElement {
     [gradeElementTypes]
   )
 
+  const weekById = useMemo(() => createRecordMap(weeks), [weeks])
+  const selectedDisciplineScheduleItems = useMemo(() => {
+    if (!selectedGroupId || !selectedSemesterId || !selectedDisciplineId) {
+      return []
+    }
+
+    return scheduleItems.filter((scheduleItem) => {
+      if (
+        Number(scheduleItem.group_id) !== Number(selectedGroupId) ||
+        Number(scheduleItem.discipline_id) !== Number(selectedDisciplineId)
+      ) {
+        return false
+      }
+
+      const weekId = toNumberOrNull(scheduleItem.week_id)
+      const week = weekId === null ? null : weekById.get(weekId)
+
+      return Number(week?.semester_id) === Number(selectedSemesterId)
+    })
+  }, [scheduleItems, selectedDisciplineId, selectedGroupId, selectedSemesterId, weekById])
+
+  const disciplineCompletionSummary = useMemo(
+    () =>
+      getDisciplineCompletionSummary({
+        scheduleItems: selectedDisciplineScheduleItems,
+        lessonSessions,
+        lessonCompletionRecords
+      }),
+    [lessonCompletionRecords, lessonSessions, selectedDisciplineScheduleItems]
+  )
+
   const selectedFinalGradeItem = useMemo(() => {
     if (!selectedDisciplineId || !selectedFinalTypeId) {
       return null
@@ -308,14 +393,10 @@ export function FinalGradeElementsMatrix(): ReactElement {
         (gradeItem) =>
           Number(gradeItem.discipline_id) === Number(selectedDisciplineId) &&
           Number(gradeItem.grade_element_type_id) === Number(selectedFinalTypeId) &&
-          toNumberOrNull(gradeItem.lesson_session_id) === null
-      ) ??
-      gradeItems.find(
-        (gradeItem) =>
-          Number(gradeItem.discipline_id) === Number(selectedDisciplineId) &&
-          Number(gradeItem.grade_element_type_id) === Number(selectedFinalTypeId)
-      ) ??
-      null
+          toNumberOrNull(gradeItem.lesson_session_id) === null &&
+          toNumberOrNull(gradeItem.week_id) === null &&
+          toNumberOrNull(gradeItem.day_of_week) === null
+      ) ?? null
     )
   }, [gradeItems, selectedDisciplineId, selectedFinalTypeId])
 
@@ -327,6 +408,8 @@ export function FinalGradeElementsMatrix(): ReactElement {
     selectedDiscipline &&
     selectedFinalType
   )
+  const isDisciplineCompleted = disciplineCompletionSummary.isCompleted
+  const isGradeInputDisabled = isSavingGrade || !isDisciplineCompleted
 
   function handleFacultyChange(value: string): void {
     setSelectedFacultyId(value)
@@ -409,33 +492,44 @@ export function FinalGradeElementsMatrix(): ReactElement {
       throw new Error('Выбери дисциплину и итоговый оценочный элемент')
     }
 
-    const maxScore = getGradeElementTypeMaxScore(selectedFinalType)
-    const gradeCategoryId = getFinalGradeCategoryId(selectedFinalType, gradeCategories)
     const result = await window.api.adminCrud.create({
       entity: 'grade_items',
       data: {
         discipline_id: Number(selectedDiscipline.id),
         lesson_session_id: null,
         grade_element_type_id: Number(selectedFinalType.id),
-        grade_category_id: gradeCategoryId,
+        grade_category_id: getFinalGradeCategoryId(selectedFinalType, gradeCategories),
         week_id: null,
         day_of_week: null,
-        name: getRecordName(selectedFinalType),
-        max_score: maxScore,
-        grade_date: null,
-        description: null
+        name: `${getRecordName(selectedFinalType)} · ${getDisciplineName(
+          selectedDiscipline,
+          subjects
+        )}`,
+        max_score: getGradeElementTypeMaxScore(selectedFinalType),
+        grade_date: getCurrentDate(),
+        description: 'Итоговая ведомость'
       }
     })
 
     if (!result.item?.id) {
-      throw new Error('Не удалось создать итоговый оценочный элемент')
+      throw new Error('Не удалось создать итоговую ведомость')
     }
 
     return result.item
   }
 
-  async function saveStudentGrade(student: AdminCrudRecord, score: number | null): Promise<void> {
+  async function saveStudentGrade(
+    student: AdminCrudRecord,
+    value: GradeSaveValue | null
+  ): Promise<void> {
     if (isSavingGrade) {
+      return
+    }
+
+    if (!isDisciplineCompleted) {
+      setGradeError(
+        'Итоговую ведомость можно заполнить только после завершения всех занятий дисциплины'
+      )
       return
     }
 
@@ -451,10 +545,10 @@ export function FinalGradeElementsMatrix(): ReactElement {
 
     try {
       const gradeItem =
-        selectedFinalGradeItem ?? (score === null ? null : await ensureFinalGradeItem())
+        selectedFinalGradeItem ?? (value === null ? null : await ensureFinalGradeItem())
       const existingGrade = getStudentGradeRecord(student, gradeItem)
 
-      if (score === null) {
+      if (value === null) {
         if (existingGrade?.id) {
           await window.api.adminCrud.delete({
             entity: 'grades',
@@ -467,16 +561,19 @@ export function FinalGradeElementsMatrix(): ReactElement {
       }
 
       if (!gradeItem?.id) {
-        throw new Error('Не удалось определить итоговый оценочный элемент')
+        throw new Error('Не удалось определить итоговую ведомость')
+      }
+
+      const payload = {
+        score: value.score,
+        result_status: value.resultStatus
       }
 
       if (existingGrade?.id) {
         await window.api.adminCrud.update({
           entity: 'grades',
           id: Number(existingGrade.id),
-          data: {
-            score
-          }
+          data: payload
         })
       } else {
         await window.api.adminCrud.create({
@@ -484,7 +581,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
           data: {
             grade_item_id: Number(gradeItem.id),
             student_id: studentId,
-            score,
+            ...payload,
             comment: null,
             graded_by_user_id: null
           }
@@ -496,6 +593,18 @@ export function FinalGradeElementsMatrix(): ReactElement {
       setGradeError(getUserFacingError(error, 'Не удалось сохранить итоговую оценку'))
     } finally {
       setIsSavingGrade(false)
+    }
+  }
+
+  function handleScoreStatusChange(student: AdminCrudRecord, value: string): void {
+    if (value === emptySelectValue) {
+      void saveStudentGrade(student, null)
+      return
+    }
+
+    if (value === 'absent') {
+      void saveStudentGrade(student, { score: 0, resultStatus: 'absent' })
+      return
     }
   }
 
@@ -516,7 +625,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
       return
     }
 
-    void saveStudentGrade(student, score)
+    void saveStudentGrade(student, { score, resultStatus: 'graded' })
   }
 
   function handlePassFailGradeChange(student: AdminCrudRecord, value: string): void {
@@ -525,57 +634,97 @@ export function FinalGradeElementsMatrix(): ReactElement {
       return
     }
 
-    void saveStudentGrade(student, value === 'pass' ? 1 : 0)
+    if (value === 'absent') {
+      void saveStudentGrade(student, { score: 0, resultStatus: 'absent' })
+      return
+    }
+
+    void saveStudentGrade(student, {
+      score: value === 'passed' ? 1 : 0,
+      resultStatus: value === 'passed' ? 'passed' : 'failed'
+    })
   }
 
-  function renderGradeCell(student: AdminCrudRecord): ReactElement {
+  function renderStatusCell(student: AdminCrudRecord): ReactElement {
     const grade = getStudentGradeRecord(student, selectedFinalGradeItem)
+    const status = getGradeResultStatus(grade, selectedFinalType)
 
     if (selectedFinalType?.grading_mode === 'pass_fail') {
-      const value =
-        grade?.score === null || grade?.score === undefined
-          ? emptySelectValue
-          : Number(grade.score) >= 1
-            ? 'pass'
-            : 'fail'
-
       return (
         <Select
-          value={value}
-          disabled={isSavingGrade}
+          value={grade ? status : emptySelectValue}
+          disabled={isGradeInputDisabled}
           onValueChange={(nextValue) => handlePassFailGradeChange(student, nextValue)}
         >
-          <SelectTrigger className="mx-auto h-8 w-32 text-xs">
+          <SelectTrigger className="mx-auto h-8 w-36 text-xs">
             <SelectValue placeholder="—" />
           </SelectTrigger>
 
           <SelectContent>
             <SelectItem value={emptySelectValue}>—</SelectItem>
-            <SelectItem value="pass">Сдал</SelectItem>
-            <SelectItem value="fail">Не сдал</SelectItem>
+            <SelectItem value="absent">Неявка</SelectItem>
+            <SelectItem value="passed">Сдал</SelectItem>
+            <SelectItem value="failed">Не сдал</SelectItem>
           </SelectContent>
         </Select>
       )
     }
 
+    return (
+      <Select
+        value={grade ? status : emptySelectValue}
+        disabled={isGradeInputDisabled}
+        onValueChange={(nextValue) => handleScoreStatusChange(student, nextValue)}
+      >
+        <SelectTrigger className="mx-auto h-8 w-36 text-xs">
+          <SelectValue placeholder="—" />
+        </SelectTrigger>
+
+        <SelectContent>
+          <SelectItem value={emptySelectValue}>—</SelectItem>
+          <SelectItem value="absent">Неявка</SelectItem>
+          <SelectItem value="graded">Оценено</SelectItem>
+        </SelectContent>
+      </Select>
+    )
+  }
+
+  function renderScoreCell(student: AdminCrudRecord): ReactElement {
+    const grade = getStudentGradeRecord(student, selectedFinalGradeItem)
+    const status = getGradeResultStatus(grade, selectedFinalType)
+
+    if (selectedFinalType?.grading_mode === 'pass_fail') {
+      return <span className="text-xs text-[var(--color-text-muted)]">—</span>
+    }
+
+    const score = status === 'absent' ? null : toNumberOrNull(grade?.score)
     const minScore = getGradeElementTypeMinScore(selectedFinalType)
     const maxScore = getGradeElementTypeMaxScore(selectedFinalType)
-    const score = toNumberOrNull(grade?.score)
-    const tone = getGradeTone(
-      score,
-      minScore,
-      maxScore,
-      getGradeElementTypePassingScore(selectedFinalType)
-    )
+    const tone =
+      status === 'absent'
+        ? 'absent'
+        : getGradeTone(
+            score,
+            minScore,
+            maxScore,
+            getGradeElementTypePassingScore(selectedFinalType)
+          )
 
     return (
       <ScoreInput
         value={score === null ? '' : formatScoreValue(score)}
-        disabled={isSavingGrade}
+        disabled={isGradeInputDisabled || status === 'absent'}
         toneClassName={getGradeToneClassName(tone)}
         onCommit={(value) => handleScoreGradeBlur(student, value)}
       />
     )
+  }
+
+  function renderResultCell(student: AdminCrudRecord): ReactElement {
+    const grade = getStudentGradeRecord(student, selectedFinalGradeItem)
+    const result = getFinalResultLabel(grade, selectedFinalType)
+
+    return <Badge variant={result.variant}>{result.label}</Badge>
   }
 
   return (
@@ -584,10 +733,10 @@ export function FinalGradeElementsMatrix(): ReactElement {
         <CardHeader>
           <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <CardTitle>Итоговые оценки</CardTitle>
+              <CardTitle>Итоговая ведомость</CardTitle>
               <CardDescription>
-                Выбери группу, дисциплину и итоговый оценочный элемент, чтобы заполнить оценки
-                студентов.
+                Выбери группу, дисциплину и итоговый оценочный элемент, чтобы заполнить результаты
+                итоговой аттестации.
               </CardDescription>
             </div>
 
@@ -703,10 +852,24 @@ export function FinalGradeElementsMatrix(): ReactElement {
         <EmptyState text="Выбери факультет, специальность, группу, семестр, дисциплину и итоговый оценочный элемент." />
       ) : null}
 
+      {hasCompleteSelection && !isDisciplineCompleted ? (
+        <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-4 text-sm text-[var(--color-text)]">
+          <p className="font-semibold">
+            Итоговая ведомость доступна после завершения всех занятий по дисциплине.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Badge variant="muted">Всего занятий: {disciplineCompletionSummary.total}</Badge>
+            <Badge variant="muted">Проведено: {disciplineCompletionSummary.conducted}</Badge>
+            <Badge variant="muted">Выполнено: {disciplineCompletionSummary.completed}</Badge>
+            <Badge variant="warning">Осталось: {disciplineCompletionSummary.remaining}</Badge>
+          </div>
+        </div>
+      ) : null}
+
       {hasCompleteSelection ? (
         <Card>
           <CardHeader>
-            <CardTitle>Ведомость итоговых оценок</CardTitle>
+            <CardTitle>Ведомость итоговой аттестации</CardTitle>
             <CardDescription>
               {selectedGroup ? getRecordName(selectedGroup) : 'Группа'} ·{' '}
               {selectedDiscipline ? getDisciplineName(selectedDiscipline, subjects) : 'Дисциплина'}{' '}
@@ -721,40 +884,60 @@ export function FinalGradeElementsMatrix(): ReactElement {
 
             {groupStudents.length > 0 ? (
               <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-                <table className="w-full min-w-[44rem] border-collapse text-sm">
+                <table className="w-full min-w-[56rem] border-collapse text-sm">
                   <thead>
                     <tr className="bg-[var(--color-surface-muted)]">
+                      <th className="w-12 border-b border-r border-[var(--color-border)] px-3 py-3 text-center font-semibold text-[var(--color-text-muted)]">
+                        №
+                      </th>
                       <th className="border-b border-r border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
                         Студент
                       </th>
                       <th className="border-b border-r border-[var(--color-border)] px-4 py-3 text-center font-semibold text-[var(--color-text-muted)]">
-                        Оценка
+                        Статус / результат
+                      </th>
+                      <th className="border-b border-r border-[var(--color-border)] px-4 py-3 text-center font-semibold text-[var(--color-text-muted)]">
+                        Балл
+                      </th>
+                      <th className="border-b border-r border-[var(--color-border)] px-4 py-3 text-center font-semibold text-[var(--color-text-muted)]">
+                        Итог
                       </th>
                       <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                        Параметры
+                        Комментарий
                       </th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {groupStudents.map((student) => (
-                      <tr
-                        key={String(student.id)}
-                        className="border-b border-[var(--color-border)] last:border-b-0"
-                      >
-                        <td className="border-r border-[var(--color-border)] px-4 py-3 font-medium text-[var(--color-text)]">
-                          {getPersonFullName(student)}
-                        </td>
-                        <td className="border-r border-[var(--color-border)] px-4 py-3 text-center">
-                          {renderGradeCell(student)}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
-                          {selectedFinalType
-                            ? getGradeElementTypeDescription(selectedFinalType)
-                            : '—'}
-                        </td>
-                      </tr>
-                    ))}
+                    {groupStudents.map((student, index) => {
+                      const grade = getStudentGradeRecord(student, selectedFinalGradeItem)
+
+                      return (
+                        <tr
+                          key={String(student.id)}
+                          className="border-b border-[var(--color-border)] last:border-b-0"
+                        >
+                          <td className="border-r border-[var(--color-border)] px-3 py-3 text-center text-[var(--color-text-muted)]">
+                            {index + 1}
+                          </td>
+                          <td className="border-r border-[var(--color-border)] px-4 py-3 font-medium text-[var(--color-text)]">
+                            {getPersonFullName(student)}
+                          </td>
+                          <td className="border-r border-[var(--color-border)] px-4 py-3 text-center">
+                            {renderStatusCell(student)}
+                          </td>
+                          <td className="border-r border-[var(--color-border)] px-4 py-3 text-center">
+                            {renderScoreCell(student)}
+                          </td>
+                          <td className="border-r border-[var(--color-border)] px-4 py-3 text-center">
+                            {renderResultCell(student)}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
+                            {formatValue(grade?.comment)}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -853,6 +1036,65 @@ function ScoreInput({
   )
 }
 
+function getDisciplineCompletionSummary({
+  scheduleItems,
+  lessonSessions,
+  lessonCompletionRecords
+}: {
+  scheduleItems: AdminCrudRecord[]
+  lessonSessions: AdminCrudRecord[]
+  lessonCompletionRecords: AdminCrudRecord[]
+}): DisciplineCompletionSummary {
+  const total = scheduleItems.length
+  let conducted = 0
+  let completed = 0
+
+  scheduleItems.forEach((scheduleItem) => {
+    const session = getLessonSessionForScheduleItem(scheduleItem, lessonSessions)
+
+    if (session && String(session.status ?? '') === 'conducted') {
+      conducted += 1
+    }
+
+    if (!session?.id) {
+      return
+    }
+
+    const completionRecord = lessonCompletionRecords.find(
+      (record) => Number(record.lesson_session_id) === Number(session.id)
+    )
+
+    if (String(completionRecord?.status ?? '') === 'completed') {
+      completed += 1
+    }
+  })
+
+  return {
+    total,
+    conducted,
+    completed,
+    remaining: Math.max(0, total - completed),
+    isCompleted: total > 0 && conducted === total && completed === total
+  }
+}
+
+function getLessonSessionForScheduleItem(
+  scheduleItem: AdminCrudRecord,
+  lessonSessions: AdminCrudRecord[]
+): AdminCrudRecord | null {
+  return (
+    lessonSessions.find((session) => {
+      if (Number(session.schedule_item_id) !== Number(scheduleItem.id)) {
+        return false
+      }
+
+      const scheduleWeekId = toNumberOrNull(scheduleItem.week_id)
+
+      return scheduleWeekId === null || Number(session.week_id) === scheduleWeekId
+    }) ?? null
+  )
+}
+
 function getGradeElementTypeMaxScore(gradeElementType: AdminCrudRecord | null): number {
   if (gradeElementType?.grading_mode === 'pass_fail') {
     return 1
@@ -891,6 +1133,73 @@ function getGradeElementTypeDescription(gradeElementType: AdminCrudRecord): stri
   }
 
   return `Баллы · ${details.join(' · ')}`
+}
+
+function getGradeResultStatus(
+  grade: AdminCrudRecord | null,
+  gradeElementType: AdminCrudRecord | null
+): GradeResultStatus {
+  const rawStatus = String(grade?.result_status ?? '')
+
+  if (rawStatus === 'absent' || rawStatus === 'passed' || rawStatus === 'failed') {
+    return rawStatus
+  }
+
+  if (gradeElementType?.grading_mode === 'pass_fail' && grade) {
+    return Number(grade.score) >= 1 ? 'passed' : 'failed'
+  }
+
+  return 'graded'
+}
+
+function getFinalResultLabel(
+  grade: AdminCrudRecord | null,
+  gradeElementType: AdminCrudRecord | null
+): {
+  label: string
+  variant: 'default' | 'success' | 'warning' | 'danger' | 'muted'
+} {
+  if (!grade) {
+    return { label: '—', variant: 'muted' }
+  }
+
+  const status = getGradeResultStatus(grade, gradeElementType)
+
+  if (status === 'absent') {
+    return { label: 'Неявка', variant: 'warning' }
+  }
+
+  if (status === 'passed') {
+    return { label: 'Сдал', variant: 'success' }
+  }
+
+  if (status === 'failed') {
+    return { label: 'Не сдал', variant: 'danger' }
+  }
+
+  const score = toNumberOrNull(grade.score)
+
+  if (score === null) {
+    return { label: '—', variant: 'muted' }
+  }
+
+  const minScore = getGradeElementTypeMinScore(gradeElementType)
+  const maxScore = getGradeElementTypeMaxScore(gradeElementType)
+  const passingScore = getGradeElementTypePassingScore(gradeElementType)
+
+  if (areNumbersClose(score, maxScore)) {
+    return { label: 'Максимум', variant: 'success' }
+  }
+
+  if (areNumbersClose(score, minScore)) {
+    return { label: 'Минимум', variant: 'danger' }
+  }
+
+  if (passingScore !== null && score < passingScore) {
+    return { label: 'Непроходной', variant: 'danger' }
+  }
+
+  return { label: 'Проходной', variant: 'success' }
 }
 
 function getFinalGradeCategoryId(
@@ -936,6 +1245,8 @@ function getGradeTone(
 
 function getGradeToneClassName(tone: GradeTone): string {
   switch (tone) {
+    case 'absent':
+      return 'border-amber-200 bg-amber-50 text-amber-800'
     case 'minimum':
       return 'border-red-300 bg-red-100 text-red-900'
     case 'belowPassing':
@@ -954,6 +1265,20 @@ function toFilterOption(record: AdminCrudRecord): FilterOption {
     value: String(record.id),
     label: getRecordName(record)
   }
+}
+
+function createRecordMap(records: AdminCrudRecord[]): Map<number, AdminCrudRecord> {
+  const map = new Map<number, AdminCrudRecord>()
+
+  records.forEach((record) => {
+    const id = toNumberOrNull(record.id)
+
+    if (id !== null) {
+      map.set(id, record)
+    }
+  })
+
+  return map
 }
 
 function getDisciplineName(discipline: AdminCrudRecord, subjects: AdminCrudRecord[]): string {
@@ -1024,6 +1349,12 @@ function formatScoreValue(value: number): string {
   return value.toFixed(2).replace(/\.?0+$/, '')
 }
 
+function formatValue(value: unknown): string {
+  const text = String(value ?? '').trim()
+
+  return text || '—'
+}
+
 function getRecordName(record: AdminCrudRecord): string {
   return record.name ? String(record.name) : `#${String(record.id)}`
 }
@@ -1035,6 +1366,15 @@ function getPersonFullName(record: AdminCrudRecord): string {
     .join(' ')
 
   return fullName || getRecordName(record)
+}
+
+function getCurrentDate(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function toNumberOrNull(value: unknown): number | null {
