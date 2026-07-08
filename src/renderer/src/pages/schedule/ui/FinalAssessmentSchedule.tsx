@@ -35,6 +35,15 @@ type RoundDraft = {
   description: string
 }
 
+type DisciplineCompletionInfo = {
+  total: number
+  conducted: number
+  completed: number
+  remaining: number
+  isCompleted: boolean
+  lastLessonDateTime: Date | null
+}
+
 const roundTypes = [
   { type: 'main', number: 1, label: 'Основной тур' },
   { type: 'retake', number: 2, label: 'Пересдача' },
@@ -50,6 +59,7 @@ export function FinalAssessmentSchedule(): ReactElement {
   const [academicYears, setAcademicYears] = useState<AdminCrudRecord[]>([])
   const [semesters, setSemesters] = useState<AdminCrudRecord[]>([])
   const [weeks, setWeeks] = useState<AdminCrudRecord[]>([])
+  const [lessonPeriods, setLessonPeriods] = useState<AdminCrudRecord[]>([])
   const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
   const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
   const [lessonCompletionRecords, setLessonCompletionRecords] = useState<AdminCrudRecord[]>([])
@@ -85,6 +95,7 @@ export function FinalAssessmentSchedule(): ReactElement {
         academicYearsResult,
         semestersResult,
         weeksResult,
+        lessonPeriodsResult,
         scheduleItemsResult,
         lessonSessionsResult,
         lessonCompletionRecordsResult,
@@ -147,6 +158,13 @@ export function FinalAssessmentSchedule(): ReactElement {
           entity: 'weeks',
           page: 1,
           pageSize: 2000,
+          orderBy: 'number',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
+          entity: 'lesson_periods',
+          page: 1,
+          pageSize: 200,
           orderBy: 'number',
           orderDirection: 'asc'
         }),
@@ -216,6 +234,7 @@ export function FinalAssessmentSchedule(): ReactElement {
       setAcademicYears(academicYearsResult.items)
       setSemesters(semestersResult.items)
       setWeeks(weeksResult.items)
+      setLessonPeriods(lessonPeriodsResult.items)
       setScheduleItems(scheduleItemsResult.items)
       setLessonSessions(lessonSessionsResult.items)
       setLessonCompletionRecords(lessonCompletionRecordsResult.items)
@@ -312,6 +331,31 @@ export function FinalAssessmentSchedule(): ReactElement {
         : [],
     [groupDisciplines, selectedSemesterId]
   )
+  const completedSemesterDisciplines = useMemo(
+    () =>
+      semesterDisciplines.filter((discipline) => {
+        const completionInfo = getDisciplineCompletionInfo({
+          discipline,
+          groupId: selectedGroupId,
+          semesterId: selectedSemesterId,
+          scheduleItems,
+          lessonSessions,
+          lessonCompletionRecords,
+          lessonPeriods
+        })
+
+        return completionInfo.isCompleted
+      }),
+    [
+      lessonCompletionRecords,
+      lessonPeriods,
+      lessonSessions,
+      scheduleItems,
+      selectedGroupId,
+      selectedSemesterId,
+      semesterDisciplines
+    ]
+  )
   const finalGradeElementTypes = useMemo(
     () => gradeElementTypes.filter((type) => Number(type.is_final) === 1),
     [gradeElementTypes]
@@ -327,31 +371,34 @@ export function FinalAssessmentSchedule(): ReactElement {
       ),
     [assessments, selectedDisciplineId, selectedGroupId, selectedSemesterId]
   )
-  const selectedDisciplineScheduleItems = useMemo(
+  const selectedDisciplineCompletionInfo = useMemo(
     () =>
-      scheduleItems.filter(
-        (item) =>
-          Number(item.group_id) === Number(selectedGroupId) &&
-          Number(item.discipline_id) === Number(selectedDisciplineId) &&
-          Number(item.semester_id) === Number(selectedSemesterId)
-      ),
-    [scheduleItems, selectedDisciplineId, selectedGroupId, selectedSemesterId]
-  )
-  const disciplineCompleted = useMemo(
-    () =>
-      isDisciplineCompleted({
-        scheduleItems: selectedDisciplineScheduleItems,
+      getDisciplineCompletionInfo({
+        discipline: selectedDiscipline,
+        groupId: selectedGroupId,
+        semesterId: selectedSemesterId,
+        scheduleItems,
         lessonSessions,
-        lessonCompletionRecords
+        lessonCompletionRecords,
+        lessonPeriods
       }),
-    [lessonCompletionRecords, lessonSessions, selectedDisciplineScheduleItems]
+    [
+      lessonCompletionRecords,
+      lessonPeriods,
+      lessonSessions,
+      scheduleItems,
+      selectedDiscipline,
+      selectedGroupId,
+      selectedSemesterId
+    ]
   )
-  const teacherOptions = useMemo(() => teachers.map(toPersonOption), [teachers])
+  const disciplineCompleted = selectedDisciplineCompletionInfo.isCompleted
   const audienceOptions = useMemo(() => audiences.map(toFilterOption), [audiences])
   const gradeElementTypeById = useMemo(
     () => createRecordMap(gradeElementTypes),
     [gradeElementTypes]
   )
+  const teacherById = useMemo(() => createRecordMap(teachers), [teachers])
 
   function handleFacultyChange(value: string): void {
     setSelectedFacultyId(value)
@@ -380,6 +427,11 @@ export function FinalAssessmentSchedule(): ReactElement {
   function handleSemesterChange(value: string): void {
     setSelectedSemesterId(value)
     setSelectedDisciplineId('')
+    setSelectedFinalTypeId('')
+  }
+
+  function handleDisciplineChange(value: string): void {
+    setSelectedDisciplineId(value)
     setSelectedFinalTypeId('')
   }
 
@@ -421,6 +473,20 @@ export function FinalAssessmentSchedule(): ReactElement {
 
     if (Number(selectedFinalType.is_final) !== 1) {
       setErrorMessage('Выбранный оценочный элемент не является итоговым')
+      return
+    }
+
+    if (!disciplineCompleted) {
+      setErrorMessage(
+        'Итоговую аттестацию можно создать только после завершения всех занятий дисциплины'
+      )
+      return
+    }
+
+    const defaultTeacherId = toNumberOrNull(selectedDiscipline.teacher_id)
+
+    if (defaultTeacherId === null) {
+      setErrorMessage('У выбранной дисциплины не указан преподаватель')
       return
     }
 
@@ -476,7 +542,7 @@ export function FinalAssessmentSchedule(): ReactElement {
               starts_at: null,
               ends_at: null,
               lesson_period_id: null,
-              teacher_id: null,
+              teacher_id: defaultTeacherId,
               audience_id: null,
               status: 'not_scheduled',
               description: null
@@ -498,8 +564,30 @@ export function FinalAssessmentSchedule(): ReactElement {
     setErrorMessage(null)
     setStatusMessage(null)
 
-    if (!disciplineCompleted) {
+    const assessmentDiscipline =
+      disciplines.find(
+        (discipline) => Number(discipline.id) === Number(assessment.discipline_id)
+      ) ?? null
+    const defaultTeacherId = toNumberOrNull(assessmentDiscipline?.teacher_id)
+    const completionInfo = getDisciplineCompletionInfo({
+      discipline: assessmentDiscipline,
+      groupId: assessment.group_id,
+      semesterId: assessment.semester_id,
+      scheduleItems,
+      lessonSessions,
+      lessonCompletionRecords,
+      lessonPeriods
+    })
+
+    if (!completionInfo.isCompleted) {
       setErrorMessage('Тур можно назначить только после завершения всех занятий дисциплины')
+      return
+    }
+
+    if (defaultTeacherId === null) {
+      setErrorMessage(
+        'У дисциплины не указан преподаватель. Сначала заполни преподавателя в дисциплине.'
+      )
       return
     }
 
@@ -507,6 +595,38 @@ export function FinalAssessmentSchedule(): ReactElement {
 
     if (!draft.assessment_date || !draft.starts_at || !draft.ends_at) {
       setErrorMessage('Укажи дату, время начала и время окончания тура')
+      return
+    }
+
+    const lastLessonDateTime = completionInfo.lastLessonDateTime
+    const roundStartDateTime = combineDateAndTime(draft.assessment_date, draft.starts_at)
+
+    if (!lastLessonDateTime) {
+      setErrorMessage('Не удалось определить окончание последней пары дисциплины')
+      return
+    }
+
+    if (!roundStartDateTime) {
+      setErrorMessage('Укажи корректную дату и время начала тура')
+      return
+    }
+
+    if (roundStartDateTime.getTime() <= lastLessonDateTime.getTime()) {
+      setErrorMessage(
+        `Тур итоговой аттестации можно назначить только после последней пары дисциплины. Последняя пара заканчивается ${formatDateTime(lastLessonDateTime)}.`
+      )
+      return
+    }
+
+    const roundOrderError = validateRoundOrder({
+      round,
+      rounds: getAssessmentRounds(assessment, rounds),
+      draft,
+      roundStartDateTime
+    })
+
+    if (roundOrderError) {
+      setErrorMessage(roundOrderError)
       return
     }
 
@@ -561,7 +681,7 @@ export function FinalAssessmentSchedule(): ReactElement {
           starts_at: draft.starts_at,
           ends_at: draft.ends_at,
           lesson_period_id: null,
-          teacher_id: toNumberOrNull(draft.teacher_id),
+          teacher_id: defaultTeacherId,
           audience_id: toNumberOrNull(draft.audience_id),
           status: 'scheduled',
           description: draft.description.trim() || null
@@ -636,13 +756,19 @@ export function FinalAssessmentSchedule(): ReactElement {
             <FilterSelect
               label="Дисциплина"
               value={selectedDisciplineId}
-              placeholder={selectedSemesterId ? 'Выбери дисциплину' : 'Сначала семестр'}
-              options={semesterDisciplines.map((discipline) => ({
+              placeholder={
+                selectedSemesterId
+                  ? completedSemesterDisciplines.length > 0
+                    ? 'Выбери дисциплину'
+                    : 'Нет завершённых дисциплин'
+                  : 'Сначала семестр'
+              }
+              options={completedSemesterDisciplines.map((discipline) => ({
                 value: String(discipline.id),
                 label: getDisciplineName(discipline, subjects)
               }))}
-              disabled={!selectedSemesterId}
-              onChange={setSelectedDisciplineId}
+              disabled={!selectedSemesterId || completedSemesterDisciplines.length === 0}
+              onChange={handleDisciplineChange}
             />
             <FilterSelect
               label="Итоговый тип"
@@ -664,10 +790,48 @@ export function FinalAssessmentSchedule(): ReactElement {
             {selectedDiscipline ? (
               <Badge>{getDisciplineName(selectedDiscipline, subjects)}</Badge>
             ) : null}
-            <Badge variant={disciplineCompleted ? 'success' : 'warning'}>
-              {disciplineCompleted ? 'Занятия завершены' : 'Занятия не завершены'}
-            </Badge>
+            {selectedDiscipline ? (
+              <>
+                <Badge variant={disciplineCompleted ? 'success' : 'warning'}>
+                  {disciplineCompleted ? 'Занятия завершены' : 'Занятия не завершены'}
+                </Badge>
+                <Badge variant="muted">
+                  Всего занятий: {selectedDisciplineCompletionInfo.total}
+                </Badge>
+                <Badge variant="muted">
+                  Проведено: {selectedDisciplineCompletionInfo.conducted}
+                </Badge>
+                <Badge variant="muted">
+                  Завершено: {selectedDisciplineCompletionInfo.completed}
+                </Badge>
+                <Badge
+                  variant={selectedDisciplineCompletionInfo.remaining > 0 ? 'warning' : 'success'}
+                >
+                  Осталось: {selectedDisciplineCompletionInfo.remaining}
+                </Badge>
+                <Badge variant="muted">
+                  Последняя пара:{' '}
+                  {selectedDisciplineCompletionInfo.lastLessonDateTime
+                    ? formatDateTime(selectedDisciplineCompletionInfo.lastLessonDateTime)
+                    : '—'}
+                </Badge>
+              </>
+            ) : null}
           </div>
+
+          {selectedSemesterId && completedSemesterDisciplines.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-3 text-sm text-[var(--color-text)]">
+              Итоговую аттестацию можно создать только после того, как все занятия дисциплины
+              проведены и завершены.
+            </div>
+          ) : null}
+
+          {selectedDiscipline && !disciplineCompleted ? (
+            <div className="mt-4 rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-3 text-sm text-[var(--color-text)]">
+              Эта дисциплина пока недоступна для итоговой аттестации. Завершите все занятия в
+              журнале.
+            </div>
+          ) : null}
 
           <div className="mt-4">
             <Button
@@ -676,7 +840,8 @@ export function FinalAssessmentSchedule(): ReactElement {
                 !selectedGroupId ||
                 !selectedSemesterId ||
                 !selectedDisciplineId ||
-                !selectedFinalTypeId
+                !selectedFinalTypeId ||
+                !disciplineCompleted
               }
               onClick={() => void createFinalAssessment()}
             >
@@ -704,6 +869,22 @@ export function FinalAssessmentSchedule(): ReactElement {
       {selectedAssessments.map((assessment) => {
         const assessmentRounds = getAssessmentRounds(assessment, rounds)
         const gradeElementType = gradeElementTypeById.get(Number(assessment.grade_element_type_id))
+        const assessmentDiscipline =
+          disciplines.find(
+            (discipline) => Number(discipline.id) === Number(assessment.discipline_id)
+          ) ?? null
+        const assessmentTeacherId = toNumberOrNull(assessmentDiscipline?.teacher_id)
+        const assessmentTeacher =
+          assessmentTeacherId === null ? null : (teacherById.get(assessmentTeacherId) ?? null)
+        const assessmentCompletionInfo = getDisciplineCompletionInfo({
+          discipline: assessmentDiscipline,
+          groupId: assessment.group_id,
+          semesterId: assessment.semester_id,
+          scheduleItems,
+          lessonSessions,
+          lessonCompletionRecords,
+          lessonPeriods
+        })
 
         return (
           <Card key={String(assessment.id)}>
@@ -779,19 +960,20 @@ export function FinalAssessmentSchedule(): ReactElement {
                         />
                       </label>
                       <FilterSelect
-                        label="Преподаватель"
-                        value={draft.teacher_id}
-                        placeholder="Выбери преподавателя"
-                        options={teacherOptions}
-                        onChange={(value) => updateRoundDraft(round.id, { teacher_id: value })}
-                      />
-                      <FilterSelect
                         label="Аудитория"
                         value={draft.audience_id}
                         placeholder="Выбери аудиторию"
                         options={audienceOptions}
                         onChange={(value) => updateRoundDraft(round.id, { audience_id: value })}
                       />
+                      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm md:col-span-2 xl:col-span-1">
+                        <p className="font-medium text-[var(--color-text)]">Преподаватель</p>
+                        <p className="mt-1 text-[var(--color-text-muted)]">
+                          {assessmentTeacher
+                            ? getPersonFullName(assessmentTeacher)
+                            : 'У дисциплины не указан преподаватель. Сначала заполни преподавателя в дисциплине.'}
+                        </p>
+                      </div>
                       <label className="grid gap-2 md:col-span-2 xl:col-span-3">
                         <span className="text-sm font-medium text-[var(--color-text)]">
                           Комментарий
@@ -807,7 +989,11 @@ export function FinalAssessmentSchedule(): ReactElement {
 
                     <div className="mt-4">
                       <Button
-                        disabled={isSaving || !disciplineCompleted}
+                        disabled={
+                          isSaving ||
+                          !assessmentCompletionInfo.isCompleted ||
+                          assessmentTeacherId === null
+                        }
                         onClick={() => void scheduleRound(assessment, round)}
                       >
                         {gradeItemId === null ? 'Назначить тур' : 'Обновить тур'}
@@ -895,35 +1081,224 @@ function getAssessmentRounds(
     .sort((first, second) => Number(first.round_number ?? 0) - Number(second.round_number ?? 0))
 }
 
-function isDisciplineCompleted({
+function getDisciplineScheduleItems({
+  discipline,
+  groupId,
+  semesterId,
+  scheduleItems
+}: {
+  discipline: AdminCrudRecord | null
+  groupId: unknown
+  semesterId: unknown
+  scheduleItems: AdminCrudRecord[]
+}): AdminCrudRecord[] {
+  if (!discipline?.id || !groupId || !semesterId) {
+    return []
+  }
+
+  return scheduleItems.filter(
+    (scheduleItem) =>
+      Number(scheduleItem.group_id) === Number(groupId) &&
+      Number(scheduleItem.semester_id) === Number(semesterId) &&
+      Number(scheduleItem.discipline_id) === Number(discipline.id)
+  )
+}
+
+function getDisciplineCompletionInfo({
+  discipline,
+  groupId,
+  semesterId,
   scheduleItems,
   lessonSessions,
-  lessonCompletionRecords
+  lessonCompletionRecords,
+  lessonPeriods
+}: {
+  discipline: AdminCrudRecord | null
+  groupId: unknown
+  semesterId: unknown
+  scheduleItems: AdminCrudRecord[]
+  lessonSessions: AdminCrudRecord[]
+  lessonCompletionRecords: AdminCrudRecord[]
+  lessonPeriods: AdminCrudRecord[]
+}): DisciplineCompletionInfo {
+  const disciplineScheduleItems = getDisciplineScheduleItems({
+    discipline,
+    groupId,
+    semesterId,
+    scheduleItems
+  })
+  let conducted = 0
+  let completed = 0
+
+  disciplineScheduleItems.forEach((scheduleItem) => {
+    const session = getLessonSessionForScheduleItem(scheduleItem, lessonSessions)
+
+    if (session && String(session.status ?? '') === 'conducted') {
+      conducted += 1
+    }
+
+    if (!session?.id) {
+      return
+    }
+
+    const completionRecord = lessonCompletionRecords.find(
+      (record) =>
+        Number(record.lesson_session_id) === Number(session.id) &&
+        String(record.status ?? '') === 'completed'
+    )
+
+    if (!completionRecord) {
+      return
+    }
+
+    completed += 1
+  })
+
+  const total = disciplineScheduleItems.length
+
+  return {
+    total,
+    conducted,
+    completed,
+    remaining: Math.max(0, total - completed),
+    isCompleted: total > 0 && conducted === total && completed === total,
+    lastLessonDateTime: getLastCompletedLessonDateTime({
+      scheduleItems: disciplineScheduleItems,
+      lessonSessions,
+      lessonCompletionRecords,
+      lessonPeriods
+    })
+  }
+}
+
+function getLastCompletedLessonDateTime({
+  scheduleItems,
+  lessonSessions,
+  lessonCompletionRecords,
+  lessonPeriods
 }: {
   scheduleItems: AdminCrudRecord[]
   lessonSessions: AdminCrudRecord[]
   lessonCompletionRecords: AdminCrudRecord[]
-}): boolean {
-  return (
-    scheduleItems.length > 0 &&
-    scheduleItems.every((scheduleItem) => {
-      const session = lessonSessions.find(
-        (item) =>
-          Number(item.schedule_item_id) === Number(scheduleItem.id) &&
-          Number(item.week_id) === Number(scheduleItem.week_id)
-      )
+  lessonPeriods: AdminCrudRecord[]
+}): Date | null {
+  let lastLessonDateTime: Date | null = null
+  let hasMissingCompletedLessonDateTime = false
 
-      if (!session?.id || String(session.status ?? '') !== 'conducted') {
+  scheduleItems.forEach((scheduleItem) => {
+    const session = getLessonSessionForScheduleItem(scheduleItem, lessonSessions)
+
+    if (!session?.id) {
+      return
+    }
+
+    const completionRecord = lessonCompletionRecords.find(
+      (record) =>
+        Number(record.lesson_session_id) === Number(session.id) &&
+        String(record.status ?? '') === 'completed'
+    )
+
+    if (!completionRecord) {
+      return
+    }
+
+    const lessonDateTime = getLessonEndDateTime(scheduleItem, session, lessonPeriods)
+
+    if (!lessonDateTime) {
+      hasMissingCompletedLessonDateTime = true
+      return
+    }
+
+    if (!lastLessonDateTime || lessonDateTime.getTime() > lastLessonDateTime.getTime()) {
+      lastLessonDateTime = lessonDateTime
+    }
+  })
+
+  return hasMissingCompletedLessonDateTime ? null : lastLessonDateTime
+}
+
+function getLessonSessionForScheduleItem(
+  scheduleItem: AdminCrudRecord,
+  lessonSessions: AdminCrudRecord[]
+): AdminCrudRecord | null {
+  return (
+    lessonSessions.find((session) => {
+      if (Number(session.schedule_item_id) !== Number(scheduleItem.id)) {
         return false
       }
 
-      return lessonCompletionRecords.some(
-        (record) =>
-          Number(record.lesson_session_id) === Number(session.id) &&
-          String(record.status ?? '') === 'completed'
-      )
-    })
+      const scheduleWeekId = toNumberOrNull(scheduleItem.week_id)
+
+      return scheduleWeekId === null || Number(session.week_id) === scheduleWeekId
+    }) ?? null
   )
+}
+
+function getLessonEndDateTime(
+  scheduleItem: AdminCrudRecord,
+  session: AdminCrudRecord,
+  lessonPeriods: AdminCrudRecord[]
+): Date | null {
+  const lessonPeriod =
+    lessonPeriods.find((period) => Number(period.id) === Number(scheduleItem.lesson_period_id)) ??
+    null
+
+  return combineDateAndTime(session.lesson_date, lessonPeriod?.ends_at)
+}
+
+function validateRoundOrder({
+  round,
+  rounds,
+  draft,
+  roundStartDateTime
+}: {
+  round: AdminCrudRecord
+  rounds: AdminCrudRecord[]
+  draft: RoundDraft
+  roundStartDateTime: Date
+}): string | null {
+  const roundEndDateTime = combineDateAndTime(draft.assessment_date, draft.ends_at)
+
+  if (!roundEndDateTime || roundEndDateTime.getTime() <= roundStartDateTime.getTime()) {
+    return 'Время окончания тура должно быть позже времени начала'
+  }
+
+  const roundType = String(round.round_type ?? '')
+
+  if (roundType === 'main') {
+    return null
+  }
+
+  const previousRoundType = roundType === 'commission' ? 'retake' : 'main'
+  const previousRound =
+    rounds.find((item) => String(item.round_type ?? '') === previousRoundType) ?? null
+
+  if (!previousRound?.assessment_date || !previousRound.starts_at) {
+    return 'Сначала назначь предыдущий тур итоговой аттестации.'
+  }
+
+  const previousRoundStartDateTime = combineDateAndTime(
+    previousRound.assessment_date,
+    previousRound.starts_at
+  )
+  const previousRoundEndDateTime = combineDateAndTime(
+    previousRound.assessment_date,
+    previousRound.ends_at
+  )
+
+  if (!previousRoundStartDateTime) {
+    return 'Сначала назначь предыдущий тур итоговой аттестации.'
+  }
+
+  const previousRoundDateTime = previousRoundEndDateTime ?? previousRoundStartDateTime
+
+  if (roundStartDateTime.getTime() <= previousRoundDateTime.getTime()) {
+    return roundType === 'commission'
+      ? 'Комиссию можно назначить только после пересдачи.'
+      : 'Пересдачу можно назначить только после основного тура.'
+  }
+
+  return null
 }
 
 function findWeekByDate(weeks: AdminCrudRecord[], dateValue: string): AdminCrudRecord | null {
@@ -953,6 +1328,29 @@ function parseDate(value: string): Date {
   const [year, month, day] = value.split('-').map(Number)
 
   return new Date(Date.UTC(year, month - 1, day))
+}
+
+function combineDateAndTime(dateValue: unknown, timeValue: unknown): Date | null {
+  const date = String(dateValue ?? '').trim()
+  const time = String(timeValue ?? '').trim()
+
+  if (!date || !time) {
+    return null
+  }
+
+  const dateTime = new Date(`${date}T${time}:00`)
+
+  return Number.isFinite(dateTime.getTime()) ? dateTime : null
+}
+
+function formatDateTime(value: Date): string {
+  return value.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 function getGradeElementTypeMaxScore(gradeElementType: AdminCrudRecord | null | undefined): number {
@@ -998,13 +1396,6 @@ function toFilterOption(record: AdminCrudRecord): FilterOption {
   return {
     value: String(record.id),
     label: getRecordName(record)
-  }
-}
-
-function toPersonOption(record: AdminCrudRecord): FilterOption {
-  return {
-    value: String(record.id),
-    label: getPersonFullName(record)
   }
 }
 
