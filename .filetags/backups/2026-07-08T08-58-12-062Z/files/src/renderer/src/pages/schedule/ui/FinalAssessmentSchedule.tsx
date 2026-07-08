@@ -440,10 +440,6 @@ export function FinalAssessmentSchedule(): ReactElement {
   )
   const disciplineCompleted = selectedDisciplineCompletionInfo.isCompleted
   const audienceOptions = useMemo(() => audiences.map(toFilterOption), [audiences])
-  const lessonPeriodOptions = useMemo(
-    () => lessonPeriods.map(toLessonPeriodFilterOption),
-    [lessonPeriods]
-  )
   const gradeElementTypeById = useMemo(
     () => createRecordMap(gradeElementTypes),
     [gradeElementTypes]
@@ -605,7 +601,7 @@ export function FinalAssessmentSchedule(): ReactElement {
               assessment_date: null,
               starts_at: null,
               ends_at: null,
-              lesson_period_id: startLessonPeriodId,
+              lesson_period_id: null,
               teacher_id: defaultTeacherId,
               audience_id: null,
               status: 'not_scheduled',
@@ -657,17 +653,8 @@ export function FinalAssessmentSchedule(): ReactElement {
 
     const draft = roundDrafts[String(round.id)] ?? createRoundDraft(round)
 
-    const startLessonPeriod = findLessonPeriodByStartsAt(lessonPeriods, draft.starts_at)
-    const endLessonPeriod = findLessonPeriodByEndsAt(lessonPeriods, draft.ends_at)
-    const startLessonPeriodId = toNumberOrNull(startLessonPeriod?.id)
-
-    if (!draft.assessment_date || startLessonPeriodId === null || !endLessonPeriod?.id) {
-      setErrorMessage('Укажи дату, начальную пару и конечную пару тура')
-      return
-    }
-
-    if (compareLessonPeriods(startLessonPeriod, endLessonPeriod) > 0) {
-      setErrorMessage('Конечная пара не может быть раньше начальной пары')
+    if (!draft.assessment_date || !draft.starts_at || !draft.ends_at) {
+      setErrorMessage('Укажи дату, время начала и время окончания тура')
       return
     }
 
@@ -1048,11 +1035,6 @@ export function FinalAssessmentSchedule(): ReactElement {
                     label: `${getRecordName(availability.audience)}${busyText}`
                   }
                 })
-                const startLessonPeriodId = getLessonPeriodIdByStartsAt(
-                  draft.starts_at,
-                  lessonPeriods
-                )
-                const endLessonPeriodId = getLessonPeriodIdByEndsAt(draft.ends_at, lessonPeriods)
                 const canShowAudienceAvailability = Boolean(
                   draft.assessment_date && draft.starts_at && draft.ends_at
                 )
@@ -1068,8 +1050,8 @@ export function FinalAssessmentSchedule(): ReactElement {
                           {String(round.round_number)} тур — {getRoundLabel(round.round_type)}
                         </p>
                         <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          {formatValue(round.assessment_date)} ·{' '}
-                          {getLessonPeriodRangeLabel(round, lessonPeriods)}
+                          {formatValue(round.assessment_date)} · {formatValue(round.starts_at)}–
+                          {formatValue(round.ends_at)}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1093,30 +1075,28 @@ export function FinalAssessmentSchedule(): ReactElement {
                           }
                         />
                       </label>
-                      <FilterSelect
-                        label="Начальная пара"
-                        value={startLessonPeriodId}
-                        placeholder="Выбери пару"
-                        options={lessonPeriodOptions}
-                        onChange={(value) =>
-                          updateRoundDraft(
-                            round.id,
-                            createStartLessonPeriodDraftPatch(value, lessonPeriods, draft)
-                          )
-                        }
-                      />
-                      <FilterSelect
-                        label="Конечная пара"
-                        value={endLessonPeriodId}
-                        placeholder="Выбери пару"
-                        options={lessonPeriodOptions}
-                        onChange={(value) =>
-                          updateRoundDraft(
-                            round.id,
-                            createEndLessonPeriodDraftPatch(value, lessonPeriods, draft)
-                          )
-                        }
-                      />
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">Начало</span>
+                        <Input
+                          type="time"
+                          value={draft.starts_at}
+                          onChange={(event) =>
+                            updateRoundDraft(round.id, { starts_at: event.target.value })
+                          }
+                        />
+                      </label>
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          Окончание
+                        </span>
+                        <Input
+                          type="time"
+                          value={draft.ends_at}
+                          onChange={(event) =>
+                            updateRoundDraft(round.id, { ends_at: event.target.value })
+                          }
+                        />
+                      </label>
                       <FilterSelect
                         label="Аудитория"
                         value={draft.audience_id}
@@ -1657,156 +1637,6 @@ function toFilterOption(record: AdminCrudRecord): FilterOption {
     value: String(record.id),
     label: getRecordName(record)
   }
-}
-function toLessonPeriodFilterOption(record: AdminCrudRecord): FilterOption {
-  return {
-    value: String(record.id),
-    label: getLessonPeriodLabel(record)
-  }
-}
-
-function getLessonPeriodLabel(record: AdminCrudRecord): string {
-  const number = String(record.number ?? '').trim()
-  const startsAt = String(record.starts_at ?? '').trim()
-  const endsAt = String(record.ends_at ?? '').trim()
-  const timeRange = startsAt && endsAt ? ` · ${startsAt}–${endsAt}` : ''
-
-  return `${number || getRecordName(record)} пара${timeRange}`
-}
-
-function findLessonPeriodById(
-  lessonPeriods: AdminCrudRecord[],
-  value: unknown
-): AdminCrudRecord | null {
-  const id = toNumberOrNull(value)
-
-  if (id === null) {
-    return null
-  }
-
-  return lessonPeriods.find((lessonPeriod) => Number(lessonPeriod.id) === id) ?? null
-}
-
-function findLessonPeriodByStartsAt(
-  lessonPeriods: AdminCrudRecord[],
-  startsAt: unknown
-): AdminCrudRecord | null {
-  const value = String(startsAt ?? '').trim()
-
-  if (!value) {
-    return null
-  }
-
-  return (
-    lessonPeriods.find((lessonPeriod) => String(lessonPeriod.starts_at ?? '') === value) ?? null
-  )
-}
-
-function findLessonPeriodByEndsAt(
-  lessonPeriods: AdminCrudRecord[],
-  endsAt: unknown
-): AdminCrudRecord | null {
-  const value = String(endsAt ?? '').trim()
-
-  if (!value) {
-    return null
-  }
-
-  return lessonPeriods.find((lessonPeriod) => String(lessonPeriod.ends_at ?? '') === value) ?? null
-}
-
-function getLessonPeriodIdByStartsAt(startsAt: unknown, lessonPeriods: AdminCrudRecord[]): string {
-  return findLessonPeriodByStartsAt(lessonPeriods, startsAt)?.id
-    ? String(findLessonPeriodByStartsAt(lessonPeriods, startsAt)?.id)
-    : ''
-}
-
-function getLessonPeriodIdByEndsAt(endsAt: unknown, lessonPeriods: AdminCrudRecord[]): string {
-  return findLessonPeriodByEndsAt(lessonPeriods, endsAt)?.id
-    ? String(findLessonPeriodByEndsAt(lessonPeriods, endsAt)?.id)
-    : ''
-}
-
-function createStartLessonPeriodDraftPatch(
-  value: string,
-  lessonPeriods: AdminCrudRecord[],
-  currentDraft: RoundDraft
-): Partial<RoundDraft> {
-  const lessonPeriod = findLessonPeriodById(lessonPeriods, value)
-
-  if (!lessonPeriod) {
-    return {
-      starts_at: '',
-      ends_at: currentDraft.ends_at
-    }
-  }
-
-  const currentEndLessonPeriod = findLessonPeriodByEndsAt(lessonPeriods, currentDraft.ends_at)
-  const shouldMoveEnd =
-    !currentEndLessonPeriod || compareLessonPeriods(lessonPeriod, currentEndLessonPeriod) > 0
-
-  return {
-    starts_at: String(lessonPeriod.starts_at ?? ''),
-    ends_at: shouldMoveEnd ? String(lessonPeriod.ends_at ?? '') : currentDraft.ends_at
-  }
-}
-
-function createEndLessonPeriodDraftPatch(
-  value: string,
-  lessonPeriods: AdminCrudRecord[],
-  currentDraft: RoundDraft
-): Partial<RoundDraft> {
-  const lessonPeriod = findLessonPeriodById(lessonPeriods, value)
-
-  if (!lessonPeriod) {
-    return {
-      starts_at: currentDraft.starts_at,
-      ends_at: ''
-    }
-  }
-
-  const currentStartLessonPeriod = findLessonPeriodByStartsAt(lessonPeriods, currentDraft.starts_at)
-  const shouldMoveStart =
-    !currentStartLessonPeriod || compareLessonPeriods(currentStartLessonPeriod, lessonPeriod) > 0
-
-  return {
-    starts_at: shouldMoveStart ? String(lessonPeriod.starts_at ?? '') : currentDraft.starts_at,
-    ends_at: String(lessonPeriod.ends_at ?? '')
-  }
-}
-
-function compareLessonPeriods(
-  firstPeriod: AdminCrudRecord | null,
-  secondPeriod: AdminCrudRecord | null
-): number {
-  const firstNumber = toNumberOrNull(firstPeriod?.number) ?? toNumberOrNull(firstPeriod?.id) ?? 0
-  const secondNumber = toNumberOrNull(secondPeriod?.number) ?? toNumberOrNull(secondPeriod?.id) ?? 0
-
-  return firstNumber - secondNumber
-}
-
-function getLessonPeriodRangeLabel(
-  round: AdminCrudRecord,
-  lessonPeriods: AdminCrudRecord[]
-): string {
-  const startPeriod = findLessonPeriodByStartsAt(lessonPeriods, round.starts_at)
-  const endPeriod = findLessonPeriodByEndsAt(lessonPeriods, round.ends_at)
-
-  if (startPeriod && endPeriod) {
-    const startNumber = String(startPeriod.number ?? getRecordName(startPeriod))
-    const endNumber = String(endPeriod.number ?? getRecordName(endPeriod))
-
-    if (startNumber === endNumber) {
-      return `${startNumber} пара`
-    }
-
-    return `${startNumber}–${endNumber} пары`
-  }
-
-  const startsAt = String(round.starts_at ?? '').trim()
-  const endsAt = String(round.ends_at ?? '').trim()
-
-  return startsAt && endsAt ? `${startsAt}–${endsAt}` : 'Пары не указаны'
 }
 
 function createRecordMap(records: AdminCrudRecord[]): Map<number, AdminCrudRecord> {

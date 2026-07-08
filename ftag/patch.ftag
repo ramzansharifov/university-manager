@@ -1,25 +1,553 @@
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@replace-first src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
 @find
-            {groupStudents.length > 0 ? (
-              <div className="grid gap-4">
-                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+  const audienceOptions = useMemo(() => audiences.map(toFilterOption), [audiences])
 @endfind
 @with
-            {groupStudents.length > 0 ? (
-              <div className="grid gap-4">
-                {renderFinalAssessmentWeekNotice()}
+  const audienceOptions = useMemo(() => audiences.map(toFilterOption), [audiences])
+  const lessonPeriodOptions = useMemo(
+    () => lessonPeriods.map(toLessonPeriodFilterOption),
+    [lessonPeriods]
+  )
+@endwith
+@end
 
-                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+@replace-first src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
+@find
+    if (!draft.assessment_date || !draft.starts_at || !draft.ends_at) {
+      setErrorMessage('Укажи дату, время начала и время окончания тура')
+      return
+    }
+
+    const audienceId = toNumberOrNull(draft.audience_id)
+@endfind
+@with
+    const startLessonPeriod = findLessonPeriodByStartsAt(lessonPeriods, draft.starts_at)
+    const endLessonPeriod = findLessonPeriodByEndsAt(lessonPeriods, draft.ends_at)
+    const startLessonPeriodId = toNumberOrNull(startLessonPeriod?.id)
+
+    if (!draft.assessment_date || startLessonPeriodId === null || !endLessonPeriod?.id) {
+      setErrorMessage('Укажи дату, начальную пару и конечную пару тура')
+      return
+    }
+
+    if (compareLessonPeriods(startLessonPeriod, endLessonPeriod) > 0) {
+      setErrorMessage('Конечная пара не может быть раньше начальной пары')
+      return
+    }
+
+    const audienceId = toNumberOrNull(draft.audience_id)
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
+@find
+          lesson_period_id: null,
+@endfind
+@with
+          lesson_period_id: startLessonPeriodId,
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
+@find
+                const canShowAudienceAvailability = Boolean(
+                  draft.assessment_date && draft.starts_at && draft.ends_at
+                )
+@endfind
+@with
+                const startLessonPeriodId = getLessonPeriodIdByStartsAt(
+                  draft.starts_at,
+                  lessonPeriods
+                )
+                const endLessonPeriodId = getLessonPeriodIdByEndsAt(draft.ends_at, lessonPeriods)
+                const canShowAudienceAvailability = Boolean(
+                  draft.assessment_date && draft.starts_at && draft.ends_at
+                )
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
+@find
+                          {formatValue(round.assessment_date)} · {formatValue(round.starts_at)}–
+                          {formatValue(round.ends_at)}
+@endfind
+@with
+                          {formatValue(round.assessment_date)} ·{' '}
+                          {getLessonPeriodRangeLabel(round, lessonPeriods)}
+@endwith
+@end
+
+@replace-block src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
+@from
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">Начало</span>
+                        <Input
+                          type="time"
+                          value={draft.starts_at}
+                          onChange={(event) =>
+                            updateRoundDraft(round.id, { starts_at: event.target.value })
+                          }
+                        />
+                      </label>
+@endfrom
+@to
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          Окончание
+                        </span>
+                        <Input
+                          type="time"
+                          value={draft.ends_at}
+                          onChange={(event) =>
+                            updateRoundDraft(round.id, { ends_at: event.target.value })
+                          }
+                        />
+                      </label>
+@endto
+@with
+                      <FilterSelect
+                        label="Начальная пара"
+                        value={startLessonPeriodId}
+                        placeholder="Выбери пару"
+                        options={lessonPeriodOptions}
+                        onChange={(value) =>
+                          updateRoundDraft(
+                            round.id,
+                            createStartLessonPeriodDraftPatch(value, lessonPeriods, draft)
+                          )
+                        }
+                      />
+                      <FilterSelect
+                        label="Конечная пара"
+                        value={endLessonPeriodId}
+                        placeholder="Выбери пару"
+                        options={lessonPeriodOptions}
+                        onChange={(value) =>
+                          updateRoundDraft(
+                            round.id,
+                            createEndLessonPeriodDraftPatch(value, lessonPeriods, draft)
+                          )
+                        }
+                      />
+@endwith
+@end
+
+@insert-after-once src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
+@find
+function toFilterOption(record: AdminCrudRecord): FilterOption {
+  return {
+    value: String(record.id),
+    label: getRecordName(record)
+  }
+}
+@endfind
+@content
+
+function toLessonPeriodFilterOption(record: AdminCrudRecord): FilterOption {
+  return {
+    value: String(record.id),
+    label: getLessonPeriodLabel(record)
+  }
+}
+
+function getLessonPeriodLabel(record: AdminCrudRecord): string {
+  const number = String(record.number ?? '').trim()
+  const startsAt = String(record.starts_at ?? '').trim()
+  const endsAt = String(record.ends_at ?? '').trim()
+  const timeRange = startsAt && endsAt ? ` · ${startsAt}–${endsAt}` : ''
+
+  return `${number || getRecordName(record)} пара${timeRange}`
+}
+
+function findLessonPeriodById(
+  lessonPeriods: AdminCrudRecord[],
+  value: unknown
+): AdminCrudRecord | null {
+  const id = toNumberOrNull(value)
+
+  if (id === null) {
+    return null
+  }
+
+  return lessonPeriods.find((lessonPeriod) => Number(lessonPeriod.id) === id) ?? null
+}
+
+function findLessonPeriodByStartsAt(
+  lessonPeriods: AdminCrudRecord[],
+  startsAt: unknown
+): AdminCrudRecord | null {
+  const value = String(startsAt ?? '').trim()
+
+  if (!value) {
+    return null
+  }
+
+  return lessonPeriods.find((lessonPeriod) => String(lessonPeriod.starts_at ?? '') === value) ?? null
+}
+
+function findLessonPeriodByEndsAt(
+  lessonPeriods: AdminCrudRecord[],
+  endsAt: unknown
+): AdminCrudRecord | null {
+  const value = String(endsAt ?? '').trim()
+
+  if (!value) {
+    return null
+  }
+
+  return lessonPeriods.find((lessonPeriod) => String(lessonPeriod.ends_at ?? '') === value) ?? null
+}
+
+function getLessonPeriodIdByStartsAt(
+  startsAt: unknown,
+  lessonPeriods: AdminCrudRecord[]
+): string {
+  return findLessonPeriodByStartsAt(lessonPeriods, startsAt)?.id
+    ? String(findLessonPeriodByStartsAt(lessonPeriods, startsAt)?.id)
+    : ''
+}
+
+function getLessonPeriodIdByEndsAt(endsAt: unknown, lessonPeriods: AdminCrudRecord[]): string {
+  return findLessonPeriodByEndsAt(lessonPeriods, endsAt)?.id
+    ? String(findLessonPeriodByEndsAt(lessonPeriods, endsAt)?.id)
+    : ''
+}
+
+function createStartLessonPeriodDraftPatch(
+  value: string,
+  lessonPeriods: AdminCrudRecord[],
+  currentDraft: RoundDraft
+): Partial<RoundDraft> {
+  const lessonPeriod = findLessonPeriodById(lessonPeriods, value)
+
+  if (!lessonPeriod) {
+    return {
+      starts_at: '',
+      ends_at: currentDraft.ends_at
+    }
+  }
+
+  const currentEndLessonPeriod = findLessonPeriodByEndsAt(lessonPeriods, currentDraft.ends_at)
+  const shouldMoveEnd =
+    !currentEndLessonPeriod || compareLessonPeriods(lessonPeriod, currentEndLessonPeriod) > 0
+
+  return {
+    starts_at: String(lessonPeriod.starts_at ?? ''),
+    ends_at: shouldMoveEnd ? String(lessonPeriod.ends_at ?? '') : currentDraft.ends_at
+  }
+}
+
+function createEndLessonPeriodDraftPatch(
+  value: string,
+  lessonPeriods: AdminCrudRecord[],
+  currentDraft: RoundDraft
+): Partial<RoundDraft> {
+  const lessonPeriod = findLessonPeriodById(lessonPeriods, value)
+
+  if (!lessonPeriod) {
+    return {
+      starts_at: currentDraft.starts_at,
+      ends_at: ''
+    }
+  }
+
+  const currentStartLessonPeriod = findLessonPeriodByStartsAt(lessonPeriods, currentDraft.starts_at)
+  const shouldMoveStart =
+    !currentStartLessonPeriod || compareLessonPeriods(currentStartLessonPeriod, lessonPeriod) > 0
+
+  return {
+    starts_at: shouldMoveStart ? String(lessonPeriod.starts_at ?? '') : currentDraft.starts_at,
+    ends_at: String(lessonPeriod.ends_at ?? '')
+  }
+}
+
+function compareLessonPeriods(
+  firstPeriod: AdminCrudRecord | null,
+  secondPeriod: AdminCrudRecord | null
+): number {
+  const firstNumber = toNumberOrNull(firstPeriod?.number) ?? toNumberOrNull(firstPeriod?.id) ?? 0
+  const secondNumber = toNumberOrNull(secondPeriod?.number) ?? toNumberOrNull(secondPeriod?.id) ?? 0
+
+  return firstNumber - secondNumber
+}
+
+function getLessonPeriodRangeLabel(
+  round: AdminCrudRecord,
+  lessonPeriods: AdminCrudRecord[]
+): string {
+  const startPeriod = findLessonPeriodByStartsAt(lessonPeriods, round.starts_at)
+  const endPeriod = findLessonPeriodByEndsAt(lessonPeriods, round.ends_at)
+
+  if (startPeriod && endPeriod) {
+    const startNumber = String(startPeriod.number ?? getRecordName(startPeriod))
+    const endNumber = String(endPeriod.number ?? getRecordName(endPeriod))
+
+    if (startNumber === endNumber) {
+      return `${startNumber} пара`
+    }
+
+    return `${startNumber}–${endNumber} пары`
+  }
+
+  const startsAt = String(round.starts_at ?? '').trim()
+  const endsAt = String(round.ends_at ?? '').trim()
+
+  return startsAt && endsAt ? `${startsAt}–${endsAt}` : 'Пары не указаны'
+}
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  const [activeTopicColumnId, setActiveTopicColumnId] = useState('')
+@endfind
+@content
+  const [activeFinalAssessmentRoundId, setActiveFinalAssessmentRoundId] = useState('')
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  const selectedWeekFinalAssessmentRounds = useMemo(
+    () =>
+      filterFinalAssessmentRoundsForWeek({
+        finalAssessmentRounds,
+        finalAssessments,
+        selectedGroupId: selectedGroup?.id,
+        selectedSemesterId: selectedSemester?.id,
+        selectedWeekId: selectedWeek?.id
+      }),
+    [finalAssessmentRounds, finalAssessments, selectedGroup, selectedSemester, selectedWeek]
+  )
+@endfind
+@content
+  const activeFinalAssessmentRound = useMemo(
+    () =>
+      selectedWeekFinalAssessmentRounds.find(
+        (round) => String(round.id) === activeFinalAssessmentRoundId
+      ) ?? null,
+    [activeFinalAssessmentRoundId, selectedWeekFinalAssessmentRounds]
+  )
+  const activeFinalAssessment = useMemo(
+    () =>
+      activeFinalAssessmentRound
+        ? getFinalAssessmentForRound(activeFinalAssessmentRound, finalAssessments)
+        : null,
+    [activeFinalAssessmentRound, finalAssessments]
+  )
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+    if (!activeTopicColumn) {
+      setActiveTopicColumnId('')
+      setTopicDraft('')
+      setLessonNoteDraft('')
+      setIsLessonEditorEditing(false)
+      setTopicError(null)
+      clearIntermediateGradeDraft()
+    }
+  }, [activeTopicColumn, activeTopicColumnId])
+@endfind
+@content
+
+  useEffect(() => {
+    if (activeFinalAssessmentRoundId && !activeFinalAssessmentRound) {
+      setActiveFinalAssessmentRoundId('')
+    }
+  }, [activeFinalAssessmentRound, activeFinalAssessmentRoundId])
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    const hasSavedDetails = hasSavedLessonDetails(column)
+
+    setActiveTopicColumnId(column.id)
+@endfind
+@content
+    setActiveFinalAssessmentRoundId('')
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+  function openTopicEditor(column: ScheduleJournalColumn): void {
+    const hasSavedDetails = hasSavedLessonDetails(column)
+
+    setActiveTopicColumnId(column.id)
+    setActiveFinalAssessmentRoundId('')
+    setTopicDraft(getLessonTopic(column))
+    setLessonNoteDraft(getLessonNote(column))
+    setIsLessonEditorEditing(!hasSavedDetails)
+    setTopicError(null)
+    setGradeError(null)
+    initializeIntermediateGradeDraft(column)
+  }
+@endfind
+@content
+
+  function openFinalAssessmentInfo(round: AdminCrudRecord): void {
+    setActiveFinalAssessmentRoundId(String(round.id))
+    setActiveTopicColumnId('')
+    setTopicDraft('')
+    setLessonNoteDraft('')
+    setIsLessonEditorEditing(false)
+    setTopicError(null)
+    clearIntermediateGradeDraft()
+  }
+
+  function getFinalAssessmentRoundForColumn(column: JournalColumn): AdminCrudRecord | null {
+    const lessonPeriod = getLessonPeriodByNumber(column.lessonNumber, lessonPeriods)
+
+    if (!lessonPeriod?.starts_at || !lessonPeriod.ends_at) {
+      return null
+    }
+
+    return (
+      selectedWeekFinalAssessmentRounds.find((round) => {
+        if (normalizeDayOfWeek(round.day_of_week) !== column.dayOfWeek) {
+          return false
+        }
+
+        return doTimeRangesOverlapByText(
+          round.starts_at,
+          round.ends_at,
+          lessonPeriod.starts_at,
+          lessonPeriod.ends_at
+        )
+      }) ?? null
+    )
+  }
+
+  function createFinalAssessmentColumnTitle(round: AdminCrudRecord): string {
+    const assessment = getFinalAssessmentForRound(round, finalAssessments)
+    const gradeElementTypeId = toNumberOrNull(assessment?.grade_element_type_id)
+    const gradeElementType =
+      gradeElementTypeId === null ? null : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
+    const disciplineId = toNumberOrNull(assessment?.discipline_id)
+    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
+    const teacherId = toNumberOrNull(round.teacher_id)
+    const teacher = teacherId === null ? null : (teacherById.get(teacherId) ?? null)
+    const audienceId = toNumberOrNull(round.audience_id)
+    const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
+
+    return [
+      'Итоговая аттестация',
+      `${gradeElementType ? getRecordName(gradeElementType) : 'Итог'} · ${
+        discipline ? getDisciplineName(discipline, subjectNameById) : getRecordName(assessment ?? round)
+      }`,
+      `${String(round.round_number ?? '—')} тур — ${getRoundLabel(round.round_type)}`,
+      formatFinalAssessmentRoundDateTime(round),
+      `Преподаватель: ${teacher ? getPersonFullName(teacher) : '—'}`,
+      `Аудитория: ${audience ? getRecordName(audience) : '—'}`,
+      'Редактируется во вкладке «Итоговая аттестация»'
+    ].join('\n')
+  }
+
+  function getFinalAssessmentColumnLabel(round: AdminCrudRecord): string {
+    const assessment = getFinalAssessmentForRound(round, finalAssessments)
+    const disciplineId = toNumberOrNull(assessment?.discipline_id)
+    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
+
+    if (!discipline) {
+      return 'Ит.'
+    }
+
+    return getDisciplineShortName(getDisciplineName(discipline, subjectNameById))
+  }
+@endcontent
+@end
+
+@replace-block src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@from
+  function renderFinalAssessmentWeekNotice(): ReactElement | null {
+@endfrom
+@to
+  return (
+@endto
+@with
+  function renderActiveFinalAssessmentDetails(): ReactElement | null {
+    if (!activeFinalAssessmentRound) {
+      return null
+    }
+
+    const gradeElementTypeId = toNumberOrNull(activeFinalAssessment?.grade_element_type_id)
+    const gradeElementType =
+      gradeElementTypeId === null ? null : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
+    const disciplineId = toNumberOrNull(activeFinalAssessment?.discipline_id)
+    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
+    const teacherId = toNumberOrNull(activeFinalAssessmentRound.teacher_id)
+    const teacher = teacherId === null ? null : (teacherById.get(teacherId) ?? null)
+    const audienceId = toNumberOrNull(activeFinalAssessmentRound.audience_id)
+    const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
+
+    return (
+      <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[var(--color-text)]">
+              Справка по итоговой аттестации
+            </p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              Это read-only событие из расписания итоговой аттестации. Посещаемость, тема занятия и
+              проведение пары здесь не редактируются.
+            </p>
+          </div>
+          <Badge variant="warning">Итог</Badge>
+        </div>
+
+        <div className="mt-3 grid gap-2 text-sm text-[var(--color-text)]">
+          <p className="font-semibold">
+            {gradeElementType ? getRecordName(gradeElementType) : 'Итоговая аттестация'} ·{' '}
+            {discipline
+              ? getDisciplineName(discipline, subjectNameById)
+              : getRecordName(activeFinalAssessment ?? activeFinalAssessmentRound)}
+          </p>
+          <p>
+            {String(activeFinalAssessmentRound.round_number ?? '—')} тур —{' '}
+            {getRoundLabel(activeFinalAssessmentRound.round_type)}
+          </p>
+          <p>{formatFinalAssessmentRoundDateTime(activeFinalAssessmentRound)}</p>
+          <p>Преподаватель: {teacher ? getPersonFullName(teacher) : '—'}</p>
+          <p>Аудитория: {audience ? getRecordName(audience) : '—'}</p>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => setActiveFinalAssessmentRoundId('')}
+          >
+            Закрыть справку
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
 @endwith
 @end
 
 @replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
 @find
-                            <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
-                              ({dayGroup.dayLabel})
-                            </span>
+                <div className="grid gap-4">
+                  {renderFinalAssessmentWeekNotice()}
+
+                  <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
 @endfind
 @with
+                <div className="grid gap-4">
+                  <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
                             <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
                               ({dayGroup.dayLabel})
                             </span>
@@ -31,5 +559,158 @@
                                 <Badge variant="warning">Итог</Badge>
                               </div>
                             ) : null}
+@endfind
+@with
+                            <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
+                              ({dayGroup.dayLabel})
+                            </span>
 @endwith
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                          {journalColumns.map((column) => {
+@endfind
+@content
+                            const finalAssessmentRound = getFinalAssessmentRoundForColumn(column)
+
+                            if (finalAssessmentRound) {
+                              return (
+                                <td
+                                  key={`${student.id}-${column.id}`}
+                                  className="h-8 border-r border-[var(--color-border)] bg-[var(--color-warning)]/10 px-0 text-center align-middle text-[11px] font-semibold text-[var(--color-text)] last:border-r-0"
+                                  title={createFinalAssessmentColumnTitle(finalAssessmentRound)}
+                                />
+                              )
+                            }
+
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                        {journalColumns.map((column) => {
+@endfind
+@content
+                          const finalAssessmentRound = getFinalAssessmentRoundForColumn(column)
+
+                          if (finalAssessmentRound) {
+                            return (
+                              <th
+                                key={`${column.id}-footer-final-assessment`}
+                                className="h-7 border-r border-t border-[var(--color-border)] bg-[var(--color-warning)]/10 px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
+                                title={createFinalAssessmentColumnTitle(finalAssessmentRound)}
+                              >
+                                <button
+                                  type="button"
+                                  className="h-full w-full transition-colors hover:bg-[var(--color-warning)]/20 focus:bg-[var(--color-warning)]/20 focus:outline-none"
+                                  onClick={() => openFinalAssessmentInfo(finalAssessmentRound)}
+                                >
+                                  {getFinalAssessmentColumnLabel(finalAssessmentRound)}
+                                </button>
+                              </th>
+                            )
+                          }
+
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                {attendanceError ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                    {attendanceError}
+                  </div>
+                ) : null}
+@endfind
+@content
+
+                {renderActiveFinalAssessmentDetails()}
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
+@endfind
+@with
+                ) : !activeFinalAssessmentRound ? (
+                  <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
+@endwith
+@end
+
+@replace-block src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@from
+function hasFinalAssessmentRoundForDay(rounds: AdminCrudRecord[], dayOfWeek: number): boolean {
+@endfrom
+@to
+function formatFinalAssessmentRoundDateTime(round: AdminCrudRecord): string {
+@endto
+@with
+function formatFinalAssessmentRoundDateTime(round: AdminCrudRecord): string {
+@endwith
+@end
+
+@insert-before-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@find
+function formatFinalAssessmentRoundDateTime(round: AdminCrudRecord): string {
+@endfind
+@content
+function getLessonPeriodByNumber(
+  lessonNumber: number,
+  lessonPeriods: AdminCrudRecord[]
+): AdminCrudRecord | null {
+  return (
+    lessonPeriods.find((lessonPeriod) => {
+      const number = toNumberOrNull(lessonPeriod.number) ?? toNumberOrNull(lessonPeriod.id)
+
+      return number === lessonNumber
+    }) ?? null
+  )
+}
+
+function doTimeRangesOverlapByText(
+  firstStartValue: unknown,
+  firstEndValue: unknown,
+  secondStartValue: unknown,
+  secondEndValue: unknown
+): boolean {
+  const firstStart = parseTimeToMinutes(firstStartValue)
+  const firstEnd = parseTimeToMinutes(firstEndValue)
+  const secondStart = parseTimeToMinutes(secondStartValue)
+  const secondEnd = parseTimeToMinutes(secondEndValue)
+
+  if (
+    firstStart === null ||
+    firstEnd === null ||
+    secondStart === null ||
+    secondEnd === null
+  ) {
+    return false
+  }
+
+  return firstStart < secondEnd && secondStart < firstEnd
+}
+
+function parseTimeToMinutes(value: unknown): number | null {
+  const match = String(value ?? '')
+    .trim()
+    .match(/^(\d{1,2}):(\d{2})/)
+
+  if (!match) {
+    return null
+  }
+
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null
+  }
+
+  return hours * 60 + minutes
+}
+
+@endcontent
 @end

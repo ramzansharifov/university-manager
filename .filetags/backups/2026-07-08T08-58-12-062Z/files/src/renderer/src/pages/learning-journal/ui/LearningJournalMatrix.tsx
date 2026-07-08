@@ -121,7 +121,6 @@ export function LearningJournalMatrix(): ReactElement {
   const [selectedWeekId, setSelectedWeekId] = useState('')
 
   const [activeTopicColumnId, setActiveTopicColumnId] = useState('')
-  const [activeFinalAssessmentRoundId, setActiveFinalAssessmentRoundId] = useState('')
   const [topicDraft, setTopicDraft] = useState('')
   const [lessonNoteDraft, setLessonNoteDraft] = useState('')
   const [isLessonEditorEditing, setIsLessonEditorEditing] = useState(false)
@@ -569,20 +568,6 @@ export function LearningJournalMatrix(): ReactElement {
       }),
     [finalAssessmentRounds, finalAssessments, selectedGroup, selectedSemester, selectedWeek]
   )
-  const activeFinalAssessmentRound = useMemo(
-    () =>
-      selectedWeekFinalAssessmentRounds.find(
-        (round) => String(round.id) === activeFinalAssessmentRoundId
-      ) ?? null,
-    [activeFinalAssessmentRoundId, selectedWeekFinalAssessmentRounds]
-  )
-  const activeFinalAssessment = useMemo(
-    () =>
-      activeFinalAssessmentRound
-        ? getFinalAssessmentForRound(activeFinalAssessmentRound, finalAssessments)
-        : null,
-    [activeFinalAssessmentRound, finalAssessments]
-  )
   const journalColumns = useMemo(
     () => journalDayGroups.flatMap((dayGroup) => dayGroup.columns),
     [journalDayGroups]
@@ -614,11 +599,6 @@ export function LearningJournalMatrix(): ReactElement {
       clearIntermediateGradeDraft()
     }
   }, [activeTopicColumn, activeTopicColumnId])
-  useEffect(() => {
-    if (activeFinalAssessmentRoundId && !activeFinalAssessmentRound) {
-      setActiveFinalAssessmentRoundId('')
-    }
-  }, [activeFinalAssessmentRound, activeFinalAssessmentRoundId])
 
   const activeLessonCompleted = activeTopicColumn ? isLessonCompleted(activeTopicColumn) : false
   const activeLessonHasSavedDetails = activeTopicColumn
@@ -1961,67 +1941,12 @@ export function LearningJournalMatrix(): ReactElement {
     }
   }
 
-  function renderActiveFinalAssessmentDetails(): ReactElement | null {
-    if (!activeFinalAssessmentRound) {
+  function renderFinalAssessmentWeekNotice(): ReactElement | null {
+    if (selectedWeekFinalAssessmentRounds.length === 0) {
       return null
     }
 
-    const gradeElementTypeId = toNumberOrNull(activeFinalAssessment?.grade_element_type_id)
-    const gradeElementType =
-      gradeElementTypeId === null ? null : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
-    const disciplineId = toNumberOrNull(activeFinalAssessment?.discipline_id)
-    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
-    const teacherId = toNumberOrNull(activeFinalAssessmentRound.teacher_id)
-    const teacher = teacherId === null ? null : (teacherById.get(teacherId) ?? null)
-    const audienceId = toNumberOrNull(activeFinalAssessmentRound.audience_id)
-    const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
-
     return (
-      <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">
-              Справка по итоговой аттестации
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Это read-only событие из расписания итоговой аттестации. Посещаемость, тема занятия и
-              проведение пары здесь не редактируются.
-            </p>
-          </div>
-          <Badge variant="warning">Итог</Badge>
-        </div>
-
-        <div className="mt-3 grid gap-2 text-sm text-[var(--color-text)]">
-          <p className="font-semibold">
-            {gradeElementType ? getRecordName(gradeElementType) : 'Итоговая аттестация'} ·{' '}
-            {discipline
-              ? getDisciplineName(discipline, subjectNameById)
-              : getRecordName(activeFinalAssessment ?? activeFinalAssessmentRound)}
-          </p>
-          <p>
-            {String(activeFinalAssessmentRound.round_number ?? '—')} тур —{' '}
-            {getRoundLabel(activeFinalAssessmentRound.round_type)}
-          </p>
-          <p>{formatFinalAssessmentRoundDateTime(activeFinalAssessmentRound)}</p>
-          <p>Преподаватель: {teacher ? getPersonFullName(teacher) : '—'}</p>
-          <p>Аудитория: {audience ? getRecordName(audience) : '—'}</p>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setActiveFinalAssessmentRoundId('')}
-          >
-            Закрыть справку
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
       <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -2251,6 +2176,14 @@ export function LearningJournalMatrix(): ReactElement {
                             <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
                               ({dayGroup.dayLabel})
                             </span>
+                            {hasFinalAssessmentRoundForDay(
+                              selectedWeekFinalAssessmentRounds,
+                              dayGroup.dayOfWeek
+                            ) ? (
+                              <div className="mt-1">
+                                <Badge variant="warning">Итог</Badge>
+                              </div>
+                            ) : null}
                           </th>
                         ))}
                       </tr>
@@ -2283,17 +2216,6 @@ export function LearningJournalMatrix(): ReactElement {
                           </td>
 
                           {journalColumns.map((column) => {
-                            const finalAssessmentRound = getFinalAssessmentRoundForColumn(column)
-
-                            if (finalAssessmentRound) {
-                              return (
-                                <td
-                                  key={`${student.id}-${column.id}`}
-                                  className="h-8 border-r border-[var(--color-border)] bg-[var(--color-warning)]/10 px-0 text-center align-middle text-[11px] font-semibold text-[var(--color-text)] last:border-r-0"
-                                  title={createFinalAssessmentColumnTitle(finalAssessmentRound)}
-                                />
-                              )
-                            }
                             if (column.kind === 'empty') {
                               return (
                                 <td
@@ -2341,25 +2263,6 @@ export function LearningJournalMatrix(): ReactElement {
                         </th>
 
                         {journalColumns.map((column) => {
-                          const finalAssessmentRound = getFinalAssessmentRoundForColumn(column)
-
-                          if (finalAssessmentRound) {
-                            return (
-                              <th
-                                key={`${column.id}-footer-final-assessment`}
-                                className="h-7 border-r border-t border-[var(--color-border)] bg-[var(--color-warning)]/10 px-0 text-center text-[10px] font-semibold text-[var(--color-text)] last:border-r-0"
-                                title={createFinalAssessmentColumnTitle(finalAssessmentRound)}
-                              >
-                                <button
-                                  type="button"
-                                  className="h-full w-full transition-colors hover:bg-[var(--color-warning)]/20 focus:bg-[var(--color-warning)]/20 focus:outline-none"
-                                  onClick={() => openFinalAssessmentInfo(finalAssessmentRound)}
-                                >
-                                  {getFinalAssessmentColumnLabel(finalAssessmentRound)}
-                                </button>
-                              </th>
-                            )
-                          }
                           const topic = column.kind === 'schedule' ? getLessonTopic(column) : ''
                           const note = column.kind === 'schedule' ? getLessonNote(column) : ''
                           const teacherName =
@@ -2407,7 +2310,6 @@ export function LearningJournalMatrix(): ReactElement {
                     {attendanceError}
                   </div>
                 ) : null}
-                {renderActiveFinalAssessmentDetails()}
 
                 {activeTopicColumn ? (
                   <div className="grid gap-4">
@@ -2584,7 +2486,7 @@ export function LearningJournalMatrix(): ReactElement {
                     {renderIntermediateGradeItemEditor()}
                     {renderIntermediateGradesJournal()}
                   </div>
-                ) : !activeFinalAssessmentRound ? (
+                ) : (
                   <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
                     Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто. Тема
                     занятия редактируется через сокращение предмета в нижней строке.
@@ -3137,60 +3039,10 @@ function getFinalAssessmentForRound(
   )
 }
 
-function getLessonPeriodByNumber(
-  lessonNumber: number,
-  lessonPeriods: AdminCrudRecord[]
-): AdminCrudRecord | null {
-  return (
-    lessonPeriods.find((lessonPeriod) => {
-      const number = toNumberOrNull(lessonPeriod.number) ?? toNumberOrNull(lessonPeriod.id)
-
-      return number === lessonNumber
-    }) ?? null
-  )
+function hasFinalAssessmentRoundForDay(rounds: AdminCrudRecord[], dayOfWeek: number): boolean {
+  return rounds.some((round) => normalizeDayOfWeek(round.day_of_week) === dayOfWeek)
 }
 
-function doTimeRangesOverlapByText(
-  firstStartValue: unknown,
-  firstEndValue: unknown,
-  secondStartValue: unknown,
-  secondEndValue: unknown
-): boolean {
-  const firstStart = parseTimeToMinutes(firstStartValue)
-  const firstEnd = parseTimeToMinutes(firstEndValue)
-  const secondStart = parseTimeToMinutes(secondStartValue)
-  const secondEnd = parseTimeToMinutes(secondEndValue)
-
-  if (
-    firstStart === null ||
-    firstEnd === null ||
-    secondStart === null ||
-    secondEnd === null
-  ) {
-    return false
-  }
-
-  return firstStart < secondEnd && secondStart < firstEnd
-}
-
-function parseTimeToMinutes(value: unknown): number | null {
-  const match = String(value ?? '')
-    .trim()
-    .match(/^(\d{1,2}):(\d{2})/)
-
-  if (!match) {
-    return null
-  }
-
-  const hours = Number(match[1])
-  const minutes = Number(match[2])
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
-    return null
-  }
-
-  return hours * 60 + minutes
-}
 function formatFinalAssessmentRoundDateTime(round: AdminCrudRecord): string {
   const date = formatJournalDate(String(round.assessment_date ?? ''))
   const startsAt = String(round.starts_at ?? '').trim()
