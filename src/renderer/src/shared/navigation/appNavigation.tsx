@@ -26,6 +26,7 @@ export interface AppNavigationItem {
   icon: ReactNode
   module?: AccessModule
   permissions?: string[]
+  profileTypes?: AuthUser['profileType'][]
 }
 
 export const studentNavigationItems: AppNavigationItem[] = [

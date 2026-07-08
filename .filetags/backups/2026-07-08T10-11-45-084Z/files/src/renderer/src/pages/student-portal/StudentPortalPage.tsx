@@ -617,6 +617,7 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
 
           {section === 'teachers' ? (
             <TeachersSection
+              data={data}
               teachers={teacherRows}
               selectedTeacher={selectedTeacher}
               selectedTeacherScheduleRows={selectedTeacherScheduleRows}
@@ -839,11 +840,13 @@ function CurriculumSection({
 }
 
 function TeachersSection({
+  data,
   teachers,
   selectedTeacher,
   selectedTeacherScheduleRows,
   onSelectTeacher
 }: {
+  data: StudentPortalData
   teachers: TeacherCardRow[]
   selectedTeacher: TeacherCardRow | null
   selectedTeacherScheduleRows: ScheduleRow[]
