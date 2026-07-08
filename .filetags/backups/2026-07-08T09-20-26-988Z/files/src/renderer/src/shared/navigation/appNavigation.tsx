@@ -8,7 +8,6 @@ import {
   FiDatabase,
   FiFilter,
   FiHome,
-  FiMapPin,
   FiSettings,
   FiShield,
   FiUsers
@@ -63,15 +62,8 @@ export const mainNavigationItems: AppNavigationItem[] = [
     module: 'academic_process'
   },
   {
-    title: 'Аудитории и занятия',
-    description: 'Корпуса, аудитории, пары и типы занятий',
-    path: '/rooms-and-lessons',
-    icon: <FiMapPin />,
-    module: 'rooms_and_lessons'
-  },
-  {
     title: 'Расписание',
-    description: 'Расписание занятий и итоговая аттестация',
+    description: 'Пары, аудитории и расписание занятий',
     path: '/schedule',
     icon: <FiCalendar />,
     module: 'schedule'

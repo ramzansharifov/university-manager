@@ -30,10 +30,6 @@ const routeAccessRules: RouteAccessRule[] = [
     matches: (pathname) => isExactOrNested(pathname, '/academic-process')
   },
   {
-    module: 'rooms_and_lessons',
-    matches: (pathname) => isExactOrNested(pathname, '/rooms-and-lessons')
-  },
-  {
     module: 'schedule',
     matches: (pathname) => isExactOrNested(pathname, '/schedule')
   },

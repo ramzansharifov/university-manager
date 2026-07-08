@@ -1,142 +1,367 @@
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-              <div className="grid gap-4">
-                {renderFinalAssessmentWeekNotice()}
+@folder src/renderer/src/pages/rooms-and-lessons
+@folder src/renderer/src/pages/rooms-and-lessons/ui
 
-                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-@endfind
-@with
-              <div className="grid gap-4">
-                <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-@endwith
+@write src/renderer/src/pages/rooms-and-lessons/RoomsAndLessonsPage.tsx
+import type { ReactElement } from 'react'
+import { AdminCrudEntityPanel } from '../../features/admin-crud'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
+import {
+  audienceTypeColumns,
+  audienceTypeFields,
+  lessonPeriodColumns,
+  lessonPeriodFields,
+  lessonTypeColumns,
+  lessonTypeFields
+} from '../schedule/config/scheduleCrudConfig'
+import { AudiencesByBuildingDrilldown } from './ui/AudiencesByBuildingDrilldown'
+
+export function RoomsAndLessonsPage(): ReactElement {
+  return (
+    <div className="grid gap-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Аудитории и занятия</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          Корпуса, аудитории, пары и справочники типов занятий.
+        </p>
+      </div>
+
+      <Tabs defaultValue="audience-types">
+        <TabsList>
+          <TabsTrigger value="audience-types">Типы аудиторий</TabsTrigger>
+          <TabsTrigger value="audiences">Аудитории</TabsTrigger>
+          <TabsTrigger value="periods">Пары</TabsTrigger>
+          <TabsTrigger value="lesson-types">Типы занятий</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="audience-types">
+          <AdminCrudEntityPanel
+            entity="audience_types"
+            title="Типы аудиторий"
+            description="Конструктор типов аудиторий: лекционная, семинарская, лаборатория, стадион и другие."
+            createButtonLabel="Добавить тип"
+            fields={audienceTypeFields}
+            columns={audienceTypeColumns}
+            emptyMessage="Типы аудиторий пока не созданы."
+          />
+        </TabsContent>
+
+        <TabsContent value="audiences">
+          <AudiencesByBuildingDrilldown />
+        </TabsContent>
+
+        <TabsContent value="periods">
+          <AdminCrudEntityPanel
+            entity="lesson_periods"
+            title="Пары"
+            description="Правила времени пар. Укажи начало пары и, при необходимости, длительность. Номер пары система рассчитает автоматически по времени."
+            createButtonLabel="Добавить пару"
+            fields={lessonPeriodFields}
+            columns={lessonPeriodColumns}
+            emptyMessage="Учебные пары пока не созданы."
+            orderBy="number"
+            orderDirection="asc"
+          />
+        </TabsContent>
+
+        <TabsContent value="lesson-types">
+          <AdminCrudEntityPanel
+            entity="dictionary_items"
+            title="Типы занятий"
+            description="Справочник типов занятий: лекция, практика, лабораторная, консультация, экзамен и другие."
+            createButtonLabel="Добавить тип занятия"
+            fields={lessonTypeFields}
+            columns={lessonTypeColumns}
+            filters={{ dictionary_key: 'lesson_types' }}
+            fixedData={{ dictionary_key: 'lesson_types' }}
+            emptyMessage="Типы занятий пока не созданы."
+            orderBy="sort_order"
+            orderDirection="asc"
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
 @end
 
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-  function openTopicEditor(column: ScheduleJournalColumn): void {
-    const hasSavedDetails = hasSavedLessonDetails(column)
+@write src/renderer/src/pages/rooms-and-lessons/ui/AudiencesByBuildingDrilldown.tsx
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ReactElement } from 'react'
+import { FiArrowRight } from 'react-icons/fi'
+import type {
+  AdminCrudFieldConfig,
+  AdminCrudRecord,
+  AdminCrudSelectOption
+} from '../../../features/admin-crud'
+import { AdminCrudEntityPanel } from '../../../features/admin-crud'
+import { Badge, Button, Card, CardContent } from '../../../shared/ui'
+import {
+  buildingColumns,
+  buildingFields,
+  createAudienceColumns,
+  createAudienceFields,
+  createOptions,
+  createOptionsMap,
+  getRecordName
+} from '../../schedule/config/scheduleCrudConfig'
 
-    setActiveTopicColumnId(column.id)
-    setTopicDraft(getLessonTopic(column))
-    setLessonNoteDraft(getLessonNote(column))
-    setIsLessonEditorEditing(!hasSavedDetails)
-    setTopicError(null)
-    setGradeError(null)
-    initializeIntermediateGradeDraft(column)
-  }
-@endfind
-@with
-  function openTopicEditor(column: ScheduleJournalColumn): void {
-    const hasSavedDetails = hasSavedLessonDetails(column)
+export function AudiencesByBuildingDrilldown(): ReactElement {
+  const [selectedBuilding, setSelectedBuilding] = useState<AdminCrudRecord | null>(null)
+  const [audienceTypeOptions, setAudienceTypeOptions] = useState<AdminCrudSelectOption[]>([])
+  const [buildingOptions, setBuildingOptions] = useState<AdminCrudSelectOption[]>([])
 
-    setActiveTopicColumnId(column.id)
-    setActiveFinalAssessmentRoundId('')
-    setTopicDraft(getLessonTopic(column))
-    setLessonNoteDraft(getLessonNote(column))
-    setIsLessonEditorEditing(!hasSavedDetails)
-    setTopicError(null)
-    setGradeError(null)
-    initializeIntermediateGradeDraft(column)
+  const selectedBuildingId = selectedBuilding ? Number(selectedBuilding.id) : null
+
+  const loadRelationOptions = useCallback(async () => {
+    const [audienceTypes, buildings] = await Promise.all([
+      window.api.adminCrud.list({
+        entity: 'audience_types',
+        page: 1,
+        pageSize: 100,
+        orderBy: 'name',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'buildings',
+        page: 1,
+        pageSize: 100,
+        orderBy: 'name',
+        orderDirection: 'asc'
+      })
+    ])
+
+    setAudienceTypeOptions(createOptions(audienceTypes.items, getRecordName))
+    setBuildingOptions(createOptions(buildings.items, getRecordName))
+  }, [])
+
+  useEffect(() => {
+    void loadRelationOptions()
+  }, [loadRelationOptions])
+
+  const audienceTypeNameById = useMemo(
+    () => createOptionsMap(audienceTypeOptions),
+    [audienceTypeOptions]
+  )
+
+  const buildingNameById = useMemo(() => createOptionsMap(buildingOptions), [buildingOptions])
+
+  const audienceFields = useMemo<AdminCrudFieldConfig[]>(() => {
+    return createAudienceFields({
+      audienceTypeOptions,
+      buildingOptions
+    }).map((field) => {
+      if (field.key !== 'building_id') {
+        return field
+      }
+
+      return {
+        ...field,
+        required: false,
+        hidden: selectedBuildingId !== null,
+        defaultValue: selectedBuildingId !== null ? String(selectedBuildingId) : field.defaultValue
+      }
+    })
+  }, [audienceTypeOptions, buildingOptions, selectedBuildingId])
+
+  const audienceColumns = useMemo(
+    () =>
+      createAudienceColumns({
+        audienceTypeNameById,
+        buildingNameById
+      }),
+    [audienceTypeNameById, buildingNameById]
+  )
+
+  const audienceFilters = useMemo(
+    () => (selectedBuildingId !== null ? { building_id: selectedBuildingId } : undefined),
+    [selectedBuildingId]
+  )
+
+  const audienceFixedData = useMemo(
+    () =>
+      selectedBuildingId !== null
+        ? ({ building_id: selectedBuildingId } as AdminCrudRecord)
+        : undefined,
+    [selectedBuildingId]
+  )
+
+  function openBuilding(record: AdminCrudRecord): void {
+    setSelectedBuilding(record)
   }
-@endwith
+
+  function backToBuildings(): void {
+    setSelectedBuilding(null)
+  }
+
+  return (
+    <div className="grid gap-4">
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant={selectedBuilding ? 'secondary' : 'primary'}
+            onClick={backToBuildings}
+          >
+            Корпуса
+          </Button>
+
+          {selectedBuilding ? (
+            <>
+              <BreadcrumbSeparator />
+              <Badge>{getRecordName(selectedBuilding)}</Badge>
+            </>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {!selectedBuilding ? (
+        <AdminCrudEntityPanel
+          entity="buildings"
+          title="Корпуса"
+          description="Выбери корпус, чтобы перейти к аудиториям внутри него. Можно кликнуть по строке или нажать «Открыть»."
+          createButtonLabel="Добавить корпус"
+          fields={buildingFields}
+          columns={buildingColumns}
+          emptyMessage="Корпуса пока не созданы."
+          orderBy="name"
+          orderDirection="asc"
+          onAfterMutation={loadRelationOptions}
+          onRowClick={openBuilding}
+          extraRowActions={(record) => (
+            <Button size="sm" variant="primary" onClick={() => openBuilding(record)}>
+              Открыть
+              <FiArrowRight />
+            </Button>
+          )}
+        />
+      ) : null}
+
+      {selectedBuilding ? (
+        <AdminCrudEntityPanel
+          entity="audiences"
+          title={`Аудитории: ${getRecordName(selectedBuilding)}`}
+          description="Аудитории, помещения и площадки выбранного корпуса. Этаж определяется автоматически по первой цифре номера."
+          createButtonLabel="Добавить аудиторию"
+          fields={audienceFields}
+          columns={audienceColumns}
+          filters={audienceFilters}
+          fixedData={audienceFixedData}
+          emptyMessage="В этом корпусе пока нет аудиторий."
+          orderBy="name"
+          orderDirection="asc"
+          onAfterMutation={loadRelationOptions}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function BreadcrumbSeparator(): ReactElement {
+  return <span className="text-sm text-[var(--color-text-muted)]">/</span>
+}
 @end
 
-@insert-after-once src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-  function openTopicEditor(column: ScheduleJournalColumn): void {
-    const hasSavedDetails = hasSavedLessonDetails(column)
+@write src/renderer/src/pages/schedule/SchedulePage.tsx
+import type { ReactElement } from 'react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui'
+import { FinalAssessmentSchedule } from './ui/FinalAssessmentSchedule'
+import { ScheduleItemsDrilldown } from './ui/ScheduleItemsDrilldown'
 
-    setActiveTopicColumnId(column.id)
-    setActiveFinalAssessmentRoundId('')
-    setTopicDraft(getLessonTopic(column))
-    setLessonNoteDraft(getLessonNote(column))
-    setIsLessonEditorEditing(!hasSavedDetails)
-    setTopicError(null)
-    setGradeError(null)
-    initializeIntermediateGradeDraft(column)
-  }
+export function SchedulePage(): ReactElement {
+  return (
+    <div className="grid gap-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Расписание</h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          Основное расписание занятий и отдельное расписание итоговой аттестации.
+        </p>
+      </div>
+
+      <Tabs defaultValue="schedule">
+        <TabsList>
+          <TabsTrigger value="schedule">Расписание занятий</TabsTrigger>
+          <TabsTrigger value="final-assessments">Итоговая аттестация</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="schedule">
+          <ScheduleItemsDrilldown />
+        </TabsContent>
+
+        <TabsContent value="final-assessments">
+          <FinalAssessmentSchedule />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+@end
+
+@insert-after-once src/renderer/src/app/router/AppRouter.tsx
+@find
+import { LearningJournalPage } from '../../pages/learning-journal/LearningJournalPage'
 @endfind
 @content
-
-  function openFinalAssessmentInfo(round: AdminCrudRecord): void {
-    setActiveFinalAssessmentRoundId(String(round.id))
-    setActiveTopicColumnId('')
-    setTopicDraft('')
-    setLessonNoteDraft('')
-    setIsLessonEditorEditing(false)
-    setTopicError(null)
-    clearIntermediateGradeDraft()
-  }
-
-  function getFinalAssessmentRoundForColumn(column: JournalColumn): AdminCrudRecord | null {
-    const lessonPeriod = getLessonPeriodByNumber(column.lessonNumber, lessonPeriods)
-
-    if (!lessonPeriod?.starts_at || !lessonPeriod.ends_at) {
-      return null
-    }
-
-    return (
-      selectedWeekFinalAssessmentRounds.find((round) => {
-        if (normalizeDayOfWeek(round.day_of_week) !== column.dayOfWeek) {
-          return false
-        }
-
-        return doTimeRangesOverlapByText(
-          round.starts_at,
-          round.ends_at,
-          lessonPeriod.starts_at,
-          lessonPeriod.ends_at
-        )
-      }) ?? null
-    )
-  }
-
-  function createFinalAssessmentColumnTitle(round: AdminCrudRecord): string {
-    const assessment = getFinalAssessmentForRound(round, finalAssessments)
-    const gradeElementTypeId = toNumberOrNull(assessment?.grade_element_type_id)
-    const gradeElementType =
-      gradeElementTypeId === null ? null : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
-    const disciplineId = toNumberOrNull(assessment?.discipline_id)
-    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
-    const teacherId = toNumberOrNull(round.teacher_id)
-    const teacher = teacherId === null ? null : (teacherById.get(teacherId) ?? null)
-    const audienceId = toNumberOrNull(round.audience_id)
-    const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
-
-    return [
-      'Итоговая аттестация',
-      `${gradeElementType ? getRecordName(gradeElementType) : 'Итог'} · ${
-        discipline ? getDisciplineName(discipline, subjectNameById) : getRecordName(assessment ?? round)
-      }`,
-      `${String(round.round_number ?? '—')} тур — ${getRoundLabel(round.round_type)}`,
-      formatFinalAssessmentRoundDateTime(round),
-      `Преподаватель: ${teacher ? getPersonFullName(teacher) : '—'}`,
-      `Аудитория: ${audience ? getRecordName(audience) : '—'}`,
-      'Редактируется во вкладке «Итоговая аттестация»'
-    ].join('\n')
-  }
-
-  function getFinalAssessmentColumnLabel(round: AdminCrudRecord): string {
-    const assessment = getFinalAssessmentForRound(round, finalAssessments)
-    const disciplineId = toNumberOrNull(assessment?.discipline_id)
-    const discipline = disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
-
-    if (!discipline) {
-      return 'Ит.'
-    }
-
-    return getDisciplineShortName(getDisciplineName(discipline, subjectNameById))
-  }
+import { RoomsAndLessonsPage } from '../../pages/rooms-and-lessons/RoomsAndLessonsPage'
 @endcontent
 @end
 
-@replace-first src/renderer/src/pages/schedule/ui/FinalAssessmentSchedule.tsx
+@insert-after-once src/renderer/src/app/router/AppRouter.tsx
 @find
-              lesson_period_id: startLessonPeriodId,
-              teacher_id: defaultTeacherId,
+          <Route path="/academic-process" element={<AcademicProcessPage />} />
+@endfind
+@content
+          <Route path="/rooms-and-lessons" element={<RoomsAndLessonsPage />} />
+@endcontent
+@end
+
+@insert-after-once src/renderer/src/shared/navigation/appNavigation.tsx
+@find
+  FiHome,
+@endfind
+@content
+  FiMapPin,
+@endcontent
+@end
+
+@replace-first src/renderer/src/shared/navigation/appNavigation.tsx
+@find
+  {
+    title: 'Расписание',
+    description: 'Пары, аудитории и расписание занятий',
+    path: '/schedule',
+    icon: <FiCalendar />,
+    module: 'schedule'
+  },
 @endfind
 @with
-              lesson_period_id: null,
-              teacher_id: defaultTeacherId,
+  {
+    title: 'Аудитории и занятия',
+    description: 'Корпуса, аудитории, пары и типы занятий',
+    path: '/rooms-and-lessons',
+    icon: <FiMapPin />,
+    module: 'rooms_and_lessons'
+  },
+  {
+    title: 'Расписание',
+    description: 'Расписание занятий и итоговая аттестация',
+    path: '/schedule',
+    icon: <FiCalendar />,
+    module: 'schedule'
+  },
 @endwith
+@end
+
+@insert-after-once src/renderer/src/shared/navigation/routeAccess.ts
+@find
+  {
+    module: 'academic_process',
+    matches: (pathname) => isExactOrNested(pathname, '/academic-process')
+  },
+@endfind
+@content
+  {
+    module: 'rooms_and_lessons',
+    matches: (pathname) => isExactOrNested(pathname, '/rooms-and-lessons')
+  },
+@endcontent
 @end

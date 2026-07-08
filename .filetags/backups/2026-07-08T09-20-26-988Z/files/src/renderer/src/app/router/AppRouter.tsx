@@ -6,7 +6,6 @@ import { AuditLogPage } from '../../pages/audit-log/AuditLogPage'
 import { AdminDashboardPage } from '../../pages/dashboard/AdminDashboardPage'
 import { FiltersPage } from '../../pages/filters/FiltersPage'
 import { LearningJournalPage } from '../../pages/learning-journal/LearningJournalPage'
-import { RoomsAndLessonsPage } from '../../pages/rooms-and-lessons/RoomsAndLessonsPage'
 import { LoginPage } from '../../pages/login/LoginPage'
 import { PeoplePage } from '../../pages/people/PeoplePage'
 import { StudentDetailsPage } from '../../pages/people/StudentDetailsPage'
@@ -32,7 +31,6 @@ export function AppRouter() {
           <Route path="/filters/teachers" element={<Navigate to="/filters" replace />} />
           <Route path="/filters/employees" element={<Navigate to="/filters" replace />} />
           <Route path="/academic-process" element={<AcademicProcessPage />} />
-          <Route path="/rooms-and-lessons" element={<RoomsAndLessonsPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/learning-journal" element={<LearningJournalPage />} />
           <Route path="/reports" element={<ReportsPage />} />

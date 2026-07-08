@@ -1,0 +1,35 @@
+{
+  "createdAt": "2026-07-08T09:20:27.041Z",
+  "backupPath": ".filetags/backups/2026-07-08T09-20-26-988Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/schedule/SchedulePage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/schedule/SchedulePage.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/app/router/AppRouter.tsx",
+      "backupRelativePath": "files/src/renderer/src/app/router/AppRouter.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/shared/navigation/appNavigation.tsx",
+      "backupRelativePath": "files/src/renderer/src/shared/navigation/appNavigation.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/shared/navigation/routeAccess.ts",
+      "backupRelativePath": "files/src/renderer/src/shared/navigation/routeAccess.ts"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Create folder: src/renderer/src/pages/rooms-and-lessons",
+    "Create folder: src/renderer/src/pages/rooms-and-lessons/ui",
+    "Write file: src/renderer/src/pages/rooms-and-lessons/RoomsAndLessonsPage.tsx\n   old: missing\n   new: 80 line(s)",
+    "Write file: src/renderer/src/pages/rooms-and-lessons/ui/AudiencesByBuildingDrilldown.tsx\n   old: missing\n   new: 174 line(s)",
+    "Write file: src/renderer/src/pages/schedule/SchedulePage.tsx\n   old: 183 line(s)\n   new: 32 line(s)",
+    "Insert after: src/renderer/src/app/router/AppRouter.tsx\n   found: yes\n   old: 47 line(s)\n   new: 48 line(s)",
+    "Insert after: src/renderer/src/app/router/AppRouter.tsx\n   found: yes\n   old: 48 line(s)\n   new: 49 line(s)",
+    "Insert after: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 132 line(s)\n   new: 133 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 133 line(s)\n   new: 140 line(s)",
+    "Insert after: src/renderer/src/shared/navigation/routeAccess.ts\n   found: yes\n   old: 100 line(s)\n   new: 104 line(s)"
+  ]
+}
