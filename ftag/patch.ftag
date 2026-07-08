@@ -1,18 +1,15 @@
-@replace-first src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
-@find
-                ) : !activeFinalAssessmentRound ? (
-                  <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
-                    Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто. Тема
-                    занятия редактируется через сокращение предмета в нижней строке.
-                  </div>
-                )}
-@endfind
+@replace-block src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx
+@from
+  return (
+      <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4">
+@endfrom
+@to
+  }
+  return (
+    <div className="grid gap-4">
+@endto
 @with
-                ) : !activeFinalAssessmentRound ? (
-                  <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
-                    Нажми на клетку студента, чтобы переключить отметку: пусто → Н → · → пусто. Тема
-                    занятия редактируется через сокращение предмета в нижней строке.
-                  </div>
-                ) : null}
+  return (
+    <div className="grid gap-4">
 @endwith
 @end
