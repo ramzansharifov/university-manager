@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FiEdit2, FiRefreshCw, FiSave, FiTrash2, FiUserPlus } from 'react-icons/fi'
 import type { AuthUserListItem, UserProfileType } from '../../../../../shared/types/auth'
 import type { AdminCrudRecord } from '../../../../../shared/types/adminCrud'
@@ -72,7 +72,6 @@ export function UsersAdministrationPanel() {
   const [isSaving, setIsSaving] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const usernameInputRef = useRef<HTMLInputElement | null>(null)
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -462,14 +461,7 @@ export function UsersAdministrationPanel() {
 
       <Dialog open={userDialogIsOpen} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent
-          className="z-[60] max-h-[90vh] max-w-3xl overflow-y-auto"
-          onOpenAutoFocus={(event) => {
-            event.preventDefault()
-
-            window.setTimeout(() => {
-              usernameInputRef.current?.focus()
-            }, 0)
-          }}
+          className="max-h-[90vh] max-w-3xl overflow-y-auto"
           onPointerDownOutside={(event) => {
             event.preventDefault()
           }}
@@ -511,18 +503,10 @@ export function UsersAdministrationPanel() {
             <label className="grid gap-2 text-sm">
               <span className="font-medium text-[var(--color-text)]">Логин</span>
               <Input
-                ref={usernameInputRef}
                 value={formUsername}
-                autoComplete="username"
+                autoComplete="off"
                 placeholder="Например: ivanov"
-                error={Boolean(errorMessage && !formUsername.trim())}
-                onChange={(event) => {
-                  setFormUsername(event.target.value)
-
-                  if (errorMessage) {
-                    setErrorMessage(null)
-                  }
-                }}
+                onChange={(event) => setFormUsername(event.target.value)}
               />
             </label>
 
@@ -539,14 +523,7 @@ export function UsersAdministrationPanel() {
                     ? 'Минимум 4 символа'
                     : 'Оставь пустым, если пароль менять не нужно'
                 }
-                error={Boolean(errorMessage && dialogMode === 'create' && formPassword.length < 4)}
-                onChange={(event) => {
-                  setFormPassword(event.target.value)
-
-                  if (errorMessage) {
-                    setErrorMessage(null)
-                  }
-                }}
+                onChange={(event) => setFormPassword(event.target.value)}
               />
             </label>
 

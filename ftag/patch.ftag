@@ -1,66 +1,134 @@
-@replace-first src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-export interface AppNavigationItem {
-  title: string
-  description: string
-  path: string
-  icon: ReactNode
-  module?: AccessModule
-  permissions?: string[]
+@write src/renderer/src/shared/ui/input/Input.tsx
+import type { InputHTMLAttributes } from 'react'
+import { forwardRef } from 'react'
+import { cn } from '../../lib/cn'
+
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  error?: boolean
 }
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { className, error = false, ...props },
+  ref
+) {
+  return (
+    <input
+      ref={ref}
+      className={cn(
+        'h-10 w-full rounded-lg border bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] outline-none transition-colors',
+        'placeholder:text-[var(--color-text-muted)]',
+        'focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20',
+        error ? 'border-[var(--color-danger)]' : 'border-[var(--color-border)]',
+        className
+      )}
+      {...props}
+    />
+  )
+})
+@end
+
+@replace-first src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
+@find
+import { useCallback, useEffect, useMemo, useState } from 'react'
 @endfind
 @with
-export interface AppNavigationItem {
-  title: string
-  description: string
-  path: string
-  icon: ReactNode
-  module?: AccessModule
-  permissions?: string[]
-  profileTypes?: AuthUser['profileType'][]
-}
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 @endwith
 @end
 
-@replace-first src/renderer/src/pages/student-portal/StudentPortalPage.tsx
+@insert-after-once src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
 @find
-            <TeachersSection
-              data={data}
-              teachers={teacherRows}
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+@endfind
+@content
+  const usernameInputRef = useRef<HTMLInputElement | null>(null)
+@endcontent
+@end
+
+@replace-first src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
+@find
+        <DialogContent
+          className="max-h-[90vh] max-w-3xl overflow-y-auto"
+          onPointerDownOutside={(event) => {
+            event.preventDefault()
+          }}
 @endfind
 @with
-            <TeachersSection
-              teachers={teacherRows}
+        <DialogContent
+          className="z-[60] max-h-[90vh] max-w-3xl overflow-y-auto"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault()
+
+            window.setTimeout(() => {
+              usernameInputRef.current?.focus()
+            }, 0)
+          }}
+          onPointerDownOutside={(event) => {
+            event.preventDefault()
+          }}
 @endwith
 @end
 
-@replace-first src/renderer/src/pages/student-portal/StudentPortalPage.tsx
+@replace-first src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
 @find
-function TeachersSection({
-  data,
-  teachers,
-  selectedTeacher,
-  selectedTeacherScheduleRows,
-  onSelectTeacher
-}: {
-  data: StudentPortalData
-  teachers: TeacherCardRow[]
-  selectedTeacher: TeacherCardRow | null
-  selectedTeacherScheduleRows: ScheduleRow[]
-  onSelectTeacher: (teacherId: string) => void
-}) {
+              <Input
+                value={formUsername}
+                autoComplete="off"
+                placeholder="Например: ivanov"
+                onChange={(event) => setFormUsername(event.target.value)}
+              />
 @endfind
 @with
-function TeachersSection({
-  teachers,
-  selectedTeacher,
-  selectedTeacherScheduleRows,
-  onSelectTeacher
-}: {
-  teachers: TeacherCardRow[]
-  selectedTeacher: TeacherCardRow | null
-  selectedTeacherScheduleRows: ScheduleRow[]
-  onSelectTeacher: (teacherId: string) => void
-}) {
+              <Input
+                ref={usernameInputRef}
+                value={formUsername}
+                autoComplete="username"
+                placeholder="Например: ivanov"
+                error={Boolean(errorMessage && !formUsername.trim())}
+                onChange={(event) => {
+                  setFormUsername(event.target.value)
+
+                  if (errorMessage) {
+                    setErrorMessage(null)
+                  }
+                }}
+              />
+@endwith
+@end
+
+@replace-first src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx
+@find
+              <Input
+                value={formPassword}
+                type="password"
+                autoComplete="new-password"
+                placeholder={
+                  dialogMode === 'create'
+                    ? 'Минимум 4 символа'
+                    : 'Оставь пустым, если пароль менять не нужно'
+                }
+                onChange={(event) => setFormPassword(event.target.value)}
+              />
+@endfind
+@with
+              <Input
+                value={formPassword}
+                type="password"
+                autoComplete="new-password"
+                placeholder={
+                  dialogMode === 'create'
+                    ? 'Минимум 4 символа'
+                    : 'Оставь пустым, если пароль менять не нужно'
+                }
+                error={Boolean(errorMessage && dialogMode === 'create' && formPassword.length < 4)}
+                onChange={(event) => {
+                  setFormPassword(event.target.value)
+
+                  if (errorMessage) {
+                    setErrorMessage(null)
+                  }
+                }}
+              />
 @endwith
 @end

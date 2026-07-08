@@ -1,0 +1,23 @@
+{
+  "createdAt": "2026-07-08T10:17:50.089Z",
+  "backupPath": ".filetags/backups/2026-07-08T10-17-50-045Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/shared/ui/input/Input.tsx",
+      "backupRelativePath": "files/src/renderer/src/shared/ui/input/Input.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Write file: src/renderer/src/shared/ui/input/Input.tsx\n   old: 22 line(s)\n   new: 26 line(s)",
+    "Replace file: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   found: yes\n   old: 741 line(s)\n   new: 741 line(s)",
+    "Insert after: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   found: yes\n   old: 741 line(s)\n   new: 742 line(s)",
+    "Replace file: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   found: yes\n   old: 742 line(s)\n   new: 749 line(s)",
+    "Replace file: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   found: yes\n   old: 749 line(s)\n   new: 757 line(s)",
+    "Replace file: src/renderer/src/pages/administration/ui/UsersAdministrationPanel.tsx\n   found: yes\n   old: 757 line(s)\n   new: 764 line(s)"
+  ]
+}
