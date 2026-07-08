@@ -77,14 +77,6 @@ export const studentNavigationItems: AppNavigationItem[] = [
     icon: <FiAward />,
     module: 'reports',
     profileTypes: ['student']
-  },
-  {
-    title: 'Настройки',
-    description: 'Профиль, контакты и учебная принадлежность',
-    path: '/student/settings',
-    icon: <FiSettings />,
-    module: 'settings',
-    profileTypes: ['student']
   }
 ]
 export const mainNavigationItems: AppNavigationItem[] = [

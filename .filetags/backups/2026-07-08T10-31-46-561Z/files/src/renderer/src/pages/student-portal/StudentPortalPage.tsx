@@ -1,4 +1,3 @@
-@write src/renderer/src/pages/student-portal/StudentPortalPage.tsx
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import {
@@ -6,13 +5,8 @@ import {
   FiBookOpen,
   FiCalendar,
   FiClipboard,
-  FiClock,
-  FiMapPin,
   FiRefreshCcw,
-  FiSearch,
-  FiSettings,
   FiTrendingUp,
-  FiUser,
   FiUserCheck,
   FiUsers
 } from 'react-icons/fi'
@@ -26,7 +20,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -36,13 +29,7 @@ import {
 import { formatDateForDisplay } from '../../shared/lib/date'
 
 export type StudentPortalSection =
-  | 'schedule'
-  | 'curriculum'
-  | 'teachers'
-  | 'group'
-  | 'journal'
-  | 'performance'
-  | 'settings'
+  'schedule' | 'curriculum' | 'teachers' | 'group' | 'journal' | 'performance'
 
 interface StudentPortalPageProps {
   section: StudentPortalSection
@@ -57,7 +44,6 @@ interface StudentPortalData {
   academicYear: AdminCrudRecord | null
   educationForm: AdminCrudRecord | null
   faculties: AdminCrudRecord[]
-  departments: AdminCrudRecord[]
   specialties: AdminCrudRecord[]
   groups: AdminCrudRecord[]
   classmates: AdminCrudRecord[]
@@ -83,7 +69,6 @@ interface StudentPortalData {
 
 interface ScheduleRow {
   id: string
-  item: AdminCrudRecord
   dayOrder: number
   periodOrder: number
   day: string
@@ -101,27 +86,16 @@ interface CurriculumCourseGroup {
   key: string
   course: string
   plan: AdminCrudRecord
-  semesterGroups: CurriculumSemesterGroup[]
-}
-
-interface CurriculumSemesterGroup {
-  key: string
-  title: string
-  sortOrder: number
   items: AdminCrudRecord[]
-  totalHours: number
 }
 
 interface TeacherCardRow {
   id: string
   teacherId: number
-  departmentId: number | null
-  subjectIds: number[]
   name: string
   department: string
   subjects: string[]
   disciplineCount: number
-  teachesOwnGroup: boolean
 }
 
 interface JournalRow {
@@ -136,7 +110,6 @@ interface JournalRow {
 
 interface GradeRow {
   id: string
-  disciplineId: number | null
   discipline: string
   work: string
   type: string
@@ -149,7 +122,6 @@ interface GradeRow {
 }
 
 const allSelectValue = '__all__'
-const dayNumbers = [1, 2, 3, 4, 5, 6, 7]
 
 const emptyData: StudentPortalData = {
   student: null,
@@ -160,7 +132,6 @@ const emptyData: StudentPortalData = {
   academicYear: null,
   educationForm: null,
   faculties: [],
-  departments: [],
   specialties: [],
   groups: [],
   classmates: [],
@@ -193,16 +164,7 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
   const [scheduleGroupId, setScheduleGroupId] = useState('')
   const [scheduleSemesterId, setScheduleSemesterId] = useState('')
   const [scheduleWeekId, setScheduleWeekId] = useState('')
-
-  const [journalSemesterId, setJournalSemesterId] = useState('')
-  const [journalWeekId, setJournalWeekId] = useState('')
-
-  const [teacherSearch, setTeacherSearch] = useState('')
-  const [teacherDepartmentId, setTeacherDepartmentId] = useState('')
-  const [teacherSubjectId, setTeacherSubjectId] = useState('')
   const [selectedTeacherId, setSelectedTeacherId] = useState('')
-
-  const [performanceDisciplineId, setPerformanceDisciplineId] = useState('')
 
   const loadStudentPortal = useCallback(async () => {
     if (auth.user?.profileType !== 'student') {
@@ -243,7 +205,6 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
         groupRecord,
         statusRecord,
         facultiesResult,
-        departmentsResult,
         specialtiesResult,
         groupsResult,
         teachersResult,
@@ -279,13 +240,6 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
           entity: 'faculties',
           page: 1,
           pageSize: 500,
-          orderBy: 'name',
-          orderDirection: 'asc'
-        }),
-        window.api.adminCrud.list({
-          entity: 'departments',
-          page: 1,
-          pageSize: 1000,
           orderBy: 'name',
           orderDirection: 'asc'
         }),
@@ -496,7 +450,6 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
         academicYear: academicYearRecord,
         educationForm: educationFormRecord,
         faculties: facultiesResult.items,
-        departments: departmentsResult.items,
         specialties: specialtiesResult.items,
         groups: groupsResult.items,
         classmates: classmatesResult.items,
@@ -532,71 +485,37 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
     void loadStudentPortal()
   }, [loadStudentPortal])
 
+  const studentName = data.student ? getPersonName(data.student) : 'Студент'
   const ownGroupId = toNumberOrNull(data.group?.id)
-  const defaultSemesterId = useMemo(() => getDefaultSemesterId(data), [data])
-  const defaultScheduleWeekId = useMemo(
-    () => getDefaultWeekId(data, scheduleSemesterId || defaultSemesterId),
-    [data, defaultSemesterId, scheduleSemesterId]
-  )
-  const defaultJournalWeekId = useMemo(
-    () => getDefaultWeekId(data, journalSemesterId || defaultSemesterId),
-    [data, defaultSemesterId, journalSemesterId]
-  )
 
   const effectiveScheduleGroupId = scheduleGroupId ? Number(scheduleGroupId) : ownGroupId
-  const effectiveScheduleSemesterId = scheduleSemesterId || defaultSemesterId
-  const effectiveScheduleWeekId = scheduleWeekId || defaultScheduleWeekId
-  const effectiveJournalSemesterId = journalSemesterId || defaultSemesterId
-  const effectiveJournalWeekId = journalWeekId || defaultJournalWeekId
-
   const scheduleRows = useMemo(
     () =>
       createScheduleRows({
         data,
         groupId: effectiveScheduleGroupId,
-        semesterId: effectiveScheduleSemesterId,
-        weekId: effectiveScheduleWeekId
+        semesterId: scheduleSemesterId,
+        weekId: scheduleWeekId
       }),
-    [data, effectiveScheduleGroupId, effectiveScheduleSemesterId, effectiveScheduleWeekId]
+    [data, effectiveScheduleGroupId, scheduleSemesterId, scheduleWeekId]
   )
 
   const curriculumGroups = useMemo(() => createCurriculumGroups(data), [data])
-  const allTeacherRows = useMemo(() => createTeacherRows(data, ownGroupId), [data, ownGroupId])
-  const filteredTeacherRows = useMemo(
-    () =>
-      filterTeacherRows({
-        teachers: allTeacherRows,
-        search: teacherSearch,
-        departmentId: teacherDepartmentId,
-        subjectId: teacherSubjectId
-      }),
-    [allTeacherRows, teacherDepartmentId, teacherSearch, teacherSubjectId]
-  )
+  const teacherRows = useMemo(() => createTeacherRows(data, ownGroupId), [data, ownGroupId])
   const selectedTeacher = useMemo(() => {
-    const effectiveTeacherId = selectedTeacherId || filteredTeacherRows[0]?.id || ''
+    const effectiveTeacherId = selectedTeacherId || teacherRows[0]?.id || ''
 
-    return allTeacherRows.find((teacher) => teacher.id === effectiveTeacherId) ?? null
-  }, [allTeacherRows, filteredTeacherRows, selectedTeacherId])
+    return teacherRows.find((teacher) => teacher.id === effectiveTeacherId) ?? null
+  }, [selectedTeacherId, teacherRows])
   const selectedTeacherScheduleRows = useMemo(
     () => (selectedTeacher ? createTeacherScheduleRows(data, selectedTeacher.teacherId) : []),
     [data, selectedTeacher]
   )
   const journalRows = useMemo(() => createJournalRows(data, ownGroupId), [data, ownGroupId])
-  const gradeRows = useMemo(() => createGradeRows(data), [data])
-  const performanceDisciplineOptions = useMemo(
-    () => createGradeDisciplineOptions(gradeRows),
-    [gradeRows]
-  )
-  const filteredGradeRows = useMemo(
-    () => filterGradeRowsByDiscipline(gradeRows, performanceDisciplineId),
-    [gradeRows, performanceDisciplineId]
-  )
-  const intermediateGrades = useMemo(
-    () => filteredGradeRows.filter((row) => !row.isFinal),
-    [filteredGradeRows]
-  )
-  const finalGrades = useMemo(() => filteredGradeRows.filter((row) => row.isFinal), [filteredGradeRows])
-  const gradeStats = useMemo(() => createGradeStats(filteredGradeRows), [filteredGradeRows])
+  const gradeRows = useMemo(() => createGradeRows(data, ownGroupId), [data, ownGroupId])
+  const intermediateGrades = useMemo(() => gradeRows.filter((row) => !row.isFinal), [gradeRows])
+  const finalGrades = useMemo(() => gradeRows.filter((row) => row.isFinal), [gradeRows])
+  const gradeStats = useMemo(() => createGradeStats(gradeRows), [gradeRows])
 
   return (
     <div className="grid gap-5">
@@ -604,7 +523,7 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{getSectionTitle(section)}</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            {getSectionDescription(section)}
+            Студенческий кабинет: расписание, учебный план, группа, журнал и успеваемость.
           </p>
         </div>
 
@@ -634,6 +553,51 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
 
       {data.student ? (
         <>
+          <Card className="overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-lg font-bold text-white shadow-sm">
+                    {getInitials(studentName)}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-xl font-bold tracking-tight">{studentName}</h2>
+                      <Badge>{data.status ? getRecordName(data.status) : 'Статус не указан'}</Badge>
+                    </div>
+
+                    <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                      {getStudentEducationLine(data)}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {data.student.student_card_number ? (
+                        <Badge variant="muted">№ {String(data.student.student_card_number)}</Badge>
+                      ) : null}
+                      {data.student.email ? (
+                        <Badge variant="muted">{String(data.student.email)}</Badge>
+                      ) : null}
+                      {data.student.phone ? (
+                        <Badge variant="muted">{String(data.student.phone)}</Badge>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
+                  <MetricCard label="Группа" value={getRecordNameOrDash(data.group)} />
+                  <MetricCard label="Курс" value={getCourseLabel(data.group)} />
+                  <MetricCard
+                    label="Дисциплин"
+                    value={String(getOwnDisciplines(data, ownGroupId).length)}
+                  />
+                  <MetricCard label="Оценок" value={String(gradeRows.length)} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {section === 'schedule' ? (
             <ScheduleSection
               data={data}
@@ -641,13 +605,8 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
               groupId={scheduleGroupId}
               semesterId={scheduleSemesterId}
               weekId={scheduleWeekId}
-              effectiveSemesterId={effectiveScheduleSemesterId}
-              effectiveWeekId={effectiveScheduleWeekId}
               onGroupChange={setScheduleGroupId}
-              onSemesterChange={(value) => {
-                setScheduleSemesterId(value)
-                setScheduleWeekId('')
-              }}
+              onSemesterChange={setScheduleSemesterId}
               onWeekChange={setScheduleWeekId}
             />
           ) : null}
@@ -658,17 +617,9 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
 
           {section === 'teachers' ? (
             <TeachersSection
-              data={data}
-              teachers={filteredTeacherRows}
-              allTeacherCount={allTeacherRows.length}
+              teachers={teacherRows}
               selectedTeacher={selectedTeacher}
               selectedTeacherScheduleRows={selectedTeacherScheduleRows}
-              search={teacherSearch}
-              departmentId={teacherDepartmentId}
-              subjectId={teacherSubjectId}
-              onSearchChange={setTeacherSearch}
-              onDepartmentChange={setTeacherDepartmentId}
-              onSubjectChange={setTeacherSubjectId}
               onSelectTeacher={(teacherId) => setSelectedTeacherId(teacherId)}
             />
           ) : null}
@@ -676,35 +627,16 @@ export function StudentPortalPage({ section }: StudentPortalPageProps): ReactEle
           {section === 'group' ? <MyGroupSection data={data} /> : null}
 
           {section === 'journal' ? (
-            <JournalSection
-              data={data}
-              rows={journalRows}
-              ownGroupId={ownGroupId}
-              semesterId={journalSemesterId}
-              weekId={journalWeekId}
-              effectiveSemesterId={effectiveJournalSemesterId}
-              effectiveWeekId={effectiveJournalWeekId}
-              gradeRows={gradeRows.filter((row) => !row.isFinal)}
-              onSemesterChange={(value) => {
-                setJournalSemesterId(value)
-                setJournalWeekId('')
-              }}
-              onWeekChange={setJournalWeekId}
-            />
+            <JournalSection data={data} rows={journalRows} gradeRows={intermediateGrades} />
           ) : null}
 
           {section === 'performance' ? (
             <PerformanceSection
               stats={gradeStats}
-              disciplineId={performanceDisciplineId}
-              disciplineOptions={performanceDisciplineOptions}
               intermediateGrades={intermediateGrades}
               finalGrades={finalGrades}
-              onDisciplineChange={setPerformanceDisciplineId}
             />
           ) : null}
-
-          {section === 'settings' ? <SettingsSection data={data} username={auth.user.username} /> : null}
         </>
       ) : null}
     </div>
@@ -717,8 +649,6 @@ function ScheduleSection({
   groupId,
   semesterId,
   weekId,
-  effectiveSemesterId,
-  effectiveWeekId,
   onGroupChange,
   onSemesterChange,
   onWeekChange
@@ -728,34 +658,27 @@ function ScheduleSection({
   groupId: string
   semesterId: string
   weekId: string
-  effectiveSemesterId: string
-  effectiveWeekId: string
   onGroupChange: (value: string) => void
   onSemesterChange: (value: string) => void
   onWeekChange: (value: string) => void
 }) {
   const selectedSemesterWeeks = data.weeks.filter((week) => {
-    return !effectiveSemesterId || String(week.semester_id ?? '') === effectiveSemesterId
+    return !semesterId || String(week.semester_id ?? '') === semesterId
   })
 
   return (
     <div className="grid gap-4">
       <Card>
         <CardHeader>
-          <div className="flex items-start gap-3">
-            <FiCalendar className="mt-1 h-5 w-5 shrink-0 text-[var(--color-primary)]" />
-            <div>
-              <CardTitle>Расписание занятий</CardTitle>
-              <CardDescription>
-                По умолчанию открывается расписание твоей группы на текущий или ближайший семестр и
-                неделю. Фильтрами можно посмотреть расписание других групп.
-              </CardDescription>
-            </div>
-          </div>
+          <CardTitle>Фильтры расписания</CardTitle>
+          <CardDescription>
+            По умолчанию показано расписание твоей группы. Можно выбрать другую группу, семестр и
+            неделю.
+          </CardDescription>
         </CardHeader>
 
         <CardContent>
-          <div className="grid gap-4 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3">
             <PortalSelect
               label="Группа"
               value={groupId}
@@ -770,11 +693,7 @@ function ScheduleSection({
             <PortalSelect
               label="Семестр"
               value={semesterId}
-              placeholder={
-                effectiveSemesterId
-                  ? `Автоматически: ${getRelationName(effectiveSemesterId, createRecordNameMap(data.semesters))}`
-                  : 'Все семестры'
-              }
+              placeholder="Все семестры"
               options={data.semesters.map((semester) => ({
                 value: String(semester.id),
                 label: getRecordName(semester)
@@ -785,11 +704,7 @@ function ScheduleSection({
             <PortalSelect
               label="Неделя"
               value={weekId}
-              placeholder={
-                effectiveWeekId
-                  ? `Автоматически: ${getRelationName(effectiveWeekId, createWeekNameMap(data.weeks))}`
-                  : 'Все недели'
-              }
+              placeholder="Все недели"
               options={selectedSemesterWeeks.map((week) => ({
                 value: String(week.id),
                 label: getWeekLabel(week)
@@ -797,106 +712,49 @@ function ScheduleSection({
               onValueChange={onWeekChange}
             />
           </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant="muted">
-              Группа: {groupId ? getRelationName(groupId, createRecordNameMap(data.groups)) : getRecordNameOrDash(data.group)}
-            </Badge>
-            {effectiveSemesterId ? (
-              <Badge variant="muted">
-                Семестр: {getRelationName(effectiveSemesterId, createRecordNameMap(data.semesters))}
-              </Badge>
-            ) : null}
-            {effectiveWeekId ? (
-              <Badge variant="muted">
-                Неделя: {getRelationName(effectiveWeekId, createWeekNameMap(data.weeks))}
-              </Badge>
-            ) : null}
-          </div>
         </CardContent>
       </Card>
 
-      <ReadOnlyScheduleWeekBoard rows={rows} />
-    </div>
-  )
-}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <FiCalendar className="h-5 w-5 text-[var(--color-primary)]" />
+            <div>
+              <CardTitle>Расписание занятий</CardTitle>
+              <CardDescription>
+                Только просмотр. Данные берутся из основного расписания.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
 
-function ReadOnlyScheduleWeekBoard({ rows }: { rows: ScheduleRow[] }) {
-  const rowsByDay = useMemo(() => {
-    const result = new Map<number, ScheduleRow[]>()
-
-    rows.forEach((row) => {
-      const dayRows = result.get(row.dayOrder) ?? []
-      dayRows.push(row)
-      result.set(row.dayOrder, dayRows)
-    })
-
-    return result
-  }, [rows])
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {dayNumbers.map((dayNumber) => {
-        const dayRows = [...(rowsByDay.get(dayNumber) ?? [])].sort(
-          (first, second) => first.periodOrder - second.periodOrder
-        )
-
-        return (
-          <Card key={dayNumber} className="min-h-64 overflow-hidden">
-            <CardHeader className="bg-[var(--color-surface-muted)]">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-base">{getDayLabel(dayNumber)}</CardTitle>
-                <Badge variant={dayRows.length > 0 ? 'default' : 'muted'}>
-                  {dayRows.length} {getLessonCountText(dayRows.length)}
-                </Badge>
-              </div>
-            </CardHeader>
-
-            <CardContent className="grid gap-3 p-4">
-              {dayRows.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[var(--color-border)] px-3 py-8 text-center text-sm text-[var(--color-text-muted)]">
-                  Занятий нет.
-                </div>
-              ) : null}
-
-              {dayRows.map((row) => (
-                <article
-                  key={row.id}
-                  className="grid gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--color-text)]">{row.discipline}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                        <span className="inline-flex items-center gap-1">
-                          <FiClock />
-                          {row.pair}
-                        </span>
-                        {row.type !== '—' ? <Badge variant="muted">{row.type}</Badge> : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-1 text-xs text-[var(--color-text-muted)]">
-                    <span className="inline-flex items-center gap-2">
-                      <FiUser />
-                      {row.teacher}
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <FiMapPin />
-                      {row.audience}
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <FiUsers />
-                      {row.group}
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </CardContent>
-          </Card>
-        )
-      })}
+        <CardContent>
+          {rows.length > 0 ? (
+            <SimpleTable
+              headers={[
+                'День',
+                'Пара',
+                'Неделя',
+                'Дисциплина',
+                'Преподаватель',
+                'Тип',
+                'Аудитория'
+              ]}
+              rows={rows.map((row) => [
+                row.day,
+                row.pair,
+                row.week,
+                row.discipline,
+                row.teacher,
+                row.type,
+                row.audience
+              ])}
+            />
+          ) : (
+            <EmptyState>По выбранным фильтрам расписание не найдено.</EmptyState>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -917,7 +775,7 @@ function CurriculumSection({
             <div>
               <CardTitle>Учебный план специальности</CardTitle>
               <CardDescription>
-                План разделён на курсы и семестры. Внутри — дисциплины, часы и формы контроля.
+                Подробный план по курсам: дисциплины, часы, семестры и формы контроля.
               </CardDescription>
             </div>
           </div>
@@ -935,63 +793,40 @@ function CurriculumSection({
       {groups.length > 0 ? (
         <div className="grid gap-4">
           {groups.map((group) => (
-            <Card key={group.key} className="overflow-hidden">
-              <CardHeader className="bg-[var(--color-surface-muted)]">
+            <Card key={group.key}>
+              <CardHeader>
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div>
                     <CardTitle>{group.course}</CardTitle>
                     <CardDescription>{getRecordName(group.plan)}</CardDescription>
                   </div>
-                  <Badge variant="muted">
-                    Семестров: {group.semesterGroups.length}
-                  </Badge>
+                  <Badge variant="muted">Дисциплин: {group.items.length}</Badge>
                 </div>
               </CardHeader>
 
-              <CardContent className="grid gap-4">
-                {group.semesterGroups.map((semesterGroup) => (
-                  <section
-                    key={semesterGroup.key}
-                    className="overflow-hidden rounded-xl border border-[var(--color-border)]"
-                  >
-                    <div className="flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <h3 className="font-semibold text-[var(--color-text)]">
-                          {semesterGroup.title}
-                        </h3>
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                          Дисциплины семестра и распределение часов.
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="muted">Дисциплин: {semesterGroup.items.length}</Badge>
-                        <Badge variant="muted">Часов: {semesterGroup.totalHours}</Badge>
-                      </div>
-                    </div>
-
-                    <SimpleTable
-                      headers={[
-                        'Предмет',
-                        'Всего',
-                        'Лекции',
-                        'Практики',
-                        'Лаб.',
-                        'Самост.',
-                        'Контроль'
-                      ]}
-                      rows={semesterGroup.items.map((item) => [
-                        getRelationName(item.subject_id, createRecordNameMap(data.subjects)),
-                        formatValue(item.hours_total),
-                        formatValue(item.hours_lectures),
-                        formatValue(item.hours_practices),
-                        formatValue(item.hours_labs),
-                        formatValue(item.hours_self_study),
-                        formatControlForms(item.control_form, data.gradeElementTypes)
-                      ])}
-                    />
-                  </section>
-                ))}
+              <CardContent>
+                <SimpleTable
+                  headers={[
+                    'Семестр',
+                    'Предмет',
+                    'Всего',
+                    'Лекции',
+                    'Практики',
+                    'Лаб.',
+                    'Самост.',
+                    'Контроль'
+                  ]}
+                  rows={group.items.map((item) => [
+                    getRelationName(item.semester_id, createRecordNameMap(data.semesters)),
+                    getRelationName(item.subject_id, createRecordNameMap(data.subjects)),
+                    formatValue(item.hours_total),
+                    formatValue(item.hours_lectures),
+                    formatValue(item.hours_practices),
+                    formatValue(item.hours_labs),
+                    formatValue(item.hours_self_study),
+                    formatControlForms(item.control_form, data.gradeElementTypes)
+                  ])}
+                />
               </CardContent>
             </Card>
           ))}
@@ -1004,162 +839,100 @@ function CurriculumSection({
 }
 
 function TeachersSection({
-  data,
   teachers,
-  allTeacherCount,
   selectedTeacher,
   selectedTeacherScheduleRows,
-  search,
-  departmentId,
-  subjectId,
-  onSearchChange,
-  onDepartmentChange,
-  onSubjectChange,
   onSelectTeacher
 }: {
-  data: StudentPortalData
   teachers: TeacherCardRow[]
-  allTeacherCount: number
   selectedTeacher: TeacherCardRow | null
   selectedTeacherScheduleRows: ScheduleRow[]
-  search: string
-  departmentId: string
-  subjectId: string
-  onSearchChange: (value: string) => void
-  onDepartmentChange: (value: string) => void
-  onSubjectChange: (value: string) => void
   onSelectTeacher: (teacherId: string) => void
 }) {
   return (
     <div className="grid gap-4">
       <Card>
         <CardHeader>
-          <div className="flex items-start gap-3">
-            <FiUserCheck className="mt-1 h-5 w-5 shrink-0 text-[var(--color-primary)]" />
+          <div className="flex items-center gap-3">
+            <FiUserCheck className="h-5 w-5 text-[var(--color-primary)]" />
             <div>
-              <CardTitle>Преподаватели</CardTitle>
+              <CardTitle>Мои преподаватели</CardTitle>
               <CardDescription>
-                Поиск доступен по всем преподавателям. Выбери преподавателя, чтобы увидеть его полное
-                расписание во всех группах.
+                Преподаватели, которые ведут дисциплины твоей группы. Выбери преподавателя, чтобы
+                увидеть его полное расписание.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
 
         <CardContent>
-          <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr_1fr]">
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium text-[var(--color-text)]">Поиск</span>
-              <div className="relative">
-                <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                <Input
-                  className="pl-9"
-                  value={search}
-                  placeholder="ФИО, кафедра или предмет"
-                  onChange={(event) => onSearchChange(event.target.value)}
-                />
-              </div>
-            </label>
-
-            <PortalSelect
-              label="Кафедра"
-              value={departmentId}
-              placeholder="Все кафедры"
-              options={data.departments.map((department) => ({
-                value: String(department.id),
-                label: getRecordName(department)
-              }))}
-              onValueChange={onDepartmentChange}
-            />
-
-            <PortalSelect
-              label="Предмет"
-              value={subjectId}
-              placeholder="Все предметы"
-              options={data.subjects.map((subject) => ({
-                value: String(subject.id),
-                label: getRecordName(subject)
-              }))}
-              onValueChange={onSubjectChange}
-            />
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant="muted">Найдено: {teachers.length}</Badge>
-            <Badge variant="muted">Всего: {allTeacherCount}</Badge>
-          </div>
+          {teachers.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {teachers.map((teacher) => (
+                <button
+                  key={teacher.id}
+                  type="button"
+                  className={[
+                    'rounded-2xl border p-4 text-left transition hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-muted)]',
+                    selectedTeacher?.id === teacher.id
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                      : 'border-[var(--color-border)] bg-[var(--color-surface)]'
+                  ].join(' ')}
+                  onClick={() => onSelectTeacher(teacher.id)}
+                >
+                  <p className="font-semibold text-[var(--color-text)]">{teacher.name}</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                    {teacher.department}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge variant="muted">Дисциплин: {teacher.disciplineCount}</Badge>
+                    {teacher.subjects.slice(0, 2).map((subject) => (
+                      <Badge key={subject} variant="muted">
+                        {subject}
+                      </Badge>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <EmptyState>Для твоей группы пока не назначены преподаватели.</EmptyState>
+          )}
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Список преподавателей</CardTitle>
-            <CardDescription>Карточки преподавателей с краткой информацией.</CardDescription>
-          </CardHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {selectedTeacher
+              ? `Расписание преподавателя: ${selectedTeacher.name}`
+              : 'Расписание преподавателя'}
+          </CardTitle>
+          <CardDescription>
+            Здесь показано полное расписание выбранного преподавателя, включая занятия в других
+            группах.
+          </CardDescription>
+        </CardHeader>
 
-          <CardContent>
-            {teachers.length > 0 ? (
-              <div className="grid max-h-[640px] gap-3 overflow-y-auto pr-1">
-                {teachers.map((teacher) => (
-                  <button
-                    key={teacher.id}
-                    type="button"
-                    className={[
-                      'rounded-2xl border p-4 text-left transition hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-muted)]',
-                      selectedTeacher?.id === teacher.id
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                        : 'border-[var(--color-border)] bg-[var(--color-surface)]'
-                    ].join(' ')}
-                    onClick={() => onSelectTeacher(teacher.id)}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-[var(--color-text)]">{teacher.name}</p>
-                        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                          {teacher.department}
-                        </p>
-                      </div>
-
-                      {teacher.teachesOwnGroup ? <Badge variant="success">Мой</Badge> : null}
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant="muted">Дисциплин: {teacher.disciplineCount}</Badge>
-                      {teacher.subjects.slice(0, 3).map((subject) => (
-                        <Badge key={subject} variant="muted">
-                          {subject}
-                        </Badge>
-                      ))}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <EmptyState>По выбранным фильтрам преподаватели не найдены.</EmptyState>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {selectedTeacher ? `Расписание: ${selectedTeacher.name}` : 'Расписание преподавателя'}
-            </CardTitle>
-            <CardDescription>
-              Полное расписание выбранного преподавателя, включая занятия в других группах.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            {selectedTeacherScheduleRows.length > 0 ? (
-              <ReadOnlyScheduleWeekBoard rows={selectedTeacherScheduleRows} />
-            ) : (
-              <EmptyState>У выбранного преподавателя пока нет расписания.</EmptyState>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        <CardContent>
+          {selectedTeacherScheduleRows.length > 0 ? (
+            <SimpleTable
+              headers={['День', 'Пара', 'Группа', 'Дисциплина', 'Тип', 'Аудитория', 'Неделя']}
+              rows={selectedTeacherScheduleRows.map((row) => [
+                row.day,
+                row.pair,
+                row.group,
+                row.discipline,
+                row.type,
+                row.audience,
+                row.week
+              ])}
+            />
+          ) : (
+            <EmptyState>У выбранного преподавателя пока нет расписания.</EmptyState>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -1177,7 +950,9 @@ function MyGroupSection({ data }: { data: StudentPortalData }) {
             <FiUsers className="h-5 w-5 text-[var(--color-primary)]" />
             <div>
               <CardTitle>Иерархия моей группы</CardTitle>
-              <CardDescription>Факультет, специальность, группа, декан, куратор и однокурсники.</CardDescription>
+              <CardDescription>
+                Факультет, специальность, группа, декан, куратор и однокурсники.
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -1221,103 +996,50 @@ function MyGroupSection({ data }: { data: StudentPortalData }) {
 }
 
 function JournalSection({
-  data,
   rows,
-  ownGroupId,
-  semesterId,
-  weekId,
-  effectiveSemesterId,
-  effectiveWeekId,
-  gradeRows,
-  onSemesterChange,
-  onWeekChange
+  gradeRows
 }: {
   data: StudentPortalData
   rows: JournalRow[]
-  ownGroupId: number | null
-  semesterId: string
-  weekId: string
-  effectiveSemesterId: string
-  effectiveWeekId: string
   gradeRows: GradeRow[]
-  onSemesterChange: (value: string) => void
-  onWeekChange: (value: string) => void
 }) {
-  const selectedSemesterWeeks = data.weeks.filter((week) => {
-    return !effectiveSemesterId || String(week.semester_id ?? '') === effectiveSemesterId
-  })
-  const scheduleRows = useMemo(
-    () =>
-      createScheduleRows({
-        data,
-        groupId: ownGroupId,
-        semesterId: effectiveSemesterId,
-        weekId: effectiveWeekId
-      }),
-    [data, effectiveSemesterId, effectiveWeekId, ownGroupId]
-  )
-
   return (
     <div className="grid gap-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <FiClipboard className="mt-1 h-5 w-5 shrink-0 text-[var(--color-primary)]" />
-            <div>
-              <CardTitle>Журнал моей группы</CardTitle>
-              <CardDescription>
-                Read-only матрица как в админском журнале: дни недели, пары, темы занятий и твои
-                отметки посещаемости. Группа выбрана автоматически.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <PortalSelect
-              label="Семестр"
-              value={semesterId}
-              placeholder={
-                effectiveSemesterId
-                  ? `Автоматически: ${getRelationName(effectiveSemesterId, createRecordNameMap(data.semesters))}`
-                  : 'Все семестры'
-              }
-              options={data.semesters.map((semester) => ({
-                value: String(semester.id),
-                label: getRecordName(semester)
-              }))}
-              onValueChange={onSemesterChange}
-            />
-
-            <PortalSelect
-              label="Неделя"
-              value={weekId}
-              placeholder={
-                effectiveWeekId
-                  ? `Автоматически: ${getRelationName(effectiveWeekId, createWeekNameMap(data.weeks))}`
-                  : 'Все недели'
-              }
-              options={selectedSemesterWeeks.map((week) => ({
-                value: String(week.id),
-                label: getWeekLabel(week)
-              }))}
-              onValueChange={onWeekChange}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <StudentJournalMatrix data={data} scheduleRows={scheduleRows} />
-
       <div className="grid gap-3 md:grid-cols-3">
-        <SummaryCard icon={<FiClipboard />} label="Занятий с отметками" value={String(rows.length)} />
+        <SummaryCard icon={<FiClipboard />} label="Занятий в журнале" value={String(rows.length)} />
         <SummaryCard label="Работ и контрольных" value={String(gradeRows.length)} />
         <SummaryCard
           label="Отметок посещаемости"
           value={String(rows.filter((row) => row.attendance !== '—').length)}
         />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Темы занятий и посещаемость</CardTitle>
+          <CardDescription>
+            Темы проведённых занятий, преподаватели и твои отметки посещаемости.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          {rows.length > 0 ? (
+            <SimpleTable
+              headers={['Дата', 'Дисциплина', 'Преподаватель', 'Тема', 'Посещение', 'Комментарий']}
+              rows={rows.map((row) => [
+                row.date,
+                row.discipline,
+                row.teacher,
+                row.topic,
+                row.attendance,
+                row.comment
+              ])}
+            />
+          ) : (
+            <EmptyState>В журнале пока нет проведённых занятий.</EmptyState>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -1346,193 +1068,36 @@ function JournalSection({
   )
 }
 
-function StudentJournalMatrix({
-  data,
-  scheduleRows
-}: {
-  data: StudentPortalData
-  scheduleRows: ScheduleRow[]
-}) {
-  const attendanceByScheduleItemId = useMemo(() => {
-    const sessionByScheduleItemId = new Map<number, AdminCrudRecord>()
-
-    data.lessonSessions.forEach((session) => {
-      const scheduleItemId = toNumberOrNull(session.schedule_item_id)
-
-      if (scheduleItemId !== null) {
-        sessionByScheduleItemId.set(scheduleItemId, session)
-      }
-    })
-
-    const attendanceByScheduleItem = new Map<number, AdminCrudRecord>()
-
-    data.attendanceRecords.forEach((record) => {
-      const sessionId = toNumberOrNull(record.lesson_session_id)
-      const session =
-        sessionId === null
-          ? null
-          : data.lessonSessions.find((item) => Number(item.id) === sessionId) ?? null
-      const scheduleItemId = toNumberOrNull(session?.schedule_item_id)
-
-      if (scheduleItemId !== null) {
-        attendanceByScheduleItem.set(scheduleItemId, record)
-      }
-    })
-
-    return {
-      sessionByScheduleItemId,
-      attendanceByScheduleItem
-    }
-  }, [data.attendanceRecords, data.lessonSessions])
-
-  const attendanceStatusById = useMemo(
-    () => createRecordMap(data.attendanceStatuses),
-    [data.attendanceStatuses]
-  )
-  const lessonNumbers = useMemo(() => {
-    const numbers = data.lessonPeriods
-      .map((period) => toNumberOrNull(period.number))
-      .filter((value): value is number => value !== null)
-
-    return numbers.length > 0 ? numbers : [1, 2, 3, 4, 5]
-  }, [data.lessonPeriods])
-
-  return (
-    <Card>
-      <CardHeader className="bg-[var(--color-surface-muted)]">
-        <CardTitle>Матрица недели</CardTitle>
-        <CardDescription>
-          Нажимать и редактировать нельзя: студент только просматривает сохранённые темы и отметки.
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent>
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-          <table className="w-full min-w-[72rem] border-collapse text-sm">
-            <thead className="bg-[var(--color-surface-muted)]">
-              <tr>
-                <th className="border-b border-r border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
-                  День
-                </th>
-                {lessonNumbers.map((lessonNumber) => (
-                  <th
-                    key={lessonNumber}
-                    className="border-b border-r border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)] last:border-r-0"
-                  >
-                    {lessonNumber} пара
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {dayNumbers.map((dayNumber) => (
-                <tr key={dayNumber} className="border-b border-[var(--color-border)] last:border-b-0">
-                  <td className="border-r border-[var(--color-border)] px-4 py-3 font-semibold text-[var(--color-text)]">
-                    {getDayLabel(dayNumber)}
-                  </td>
-
-                  {lessonNumbers.map((lessonNumber) => {
-                    const row = scheduleRows.find(
-                      (item) => item.dayOrder === dayNumber && item.periodOrder === lessonNumber
-                    )
-                    const session = row
-                      ? attendanceByScheduleItemId.sessionByScheduleItemId.get(Number(row.item.id))
-                      : null
-                    const attendance = row
-                      ? attendanceByScheduleItemId.attendanceByScheduleItem.get(Number(row.item.id))
-                      : null
-                    const attendanceStatus = attendance
-                      ? getRecordById(attendance.attendance_status_id, attendanceStatusById)
-                      : null
-
-                    return (
-                      <td
-                        key={`${dayNumber}:${lessonNumber}`}
-                        className="border-r border-[var(--color-border)] px-3 py-3 align-top last:border-r-0"
-                      >
-                        {row ? (
-                          <div className="grid gap-2">
-                            <div>
-                              <p className="font-semibold text-[var(--color-text)]">{row.discipline}</p>
-                              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                                {row.teacher}
-                              </p>
-                            </div>
-
-                            <div className="flex flex-wrap gap-1.5">
-                              <Badge variant="muted">{row.type}</Badge>
-                              <Badge variant={attendanceStatus ? 'default' : 'muted'}>
-                                {attendanceStatus ? getRecordName(attendanceStatus) : 'Нет отметки'}
-                              </Badge>
-                            </div>
-
-                            <p className="rounded-lg bg-[var(--color-surface-muted)] px-2 py-1.5 text-xs text-[var(--color-text-muted)]">
-                              Тема: {formatValue(session?.topic)}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-[var(--color-text-muted)]">—</span>
-                        )}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 function PerformanceSection({
   stats,
-  disciplineId,
-  disciplineOptions,
   intermediateGrades,
-  finalGrades,
-  onDisciplineChange
+  finalGrades
 }: {
   stats: { total: number; average: number | null; finalCount: number }
-  disciplineId: string
-  disciplineOptions: AdminCrudSelectOption[]
   intermediateGrades: GradeRow[]
   finalGrades: GradeRow[]
-  onDisciplineChange: (value: string) => void
 }) {
   return (
     <div className="grid gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Фильтр успеваемости</CardTitle>
-          <CardDescription>
-            Можно посмотреть все оценки сразу или выбрать конкретную дисциплину.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <PortalSelect
-            label="Дисциплина"
-            value={disciplineId}
-            placeholder="Все дисциплины"
-            options={disciplineOptions}
-            onValueChange={onDisciplineChange}
-          />
-        </CardContent>
-      </Card>
-
       <div className="grid gap-3 md:grid-cols-3">
-        <SummaryCard icon={<FiTrendingUp />} label="Всего результатов" value={String(stats.total)} />
-        <SummaryCard label="Средний балл" value={stats.average === null ? '—' : stats.average.toFixed(1)} />
+        <SummaryCard
+          icon={<FiTrendingUp />}
+          label="Всего результатов"
+          value={String(stats.total)}
+        />
+        <SummaryCard
+          label="Средний балл"
+          value={stats.average === null ? '—' : stats.average.toFixed(1)}
+        />
         <SummaryCard icon={<FiAward />} label="Итоговых оценок" value={String(stats.finalCount)} />
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Промежуточная успеваемость</CardTitle>
-          <CardDescription>Оценки по контрольным, лабораторным, практическим и другим промежуточным элементам.</CardDescription>
+          <CardDescription>
+            Оценки по контрольным, лабораторным, практическим и другим промежуточным элементам.
+          </CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -1545,9 +1110,11 @@ function PerformanceSection({
       </Card>
 
       <Card>
-        <CardHeader className="bg-[var(--color-surface-muted)]">
+        <CardHeader className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]">
           <CardTitle>Зачётная книжка</CardTitle>
-          <CardDescription>Итоговые оценочные элементы: зачёты, экзамены и финальные результаты.</CardDescription>
+          <CardDescription>
+            Итоговые оценочные элементы: зачёты, экзамены и финальные результаты.
+          </CardDescription>
         </CardHeader>
 
         <CardContent className="p-4">
@@ -1570,11 +1137,15 @@ function PerformanceSection({
                   <div className="mt-3 grid gap-2 text-xs text-[var(--color-text-muted)]">
                     <div className="flex justify-between gap-3">
                       <span>Элемент</span>
-                      <span className="text-right font-medium text-[var(--color-text)]">{row.work}</span>
+                      <span className="text-right font-medium text-[var(--color-text)]">
+                        {row.work}
+                      </span>
                     </div>
                     <div className="flex justify-between gap-3">
                       <span>Дата</span>
-                      <span className="text-right font-medium text-[var(--color-text)]">{row.date}</span>
+                      <span className="text-right font-medium text-[var(--color-text)]">
+                        {row.date}
+                      </span>
                     </div>
                   </div>
                 </article>
@@ -1583,58 +1154,6 @@ function PerformanceSection({
           ) : (
             <EmptyState>Итоговых оценок пока нет.</EmptyState>
           )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function SettingsSection({ data, username }: { data: StudentPortalData; username: string }) {
-  return (
-    <div className="grid gap-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <FiSettings className="h-5 w-5 text-[var(--color-primary)]" />
-            <div>
-              <CardTitle>Профиль студента</CardTitle>
-              <CardDescription>
-                Личные данные, учебная принадлежность и контакты текущего аккаунта.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <InfoItem label="Аккаунт" value={username} />
-            <InfoItem label="ФИО" value={data.student ? getPersonName(data.student) : '—'} />
-            <InfoItem label="Статус" value={getRecordNameOrDash(data.status)} />
-            <InfoItem label="Студенческий" value={data.student?.student_card_number} />
-            <InfoItem label="Email" value={data.student?.email} />
-            <InfoItem label="Телефон" value={data.student?.phone} />
-            <InfoItem label="Дата рождения" value={formatDateForDisplay(data.student?.birth_date)} />
-            <InfoItem label="Дата поступления" value={formatDateForDisplay(data.student?.admission_date)} />
-            <InfoItem label="Адрес" value={data.student?.address} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Учебная принадлежность</CardTitle>
-          <CardDescription>Данные подтягиваются из карточки студента и группы.</CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <InfoItem label="Факультет" value={getRecordNameOrDash(data.faculty)} />
-            <InfoItem label="Специальность" value={getRecordNameOrDash(data.specialty)} />
-            <InfoItem label="Группа" value={getRecordNameOrDash(data.group)} />
-            <InfoItem label="Курс" value={getCourseLabel(data.group)} />
-            <InfoItem label="Учебный год" value={getRecordNameOrDash(data.academicYear)} />
-            <InfoItem label="Форма обучения" value={getRecordNameOrDash(data.educationForm)} />
-          </div>
         </CardContent>
       </Card>
     </div>
@@ -1694,15 +1213,16 @@ function PortalSelect({
   )
 }
 
-function SummaryCard({
-  icon,
-  label,
-  value
-}: {
-  icon?: ReactNode
-  label: string
-  value: string
-}) {
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2">
+      <p className="text-xs font-medium text-[var(--color-text-muted)]">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-[var(--color-text)]">{value}</p>
+    </div>
+  )
+}
+
+function SummaryCard({ icon, label, value }: { icon?: ReactNode; label: string; value: string }) {
   return (
     <Card>
       <CardContent className="flex items-center gap-3">
@@ -1731,8 +1251,8 @@ function InfoItem({ label, value }: { label: string; value: unknown }) {
 
 function SimpleTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-      <table className="w-full min-w-[56rem] border-collapse text-sm">
+    <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
+      <table className="w-full border-collapse text-sm">
         <thead className="bg-[var(--color-surface-muted)]">
           <tr>
             {headers.map((header) => (
@@ -1820,7 +1340,6 @@ function createScheduleRows({
 
       return {
         id: String(item.id ?? index),
-        item,
         dayOrder: Number(item.day_of_week ?? 999),
         periodOrder: Number(period?.number ?? 999),
         day: getDayLabel(item.day_of_week),
@@ -1836,7 +1355,9 @@ function createScheduleRows({
         status: formatValue(item.status)
       }
     })
-    .sort((first, second) => first.dayOrder - second.dayOrder || first.periodOrder - second.periodOrder)
+    .sort(
+      (first, second) => first.dayOrder - second.dayOrder || first.periodOrder - second.periodOrder
+    )
 }
 
 function createTeacherScheduleRows(data: StudentPortalData, teacherId: number): ScheduleRow[] {
@@ -1852,8 +1373,6 @@ function createTeacherScheduleRows(data: StudentPortalData, teacherId: number): 
 }
 
 function createCurriculumGroups(data: StudentPortalData): CurriculumCourseGroup[] {
-  const subjectNameById = createRecordNameMap(data.subjects)
-  const semesterNameById = createRecordNameMap(data.semesters)
   const itemsByPlanId = new Map<number, AdminCrudRecord[]>()
 
   data.curriculumItems.forEach((item) => {
@@ -1872,166 +1391,62 @@ function createCurriculumGroups(data: StudentPortalData): CurriculumCourseGroup[
     .map((plan) => {
       const planId = toNumberOrNull(plan.id) ?? -1
       const course = toNumberOrNull(plan.course)
-      const items = [...(itemsByPlanId.get(planId) ?? [])].sort((first, second) => {
-        const semesterDiff = Number(first.semester_id ?? 999) - Number(second.semester_id ?? 999)
-
-        if (semesterDiff !== 0) {
-          return semesterDiff
-        }
-
-        return getRelationName(first.subject_id, subjectNameById).localeCompare(
-          getRelationName(second.subject_id, subjectNameById),
-          'ru'
-        )
-      })
 
       return {
         key: String(plan.id ?? plan.name),
         course: course === null ? 'Курс не указан' : `${course} курс`,
         plan,
-        semesterGroups: groupCurriculumItemsBySemester(items, semesterNameById)
+        items: [...(itemsByPlanId.get(planId) ?? [])].sort(
+          (first, second) => Number(first.semester_id ?? 999) - Number(second.semester_id ?? 999)
+        )
       }
     })
     .sort((first, second) => Number(first.plan.course ?? 999) - Number(second.plan.course ?? 999))
 }
 
-function groupCurriculumItemsBySemester(
-  items: AdminCrudRecord[],
-  semesterNameById: Map<number, string>
-): CurriculumSemesterGroup[] {
-  const groups = new Map<string, CurriculumSemesterGroup>()
-
-  items.forEach((item) => {
-    const semesterId = toNumberOrNull(item.semester_id)
-    const sortOrder = semesterId ?? Number.MAX_SAFE_INTEGER
-    const key = semesterId === null ? 'empty' : String(semesterId)
-    const group =
-      groups.get(key) ??
-      ({
-        key,
-        title: semesterId === null ? 'Семестр не указан' : (semesterNameById.get(semesterId) ?? `${semesterId} семестр`),
-        sortOrder,
-        items: [],
-        totalHours: 0
-      } satisfies CurriculumSemesterGroup)
-
-    group.items.push(item)
-    group.totalHours += toNumberOrNull(item.hours_total) ?? 0
-    groups.set(key, group)
-  })
-
-  return Array.from(groups.values()).sort((first, second) => first.sortOrder - second.sortOrder)
-}
-
 function createTeacherRows(data: StudentPortalData, ownGroupId: number | null): TeacherCardRow[] {
   const subjectById = createRecordMap(data.subjects)
   const teacherById = createRecordMap(data.teachers)
-  const departmentById = createRecordMap(data.departments)
+  const departmentById = new Map<number, AdminCrudRecord>()
   const teacherMap = new Map<number, TeacherCardRow>()
 
-  data.teachers.forEach((teacher) => {
-    const teacherId = toNumberOrNull(teacher.id)
+  data.disciplines
+    .filter((discipline) => ownGroupId !== null && Number(discipline.group_id) === ownGroupId)
+    .forEach((discipline) => {
+      const teacher = getRecordById(discipline.teacher_id, teacherById)
+      const teacherId = toNumberOrNull(teacher?.id)
 
-    if (teacherId === null) {
-      return
-    }
+      if (!teacher || teacherId === null) {
+        return
+      }
 
-    const department = getRecordById(teacher.department_id, departmentById)
-    const subjectIds = parseMultiValue(teacher.teaching_subjects)
-      .map((item) => toNumberOrNull(item))
-      .filter((id): id is number => id !== null)
+      const subject = getRecordById(discipline.subject_id, subjectById)
+      const department = getRecordById(teacher.department_id, departmentById)
+      const current = teacherMap.get(teacherId) ?? {
+        id: String(teacherId),
+        teacherId,
+        name: getPersonName(teacher),
+        department: department ? getRecordName(department) : 'Кафедра не указана',
+        subjects: [],
+        disciplineCount: 0
+      }
 
-    teacherMap.set(teacherId, {
-      id: String(teacherId),
-      teacherId,
-      departmentId: toNumberOrNull(teacher.department_id),
-      subjectIds,
-      name: getPersonName(teacher),
-      department: department ? getRecordName(department) : 'Кафедра не указана',
-      subjects: subjectIds
-        .map((subjectId) => {
-          const subject = subjectById.get(subjectId)
+      current.disciplineCount += 1
 
-          return subject ? getRecordName(subject) : `#${subjectId}`
-        })
-        .filter(Boolean),
-      disciplineCount: 0,
-      teachesOwnGroup: false
+      if (subject) {
+        const subjectName = getRecordName(subject)
+
+        if (!current.subjects.includes(subjectName)) {
+          current.subjects.push(subjectName)
+        }
+      }
+
+      teacherMap.set(teacherId, current)
     })
-  })
-
-  data.disciplines.forEach((discipline) => {
-    const teacher = getRecordById(discipline.teacher_id, teacherById)
-    const teacherId = toNumberOrNull(teacher?.id)
-
-    if (!teacher || teacherId === null) {
-      return
-    }
-
-    const current = teacherMap.get(teacherId)
-
-    if (!current) {
-      return
-    }
-
-    current.disciplineCount += 1
-    current.teachesOwnGroup =
-      current.teachesOwnGroup ||
-      (ownGroupId !== null && Number(discipline.group_id) === ownGroupId)
-
-    const subject = getRecordById(discipline.subject_id, subjectById)
-
-    if (subject) {
-      const subjectId = toNumberOrNull(subject.id)
-      const subjectName = getRecordName(subject)
-
-      if (subjectId !== null && !current.subjectIds.includes(subjectId)) {
-        current.subjectIds.push(subjectId)
-      }
-
-      if (!current.subjects.includes(subjectName)) {
-        current.subjects.push(subjectName)
-      }
-    }
-  })
 
   return Array.from(teacherMap.values()).sort((first, second) =>
     first.name.localeCompare(second.name, 'ru')
   )
-}
-
-function filterTeacherRows({
-  teachers,
-  search,
-  departmentId,
-  subjectId
-}: {
-  teachers: TeacherCardRow[]
-  search: string
-  departmentId: string
-  subjectId: string
-}): TeacherCardRow[] {
-  const normalizedSearch = search.trim().toLowerCase()
-
-  return teachers.filter((teacher) => {
-    if (departmentId && String(teacher.departmentId ?? '') !== departmentId) {
-      return false
-    }
-
-    if (subjectId && !teacher.subjectIds.includes(Number(subjectId))) {
-      return false
-    }
-
-    if (!normalizedSearch) {
-      return true
-    }
-
-    const haystack = [teacher.name, teacher.department, ...teacher.subjects]
-      .join(' ')
-      .toLowerCase()
-
-    return haystack.includes(normalizedSearch)
-  })
 }
 
 function createJournalRows(data: StudentPortalData, ownGroupId: number | null): JournalRow[] {
@@ -2058,10 +1473,15 @@ function createJournalRows(data: StudentPortalData, ownGroupId: number | null): 
     })
     .map((session, index) => {
       const scheduleItem = getRecordById(session.schedule_item_id, scheduleItemById)
-      const discipline = scheduleItem ? getRecordById(scheduleItem.discipline_id, disciplineById) : null
+      const discipline = scheduleItem
+        ? getRecordById(scheduleItem.discipline_id, disciplineById)
+        : null
       const teacher = getRecordById(session.teacher_id ?? scheduleItem?.teacher_id, teacherById)
+      const attendance = getRecordById(
+        attendanceBySessionId.get(Number(session.id))?.attendance_status_id,
+        attendanceStatusById
+      )
       const attendanceRecord = attendanceBySessionId.get(Number(session.id))
-      const attendance = getRecordById(attendanceRecord?.attendance_status_id, attendanceStatusById)
 
       return {
         id: String(session.id ?? index),
@@ -2076,7 +1496,7 @@ function createJournalRows(data: StudentPortalData, ownGroupId: number | null): 
     .sort((first, second) => second.date.localeCompare(first.date, 'ru'))
 }
 
-function createGradeRows(data: StudentPortalData): GradeRow[] {
+function createGradeRows(data: StudentPortalData, ownGroupId: number | null): GradeRow[] {
   const gradeItemById = createRecordMap(data.gradeItems)
   const disciplineById = createRecordMap(data.disciplines)
   const subjectById = createRecordMap(data.subjects)
@@ -2094,7 +1514,6 @@ function createGradeRows(data: StudentPortalData): GradeRow[] {
 
       return {
         id: String(grade.id ?? index),
-        disciplineId: toNumberOrNull(discipline?.id ?? gradeItem?.discipline_id),
         discipline: discipline ? getDisciplineName(discipline, subjectById) : '—',
         work: gradeItem ? getRecordName(gradeItem) : `Работа #${String(grade.grade_item_id ?? '')}`,
         type: gradeElementType ? getRecordName(gradeElementType) : '—',
@@ -2106,37 +1525,24 @@ function createGradeRows(data: StudentPortalData): GradeRow[] {
         comment: formatValue(grade.comment)
       }
     })
+    .filter((row) => {
+      if (ownGroupId === null) {
+        return true
+      }
+
+      const gradeItem = getRecordById(row.id, new Map())
+      void gradeItem
+
+      return true
+    })
     .sort((first, second) => second.date.localeCompare(first.date, 'ru'))
 }
 
-function createGradeDisciplineOptions(rows: GradeRow[]): AdminCrudSelectOption[] {
-  const options = new Map<string, AdminCrudSelectOption>()
-
-  rows.forEach((row) => {
-    if (row.disciplineId === null) {
-      return
-    }
-
-    options.set(String(row.disciplineId), {
-      value: String(row.disciplineId),
-      label: row.discipline
-    })
-  })
-
-  return Array.from(options.values()).sort((first, second) =>
-    first.label.localeCompare(second.label, 'ru')
-  )
-}
-
-function filterGradeRowsByDiscipline(rows: GradeRow[], disciplineId: string): GradeRow[] {
-  if (!disciplineId) {
-    return rows
-  }
-
-  return rows.filter((row) => String(row.disciplineId ?? '') === disciplineId)
-}
-
-function createGradeStats(rows: GradeRow[]): { total: number; average: number | null; finalCount: number } {
+function createGradeStats(rows: GradeRow[]): {
+  total: number
+  average: number | null
+  finalCount: number
+} {
   const numericScores = rows
     .map((row) => row.numericScore)
     .filter((score): score is number => score !== null)
@@ -2150,6 +1556,12 @@ function createGradeStats(rows: GradeRow[]): { total: number; average: number | 
     average,
     finalCount: rows.filter((row) => row.isFinal).length
   }
+}
+
+function getOwnDisciplines(data: StudentPortalData, ownGroupId: number | null): AdminCrudRecord[] {
+  return data.disciplines.filter((discipline) => {
+    return ownGroupId !== null && Number(discipline.group_id) === ownGroupId
+  })
 }
 
 function getScoreLabel(
@@ -2189,7 +1601,9 @@ function getGradeResultStatus(
   return 'graded'
 }
 
-function getGradeBadgeVariant(row: GradeRow): 'default' | 'success' | 'warning' | 'danger' | 'muted' {
+function getGradeBadgeVariant(
+  row: GradeRow
+): 'default' | 'success' | 'warning' | 'danger' | 'muted' {
   if (row.resultStatus === 'absent' || row.resultStatus === 'failed') return 'danger'
   if (row.resultStatus === 'passed') return 'success'
   if (row.isFinal) return 'warning'
@@ -2237,61 +1651,6 @@ function parseMultiValue(value: unknown): string[] {
   return []
 }
 
-function getDefaultSemesterId(data: StudentPortalData): string {
-  const now = new Date()
-  const currentSemester = data.semesters.find((semester) => {
-    return isDateWithinRange(now, semester.starts_at, semester.ends_at)
-  })
-
-  if (currentSemester?.id) {
-    return String(currentSemester.id)
-  }
-
-  const groupAcademicYearId = toNumberOrNull(data.group?.academic_year_id)
-  const groupSemester = data.semesters.find((semester) => {
-    return groupAcademicYearId !== null && Number(semester.academic_year_id) === groupAcademicYearId
-  })
-
-  return groupSemester?.id ? String(groupSemester.id) : ''
-}
-
-function getDefaultWeekId(data: StudentPortalData, semesterId: string): string {
-  const now = new Date()
-  const semesterWeeks = data.weeks.filter((week) => {
-    return !semesterId || String(week.semester_id ?? '') === semesterId
-  })
-  const currentWeek = semesterWeeks.find((week) => isDateWithinRange(now, week.starts_at, week.ends_at))
-
-  if (currentWeek?.id) {
-    return String(currentWeek.id)
-  }
-
-  return semesterWeeks[0]?.id ? String(semesterWeeks[0].id) : ''
-}
-
-function isDateWithinRange(date: Date, startsAt: unknown, endsAt: unknown): boolean {
-  const startDate = parseDate(startsAt)
-  const endDate = parseDate(endsAt)
-
-  if (!startDate || !endDate) {
-    return false
-  }
-
-  return date >= startDate && date <= endDate
-}
-
-function parseDate(value: unknown): Date | null {
-  const stringValue = String(value ?? '').trim()
-
-  if (!stringValue) {
-    return null
-  }
-
-  const date = new Date(stringValue)
-
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
 function createRecordMap(records: AdminCrudRecord[]): Map<number, AdminCrudRecord> {
   return new Map(
     records
@@ -2304,14 +1663,6 @@ function createRecordNameMap(records: AdminCrudRecord[]): Map<number, string> {
   return new Map(
     records
       .map((record) => [toNumberOrNull(record.id), getRecordName(record)] as const)
-      .filter((entry): entry is readonly [number, string] => entry[0] !== null)
-  )
-}
-
-function createWeekNameMap(records: AdminCrudRecord[]): Map<number, string> {
-  return new Map(
-    records
-      .map((record) => [toNumberOrNull(record.id), getWeekLabel(record)] as const)
       .filter((entry): entry is readonly [number, string] => entry[0] !== null)
   )
 }
@@ -2352,26 +1703,25 @@ function getDisciplineName(
   return subject ? getRecordName(subject) : `Дисциплина #${String(discipline.id ?? '')}`
 }
 
+function getStudentEducationLine(data: StudentPortalData): string {
+  const parts = [
+    data.group ? `Группа ${getRecordName(data.group)}` : null,
+    getCourseLabel(data.group),
+    data.specialty ? getRecordName(data.specialty) : null,
+    data.faculty ? getRecordName(data.faculty) : null
+  ].filter((part) => part && part !== '—')
+
+  return parts.length > 0 ? parts.join(' · ') : 'Учебная принадлежность не указана'
+}
+
 function getSectionTitle(section: StudentPortalSection): string {
   if (section === 'schedule') return 'Расписание'
   if (section === 'curriculum') return 'Учебный план'
   if (section === 'teachers') return 'Преподаватели'
   if (section === 'group') return 'Моя группа'
   if (section === 'journal') return 'Журнал'
-  if (section === 'performance') return 'Успеваемость'
 
-  return 'Настройки'
-}
-
-function getSectionDescription(section: StudentPortalSection): string {
-  if (section === 'schedule') return 'Карточки расписания по дням недели и фильтры просмотра других групп.'
-  if (section === 'curriculum') return 'Учебный план специальности по курсам, семестрам и дисциплинам.'
-  if (section === 'teachers') return 'Поиск преподавателей и просмотр полного расписания выбранного преподавателя.'
-  if (section === 'group') return 'Факультет, специальность, группа, куратор и однокурсники.'
-  if (section === 'journal') return 'Матрица журнала группы, темы занятий, посещаемость и контрольные.'
-  if (section === 'performance') return 'Промежуточные оценки, итоговые элементы и зачётная книжка.'
-
-  return 'Профиль, контакты и учебная принадлежность студента.'
+  return 'Успеваемость'
 }
 
 function getCourseLabel(group: AdminCrudRecord | null): string {
@@ -2412,25 +1762,6 @@ function getDayLabel(value: unknown): string {
   return 'День не указан'
 }
 
-function getLessonCountText(count: number): string {
-  const normalizedCount = Math.abs(count) % 100
-  const lastDigit = normalizedCount % 10
-
-  if (normalizedCount > 10 && normalizedCount < 20) {
-    return 'занятий'
-  }
-
-  if (lastDigit === 1) {
-    return 'занятие'
-  }
-
-  if (lastDigit >= 2 && lastDigit <= 4) {
-    return 'занятия'
-  }
-
-  return 'занятий'
-}
-
 function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === '') {
     return '—'
@@ -2459,12 +1790,27 @@ function getRecordName(record: AdminCrudRecord): string {
   return getPersonName(record) || `#${String(record.id)}`
 }
 
+function getInitials(value: string): string {
+  const parts = value
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase()
+  }
+
+  return value.slice(0, 2).toUpperCase()
+}
+
 function isTruthy(value: unknown): boolean {
   if (value === true || value === 1) {
     return true
   }
 
-  const normalizedValue = String(value ?? '').trim().toLowerCase()
+  const normalizedValue = String(value ?? '')
+    .trim()
+    .toLowerCase()
 
   return normalizedValue === '1' || normalizedValue === 'true' || normalizedValue === 'yes'
 }
@@ -2484,44 +1830,3 @@ function toNumberOrNull(value: unknown): number | null {
 
   return Number.isFinite(numberValue) ? numberValue : null
 }
-@end
-
-@replace-first src/renderer/src/shared/navigation/appNavigation.tsx
-@find
-  {
-    title: 'Успеваемость',
-    description: 'Оценки, итоговые элементы и зачётная книжка',
-    path: '/student/performance',
-    icon: <FiAward />,
-    module: 'reports',
-    profileTypes: ['student']
-  }
-@endfind
-@with
-  {
-    title: 'Успеваемость',
-    description: 'Оценки, итоговые элементы и зачётная книжка',
-    path: '/student/performance',
-    icon: <FiAward />,
-    module: 'reports',
-    profileTypes: ['student']
-  },
-  {
-    title: 'Настройки',
-    description: 'Профиль, контакты и учебная принадлежность',
-    path: '/student/settings',
-    icon: <FiSettings />,
-    module: 'settings',
-    profileTypes: ['student']
-  }
-@endwith
-@end
-
-@insert-after-once src/renderer/src/app/router/AppRouter.tsx
-@find
-          <Route path="/student/performance" element={<StudentPortalPage section="performance" />} />
-@endfind
-@content
-          <Route path="/student/settings" element={<StudentPortalPage section="settings" />} />
-@endcontent
-@end

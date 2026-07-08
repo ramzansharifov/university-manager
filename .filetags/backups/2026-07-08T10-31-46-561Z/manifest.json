@@ -1,0 +1,20 @@
+{
+  "createdAt": "2026-07-08T10:31:46.584Z",
+  "backupPath": ".filetags/backups/2026-07-08T10-31-46-561Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/student-portal/StudentPortalPage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/student-portal/StudentPortalPage.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/shared/navigation/appNavigation.tsx",
+      "backupRelativePath": "files/src/renderer/src/shared/navigation/appNavigation.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Write file: src/renderer/src/pages/student-portal/StudentPortalPage.tsx\n   old: 1833 line(s)\n   new: 2485 line(s)",
+    "Replace file: src/renderer/src/shared/navigation/appNavigation.tsx\n   found: yes\n   old: 200 line(s)\n   new: 208 line(s)",
+    "Insert after: src/renderer/src/app/router/AppRouter.tsx\n   found: no\n   old: 64 line(s)\n   new: 64 line(s)"
+  ]
+}
