@@ -565,37 +565,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
     }
   }, [selectedGroupId, selectedSemesterId, selectedWeekId])
 
-  const selectedWeekFinalAssessmentRounds = useMemo(() => {
-    if (!selectedGroupId || !selectedSemesterId || !selectedWeekId) {
-      return []
-    }
-
-    return finalAssessmentRounds
-      .filter((round) => {
-        if (String(round.status ?? '') === 'cancelled') {
-          return false
-        }
-
-        const assessment =
-          finalAssessments.find((item) => Number(item.id) === Number(round.final_assessment_id)) ??
-          null
-
-        if (!assessment) {
-          return false
-        }
-
-        return (
-          Number(assessment.group_id) === Number(selectedGroupId) &&
-          Number(assessment.semester_id) === Number(selectedSemesterId) &&
-          Number(round.week_id) === Number(selectedWeekId) &&
-          Boolean(round.assessment_date) &&
-          Boolean(round.starts_at) &&
-          Boolean(round.ends_at)
-        )
-      })
-      .sort(compareFinalAssessmentRounds)
-  }, [finalAssessmentRounds, finalAssessments, selectedGroupId, selectedSemesterId, selectedWeekId])
-
   const scheduleFixedData = useMemo(() => {
     if (!selectedGroupId || !selectedSemesterId || !selectedWeekId) {
       return undefined
@@ -873,8 +842,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
               audienceNameById={audienceNameById}
               lessonTypeNameById={lessonTypeNameById}
               columnsPerRow={scheduleColumnsPerRow}
-              finalAssessmentRounds={selectedWeekFinalAssessmentRounds}
-              finalAssessments={finalAssessments}
               canCreate={canCreateScheduleItem}
               onCreateDay={(dayNumber) => openCreateDialog({ day_of_week: dayNumber })}
               onEdit={openEditDialog}
@@ -1034,8 +1001,6 @@ function ScheduleWeekBoard({
   audienceNameById,
   lessonTypeNameById,
   columnsPerRow,
-  finalAssessmentRounds,
-  finalAssessments,
   canCreate,
   onCreateDay,
   onEdit,
@@ -1053,8 +1018,6 @@ function ScheduleWeekBoard({
   audienceNameById: Map<number, string>
   lessonTypeNameById: Map<number, string>
   columnsPerRow: ScheduleColumnsPerRow
-  finalAssessmentRounds: AdminCrudRecord[]
-  finalAssessments: AdminCrudRecord[]
   canCreate: boolean
   onCreateDay: (dayNumber: number) => void
   onEdit: (record: AdminCrudRecord) => void
@@ -1082,7 +1045,6 @@ function ScheduleWeekBoard({
   })
 
   const itemsByDay = createItemsByDay(sortedItems)
-  const finalAssessmentRoundsByDay = createFinalAssessmentRoundsByDay(finalAssessmentRounds)
 
   return (
     <div className={`grid gap-4 ${scheduleGridClasses[columnsPerRow]}`}>
@@ -1091,8 +1053,6 @@ function ScheduleWeekBoard({
           key={dayNumber}
           dayNumber={dayNumber}
           items={itemsByDay.get(dayNumber) ?? []}
-          finalAssessmentRounds={finalAssessmentRoundsByDay.get(dayNumber) ?? []}
-          finalAssessments={finalAssessments}
           emptyMessage={emptyMessage}
           canEdit={canEdit}
           canDelete={canDelete}
@@ -1115,8 +1075,6 @@ function ScheduleWeekBoard({
 function ScheduleDayCard({
   dayNumber,
   items,
-  finalAssessmentRounds,
-  finalAssessments,
   emptyMessage,
   canEdit,
   canDelete,
@@ -1133,8 +1091,6 @@ function ScheduleDayCard({
 }: {
   dayNumber: number
   items: AdminCrudRecord[]
-  finalAssessmentRounds: AdminCrudRecord[]
-  finalAssessments: AdminCrudRecord[]
   emptyMessage: string
   canEdit: boolean
   canDelete: boolean
@@ -1149,25 +1105,15 @@ function ScheduleDayCard({
   onEdit: (record: AdminCrudRecord) => void
   onDelete: (record: AdminCrudRecord) => void
 }): ReactElement {
-  const sortedFinalAssessmentRounds = [...finalAssessmentRounds].sort(compareFinalAssessmentRounds)
-
   return (
     <Card className="min-h-64 overflow-hidden">
       <CardHeader className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-base">{getDayName(dayNumber)}</CardTitle>
           <div className="flex items-center gap-2">
-            <Badge
-              variant={
-                items.length > 0 || sortedFinalAssessmentRounds.length > 0 ? 'default' : 'muted'
-              }
-            >
+            <Badge variant={items.length > 0 ? 'default' : 'muted'}>
               {items.length} {getLessonCountText(items.length)}
             </Badge>
-
-            {sortedFinalAssessmentRounds.length > 0 ? (
-              <Badge variant="warning">Итогов: {sortedFinalAssessmentRounds.length}</Badge>
-            ) : null}
 
             <Button
               type="button"
@@ -1185,7 +1131,7 @@ function ScheduleDayCard({
       </CardHeader>
 
       <CardContent className="grid gap-3 p-4">
-        {items.length === 0 && sortedFinalAssessmentRounds.length === 0 ? (
+        {items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[var(--color-border)] px-3 py-6 text-center text-sm text-[var(--color-text-muted)]">
             {emptyMessage}
           </div>
@@ -1278,154 +1224,9 @@ function ScheduleDayCard({
             </div>
           )
         })}
-
-        {sortedFinalAssessmentRounds.length > 0 ? (
-          <div className="grid gap-2 rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-[var(--color-text)]">Итоговая аттестация</p>
-              <Badge variant="warning">Read-only</Badge>
-            </div>
-
-            {sortedFinalAssessmentRounds.map((round) => {
-              const assessment = getFinalAssessmentForRound(round, finalAssessments)
-              const title = getFinalAssessmentRoundTitle({
-                round,
-                assessment,
-                disciplineNameById
-              })
-
-              return (
-                <div
-                  key={String(round.id)}
-                  className="grid gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-sm"
-                >
-                  <div>
-                    <p className="font-semibold text-[var(--color-text)]">{title}</p>
-                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      {String(round.round_number ?? '—')} тур — {getRoundLabel(round.round_type)}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-1 text-xs text-[var(--color-text-muted)]">
-                    <span className="inline-flex items-center gap-2">
-                      <FiClock />
-                      {getFinalAssessmentRoundTimeText(round)}
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <FiUser />
-                      {renderRelation(round.teacher_id, teacherNameById)}
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <FiMapPin />
-                      {renderRelation(round.audience_id, audienceNameById)}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    Редактируется во вкладке «Итоговая аттестация».
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   )
-}
-
-function createFinalAssessmentRoundsByDay(
-  finalAssessmentRounds: AdminCrudRecord[]
-): Map<number, AdminCrudRecord[]> {
-  const result = new Map<number, AdminCrudRecord[]>()
-
-  finalAssessmentRounds.forEach((round) => {
-    const dayNumber = toNumberOrNull(round.day_of_week)
-
-    if (dayNumber === null) {
-      return
-    }
-
-    const dayRounds = result.get(dayNumber) ?? []
-    dayRounds.push(round)
-    result.set(dayNumber, dayRounds)
-  })
-
-  return result
-}
-
-function getFinalAssessmentForRound(
-  round: AdminCrudRecord,
-  finalAssessments: AdminCrudRecord[]
-): AdminCrudRecord | null {
-  return (
-    finalAssessments.find(
-      (assessment) => Number(assessment.id) === Number(round.final_assessment_id)
-    ) ?? null
-  )
-}
-
-function getFinalAssessmentRoundTitle({
-  round,
-  assessment,
-  disciplineNameById
-}: {
-  round: AdminCrudRecord
-  assessment: AdminCrudRecord | null
-  disciplineNameById: Map<number, string>
-}): string {
-  if (assessment) {
-    const assessmentName = getRecordName(assessment)
-    const disciplineId = toNumberOrNull(assessment.discipline_id)
-    const disciplineName =
-      disciplineId === null ? null : (disciplineNameById.get(disciplineId) ?? null)
-
-    return disciplineName && !assessmentName.includes(disciplineName)
-      ? `${assessmentName} · ${disciplineName}`
-      : assessmentName
-  }
-
-  return `Итоговая аттестация #${String(round.final_assessment_id ?? '')}`
-}
-
-function getFinalAssessmentRoundTimeText(round: AdminCrudRecord): string {
-  const date = String(round.assessment_date ?? '').trim()
-  const startsAt = String(round.starts_at ?? '').trim()
-  const endsAt = String(round.ends_at ?? '').trim()
-  const timeRange = startsAt && endsAt ? `${startsAt}–${endsAt}` : 'Время не указано'
-
-  return date ? `${date} · ${timeRange}` : timeRange
-}
-
-function getRoundLabel(value: unknown): string {
-  const labels: Record<string, string> = {
-    main: 'Основной тур',
-    retake: 'Пересдача',
-    commission: 'Комиссия'
-  }
-
-  return labels[String(value ?? '')] ?? String(value ?? '—')
-}
-
-function compareFinalAssessmentRounds(
-  firstRound: AdminCrudRecord,
-  secondRound: AdminCrudRecord
-): number {
-  const firstDate = String(firstRound.assessment_date ?? '')
-  const secondDate = String(secondRound.assessment_date ?? '')
-
-  if (firstDate !== secondDate) {
-    return firstDate.localeCompare(secondDate)
-  }
-
-  const firstTime = String(firstRound.starts_at ?? '')
-  const secondTime = String(secondRound.starts_at ?? '')
-
-  if (firstTime !== secondTime) {
-    return firstTime.localeCompare(secondTime)
-  }
-
-  return Number(firstRound.id ?? 0) - Number(secondRound.id ?? 0)
 }
 
 function createItemsByDay(items: AdminCrudRecord[]): Map<number, AdminCrudRecord[]> {

@@ -1,0 +1,30 @@
+{
+  "createdAt": "2026-07-08T08:15:28.979Z",
+  "backupPath": ".filetags/backups/2026-07-08T08-15-28-937Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Insert after: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1403 line(s)\n   new: 1441 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1441 line(s)\n   new: 1443 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1443 line(s)\n   new: 1602 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 2952 line(s)\n   new: 2955 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 2955 line(s)\n   new: 2958 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 2958 line(s)\n   new: 2979 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 2979 line(s)\n   new: 2982 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 2982 line(s)\n   new: 2983 line(s)",
+    "Insert before: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 2983 line(s)\n   new: 2994 line(s)",
+    "Insert before: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 2994 line(s)\n   new: 3057 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: no\n   old: 3057 line(s)\n   new: 3057 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: no\n   old: 3057 line(s)\n   new: 3057 line(s)",
+    "Insert before: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3057 line(s)\n   new: 3156 line(s)"
+  ]
+}

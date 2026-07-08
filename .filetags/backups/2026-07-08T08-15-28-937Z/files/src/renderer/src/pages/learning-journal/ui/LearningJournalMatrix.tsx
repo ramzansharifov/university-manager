@@ -110,9 +110,6 @@ export function LearningJournalMatrix(): ReactElement {
   const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
   const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
   const [grades, setGrades] = useState<AdminCrudRecord[]>([])
-  const [finalAssessments, setFinalAssessments] = useState<AdminCrudRecord[]>([])
-  const [finalAssessmentRounds, setFinalAssessmentRounds] = useState<AdminCrudRecord[]>([])
-  const [audiences, setAudiences] = useState<AdminCrudRecord[]>([])
 
   const [selectedFacultyId, setSelectedFacultyId] = useState('')
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
@@ -155,10 +152,7 @@ export function LearningJournalMatrix(): ReactElement {
       attendanceStatusesResult,
       gradeElementTypesResult,
       gradeItemsResult,
-      gradesResult,
-      finalAssessmentsResult,
-      finalAssessmentRoundsResult,
-      audiencesResult
+      gradesResult
     ] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'faculties',
@@ -293,27 +287,6 @@ export function LearningJournalMatrix(): ReactElement {
         pageSize: 20000,
         orderBy: 'id',
         orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'final_assessments',
-        page: 1,
-        pageSize: 5000,
-        orderBy: 'id',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'final_assessment_rounds',
-        page: 1,
-        pageSize: 15000,
-        orderBy: 'assessment_date',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'audiences',
-        page: 1,
-        pageSize: 1000,
-        orderBy: 'name',
-        orderDirection: 'asc'
       })
     ])
 
@@ -336,9 +309,6 @@ export function LearningJournalMatrix(): ReactElement {
     setGradeElementTypes(gradeElementTypesResult.items)
     setGradeItems(gradeItemsResult.items)
     setGrades(gradesResult.items)
-    setFinalAssessments(finalAssessmentsResult.items)
-    setFinalAssessmentRounds(finalAssessmentRoundsResult.items)
-    setAudiences(audiencesResult.items)
   }, [])
 
   useEffect(() => {
@@ -436,7 +406,6 @@ export function LearningJournalMatrix(): ReactElement {
   const subjectNameById = useMemo(() => createRecordNameMap(subjects), [subjects])
   const lessonPeriodById = useMemo(() => createRecordMap(lessonPeriods), [lessonPeriods])
   const teacherById = useMemo(() => createRecordMap(teachers), [teachers])
-  const audienceById = useMemo(() => createRecordMap(audiences), [audiences])
   const gradeElementTypeById = useMemo(
     () => createRecordMap(gradeElementTypes),
     [gradeElementTypes]
@@ -557,17 +526,6 @@ export function LearningJournalMatrix(): ReactElement {
     subjectNameById
   ])
 
-  const selectedWeekFinalAssessmentRounds = useMemo(
-    () =>
-      filterFinalAssessmentRoundsForWeek({
-        finalAssessmentRounds,
-        finalAssessments,
-        selectedGroupId: selectedGroup?.id,
-        selectedSemesterId: selectedSemester?.id,
-        selectedWeekId: selectedWeek?.id
-      }),
-    [finalAssessmentRounds, finalAssessments, selectedGroup, selectedSemester, selectedWeek]
-  )
   const journalColumns = useMemo(
     () => journalDayGroups.flatMap((dayGroup) => dayGroup.columns),
     [journalDayGroups]
@@ -1941,73 +1899,6 @@ export function LearningJournalMatrix(): ReactElement {
     }
   }
 
-  function renderFinalAssessmentWeekNotice(): ReactElement | null {
-    if (selectedWeekFinalAssessmentRounds.length === 0) {
-      return null
-    }
-
-    return (
-      <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">
-              Итоговая аттестация на этой неделе
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Эти события показаны только для информации. Посещаемость, темы и проведение занятия
-              здесь не редактируются.
-            </p>
-          </div>
-          <Badge variant="warning">Read-only</Badge>
-        </div>
-
-        <div className="mt-3 grid gap-2 lg:grid-cols-2">
-          {selectedWeekFinalAssessmentRounds.map((round) => {
-            const assessment = getFinalAssessmentForRound(round, finalAssessments)
-            const gradeElementTypeId = toNumberOrNull(assessment?.grade_element_type_id)
-            const gradeElementType =
-              gradeElementTypeId === null
-                ? null
-                : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
-            const disciplineId = toNumberOrNull(assessment?.discipline_id)
-            const discipline =
-              disciplineId === null ? null : (disciplineById.get(disciplineId) ?? null)
-            const teacherId = toNumberOrNull(round.teacher_id)
-            const teacher = teacherId === null ? null : (teacherById.get(teacherId) ?? null)
-            const audienceId = toNumberOrNull(round.audience_id)
-            const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
-
-            return (
-              <div
-                key={String(round.id)}
-                className="grid gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-sm"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="warning">Итог</Badge>
-                  <Badge variant="muted">
-                    {String(round.round_number ?? '—')} тур — {getRoundLabel(round.round_type)}
-                  </Badge>
-                </div>
-
-                <p className="font-semibold text-[var(--color-text)]">
-                  {gradeElementType ? getRecordName(gradeElementType) : 'Итоговая аттестация'} ·{' '}
-                  {discipline
-                    ? getDisciplineName(discipline, subjectNameById)
-                    : getRecordName(assessment ?? round)}
-                </p>
-
-                <div className="grid gap-1 text-xs text-[var(--color-text-muted)]">
-                  <span>{formatFinalAssessmentRoundDateTime(round)}</span>
-                  <span>Преподаватель: {teacher ? getPersonFullName(teacher) : '—'}</span>
-                  <span>Аудитория: {audience ? getRecordName(audience) : '—'}</span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
   return (
     <div className="grid gap-4">
       <Card>
@@ -2970,107 +2861,6 @@ function getJournalCellClassName(statusKey: string): string {
   return `${baseClassName} bg-emerald-50 text-emerald-700`
 }
 
-function filterFinalAssessmentRoundsForWeek({
-  finalAssessmentRounds,
-  finalAssessments,
-  selectedGroupId,
-  selectedSemesterId,
-  selectedWeekId
-}: {
-  finalAssessmentRounds: AdminCrudRecord[]
-  finalAssessments: AdminCrudRecord[]
-  selectedGroupId: unknown
-  selectedSemesterId: unknown
-  selectedWeekId: unknown
-}): AdminCrudRecord[] {
-  const groupId = toNumberOrNull(selectedGroupId)
-  const semesterId = toNumberOrNull(selectedSemesterId)
-  const weekId = toNumberOrNull(selectedWeekId)
-
-  if (groupId === null || semesterId === null || weekId === null) {
-    return []
-  }
-
-  return finalAssessmentRounds
-    .filter((round) => {
-      if (String(round.status ?? '') === 'cancelled') {
-        return false
-      }
-
-      if (!round.assessment_date || !round.starts_at || !round.ends_at) {
-        return false
-      }
-
-      if (Number(round.week_id) !== weekId) {
-        return false
-      }
-
-      const assessment = getFinalAssessmentForRound(round, finalAssessments)
-
-      if (!assessment) {
-        return false
-      }
-
-      return (
-        Number(assessment.group_id) === groupId && Number(assessment.semester_id) === semesterId
-      )
-    })
-    .sort(compareFinalAssessmentRounds)
-}
-
-function getFinalAssessmentForRound(
-  round: AdminCrudRecord,
-  finalAssessments: AdminCrudRecord[]
-): AdminCrudRecord | null {
-  return (
-    finalAssessments.find(
-      (assessment) => Number(assessment.id) === Number(round.final_assessment_id)
-    ) ?? null
-  )
-}
-
-function hasFinalAssessmentRoundForDay(rounds: AdminCrudRecord[], dayOfWeek: number): boolean {
-  return rounds.some((round) => normalizeDayOfWeek(round.day_of_week) === dayOfWeek)
-}
-
-function formatFinalAssessmentRoundDateTime(round: AdminCrudRecord): string {
-  const date = formatJournalDate(String(round.assessment_date ?? ''))
-  const startsAt = String(round.starts_at ?? '').trim()
-  const endsAt = String(round.ends_at ?? '').trim()
-
-  return startsAt && endsAt ? `${date} · ${startsAt}–${endsAt}` : date
-}
-
-function getRoundLabel(value: unknown): string {
-  const labels: Record<string, string> = {
-    main: 'Основной тур',
-    retake: 'Пересдача',
-    commission: 'Комиссия'
-  }
-
-  return labels[String(value ?? '')] ?? String(value ?? '—')
-}
-
-function compareFinalAssessmentRounds(
-  firstRound: AdminCrudRecord,
-  secondRound: AdminCrudRecord
-): number {
-  const firstDate = String(firstRound.assessment_date ?? '')
-  const secondDate = String(secondRound.assessment_date ?? '')
-
-  if (firstDate !== secondDate) {
-    return firstDate.localeCompare(secondDate)
-  }
-
-  const firstTime = String(firstRound.starts_at ?? '')
-  const secondTime = String(secondRound.starts_at ?? '')
-
-  if (firstTime !== secondTime) {
-    return firstTime.localeCompare(secondTime)
-  }
-
-  return Number(firstRound.id ?? 0) - Number(secondRound.id ?? 0)
-}
 function compareSemesters(firstSemester: AdminCrudRecord, secondSemester: AdminCrudRecord): number {
   const firstAcademicYearId = toNumberOrNull(firstSemester.academic_year_id) ?? 0
   const secondAcademicYearId = toNumberOrNull(secondSemester.academic_year_id) ?? 0
