@@ -90,17 +90,7 @@ type GradeSummary =
 
 type GradeTone = 'empty' | 'minimum' | 'belowPassing' | 'passing' | 'maximum'
 
-interface LearningJournalMatrixProps {
-  initialGroupId?: number | null
-  readOnly?: boolean
-  lockGroupSelection?: boolean
-}
-
-export function LearningJournalMatrix({
-  initialGroupId = null,
-  readOnly = false,
-  lockGroupSelection = false
-}: LearningJournalMatrixProps = {}): ReactElement {
+export function LearningJournalMatrix(): ReactElement {
   const [faculties, setFaculties] = useState<AdminCrudRecord[]>([])
   const [specialties, setSpecialties] = useState<AdminCrudRecord[]>([])
   const [groups, setGroups] = useState<AdminCrudRecord[]>([])
@@ -374,37 +364,6 @@ export function LearningJournalMatrix({
     () => groups.find((group) => String(group.id) === selectedGroupId) ?? null,
     [groups, selectedGroupId]
   )
-  useEffect(() => {
-    if (!initialGroupId || selectedGroupId) {
-      return
-    }
-
-    const initialGroup = groups.find((group) => Number(group.id) === Number(initialGroupId)) ?? null
-
-    if (!initialGroup) {
-      return
-    }
-
-    const initialSpecialty =
-      specialties.find((specialty) => Number(specialty.id) === Number(initialGroup.specialty_id)) ??
-      null
-    const initialFaculty =
-      initialSpecialty === null
-        ? null
-        : (faculties.find(
-            (faculty) => Number(faculty.id) === Number(initialSpecialty.faculty_id)
-          ) ?? null)
-
-    if (initialFaculty?.id) {
-      setSelectedFacultyId(String(initialFaculty.id))
-    }
-
-    if (initialSpecialty?.id) {
-      setSelectedSpecialtyId(String(initialSpecialty.id))
-    }
-
-    setSelectedGroupId(String(initialGroup.id))
-  }, [faculties, groups, initialGroupId, selectedGroupId, specialties])
 
   const filteredSpecialties = useMemo(() => {
     if (!selectedFacultyId) {
@@ -843,9 +802,6 @@ export function LearningJournalMatrix({
     student: AdminCrudRecord,
     column: ScheduleJournalColumn
   ): Promise<void> {
-    if (readOnly) {
-      return
-    }
     if (isSavingAttendance) {
       return
     }
@@ -953,7 +909,7 @@ export function LearningJournalMatrix({
     setActiveFinalAssessmentRoundId('')
     setTopicDraft(getLessonTopic(column))
     setLessonNoteDraft(getLessonNote(column))
-    setIsLessonEditorEditing(readOnly ? false : !hasSavedDetails)
+    setIsLessonEditorEditing(!hasSavedDetails)
     setTopicError(null)
     setGradeError(null)
     initializeIntermediateGradeDraft(column)
@@ -1812,7 +1768,7 @@ export function LearningJournalMatrix({
                                 >
                                   <Select
                                     value={passFailValue || emptySelectValue}
-                                    disabled={readOnly || isSavingGrade}
+                                    disabled={isSavingGrade}
                                     onValueChange={(value) =>
                                       handlePassFailGradeChange(student, gradeItem, value)
                                     }
@@ -2156,11 +2112,9 @@ export function LearningJournalMatrix({
                 Обновить
               </Button>
 
-              {!lockGroupSelection ? (
-                <Button variant="secondary" onClick={resetFilters}>
-                  Сбросить
-                </Button>
-              ) : null}
+              <Button variant="secondary" onClick={resetFilters}>
+                Сбросить
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -2171,7 +2125,6 @@ export function LearningJournalMatrix({
               label="Факультет"
               value={selectedFacultyId}
               placeholder="Выбери факультет"
-              disabled={lockGroupSelection}
               options={faculties.map(toFilterOption)}
               onChange={handleFacultyChange}
             />
@@ -2180,7 +2133,7 @@ export function LearningJournalMatrix({
               label="Специальность"
               value={selectedSpecialtyId}
               placeholder={selectedFacultyId ? 'Выбери специальность' : 'Сначала факультет'}
-              disabled={lockGroupSelection || !selectedFacultyId}
+              disabled={!selectedFacultyId}
               options={filteredSpecialties.map(toFilterOption)}
               onChange={handleSpecialtyChange}
             />
@@ -2189,7 +2142,7 @@ export function LearningJournalMatrix({
               label="Группа"
               value={selectedGroupId}
               placeholder={selectedSpecialtyId ? 'Выбери группу' : 'Сначала специальность'}
-              disabled={lockGroupSelection || !selectedSpecialtyId}
+              disabled={!selectedSpecialtyId}
               options={filteredGroups.map(toFilterOption)}
               onChange={handleGroupChange}
             />

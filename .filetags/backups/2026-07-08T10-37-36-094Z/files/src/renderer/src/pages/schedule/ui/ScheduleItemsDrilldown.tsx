@@ -55,17 +55,8 @@ const scheduleGridClasses: Record<ScheduleColumnsPerRow, string> = {
   3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
   4: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4'
 }
-interface ScheduleItemsDrilldownProps {
-  initialGroupId?: number | null
-  readOnly?: boolean
-  hideAudienceAvailability?: boolean
-}
 
-export function ScheduleItemsDrilldown({
-  initialGroupId = null,
-  readOnly = false,
-  hideAudienceAvailability = false
-}: ScheduleItemsDrilldownProps = {}): ReactElement {
+export function ScheduleItemsDrilldown(): ReactElement {
   const [selectedFacultyId, setSelectedFacultyId] = useState('')
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState('')
@@ -299,37 +290,6 @@ export function ScheduleItemsDrilldown({
     () => groups.find((group) => String(group.id) === selectedGroupId) ?? null,
     [groups, selectedGroupId]
   )
-  useEffect(() => {
-    if (!initialGroupId || selectedGroupId) {
-      return
-    }
-
-    const initialGroup = groups.find((group) => Number(group.id) === Number(initialGroupId)) ?? null
-
-    if (!initialGroup) {
-      return
-    }
-
-    const initialSpecialty =
-      specialties.find((specialty) => Number(specialty.id) === Number(initialGroup.specialty_id)) ??
-      null
-    const initialFaculty =
-      initialSpecialty === null
-        ? null
-        : (faculties.find(
-            (faculty) => Number(faculty.id) === Number(initialSpecialty.faculty_id)
-          ) ?? null)
-
-    if (initialFaculty?.id) {
-      setSelectedFacultyId(String(initialFaculty.id))
-    }
-
-    if (initialSpecialty?.id) {
-      setSelectedSpecialtyId(String(initialSpecialty.id))
-    }
-
-    setSelectedGroupId(String(initialGroup.id))
-  }, [faculties, groups, initialGroupId, selectedGroupId, specialties])
 
   const selectedWeek = useMemo(
     () => weeks.find((week) => String(week.id) === selectedWeekId) ?? null,
@@ -735,7 +695,7 @@ export function ScheduleItemsDrilldown({
   }
 
   const canShowSchedule = Boolean(selectedGroup && selectedSemesterId && selectedWeek)
-  const canCreateScheduleItem = !readOnly && canShowSchedule && selectedSemesterDisciplines.length > 0
+  const canCreateScheduleItem = canShowSchedule && selectedSemesterDisciplines.length > 0
 
   return (
     <div className="grid gap-4">
@@ -839,7 +799,7 @@ export function ScheduleItemsDrilldown({
         </Card>
       ) : null}
 
-      {canShowSchedule && !hideAudienceAvailability ? (
+      {canShowSchedule ? (
         <AudienceAvailabilityPanel
           dayOfWeek={availabilityDayOfWeek}
           lessonPeriodId={availabilityLessonPeriodId}
@@ -904,8 +864,8 @@ export function ScheduleItemsDrilldown({
               items={items}
               isLoading={isLoading}
               emptyMessage={emptyMessage}
-              canEdit={!readOnly && canEdit}
-              canDelete={!readOnly && canDelete}
+              canEdit={canEdit}
+              canDelete={canDelete}
               lessonPeriodById={lessonPeriodById}
               lessonPeriodNameById={lessonPeriodNameById}
               disciplineNameById={disciplineNameById}

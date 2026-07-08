@@ -1,0 +1,48 @@
+{
+  "createdAt": "2026-07-08T10:37:36.142Z",
+  "backupPath": ".filetags/backups/2026-07-08T10-37-36-094Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/student-portal/StudentPortalPage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/student-portal/StudentPortalPage.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/app/router/AppRouter.tsx",
+      "backupRelativePath": "files/src/renderer/src/app/router/AppRouter.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Insert after: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1602 line(s)\n   new: 1607 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1607 line(s)\n   new: 1611 line(s)",
+    "Insert after: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1611 line(s)\n   new: 1642 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1642 line(s)\n   new: 1642 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1642 line(s)\n   new: 1642 line(s)",
+    "Replace file: src/renderer/src/pages/schedule/ui/ScheduleItemsDrilldown.tsx\n   found: yes\n   old: 1642 line(s)\n   new: 1642 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3323 line(s)\n   new: 3333 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3333 line(s)\n   new: 3364 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3364 line(s)\n   new: 3364 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3364 line(s)\n   new: 3367 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3367 line(s)\n   new: 3367 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3367 line(s)\n   new: 3367 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3367 line(s)\n   new: 3367 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3367 line(s)\n   new: 3367 line(s)",
+    "Insert after: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3367 line(s)\n   new: 3367 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3367 line(s)\n   new: 3368 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3368 line(s)\n   new: 3368 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3368 line(s)\n   new: 3368 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3368 line(s)\n   new: 3370 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: no\n   old: 3370 line(s)\n   new: 3370 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/ui/LearningJournalMatrix.tsx\n   found: yes\n   old: 3370 line(s)\n   new: 3370 line(s)",
+    "Write file: src/renderer/src/pages/student-portal/StudentPortalPage.tsx\n   old: 2485 line(s)\n   new: 831 line(s)",
+    "Insert after: src/renderer/src/app/router/AppRouter.tsx\n   found: yes\n   old: 64 line(s)\n   new: 65 line(s)"
+  ]
+}

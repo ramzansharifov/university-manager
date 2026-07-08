@@ -42,7 +42,6 @@ export function AppRouter() {
             path="/student/performance"
             element={<StudentPortalPage section="performance" />}
           />
-          <Route path="/student/settings" element={<StudentPortalPage section="settings" />} />
           <Route path="/filters" element={<FiltersPage />} />
           <Route path="/filters/students" element={<Navigate to="/filters" replace />} />
           <Route path="/filters/teachers" element={<Navigate to="/filters" replace />} />
