@@ -1213,6 +1213,7 @@ function createDisciplineRows(data: StudentRelatedData): DisciplineRow[] {
   })
 }
 
+function getLessonLabel(
 function groupDisciplineRowsBySemester(rows: DisciplineRow[]): DisciplineSemesterGroup[] {
   const groups = new Map<string, DisciplineSemesterGroup>()
 
@@ -1350,8 +1351,6 @@ function getGradeBadgeVariant(row: GradeRow): 'default' | 'success' | 'warning' 
 
   return row.numericScore === null ? 'muted' : 'default'
 }
-
-function getLessonLabel(
   scheduleItem: AdminCrudRecord | null,
   period: AdminCrudRecord | null
 ): string {
