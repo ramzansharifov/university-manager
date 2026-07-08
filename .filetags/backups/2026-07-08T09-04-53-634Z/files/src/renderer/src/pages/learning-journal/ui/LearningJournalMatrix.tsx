@@ -1977,51 +1977,6 @@ export function LearningJournalMatrix(): ReactElement {
     const audience = audienceId === null ? null : (audienceById.get(audienceId) ?? null)
 
     return (
-      <div className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">
-              Справка по итоговой аттестации
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Это read-only событие из расписания итоговой аттестации. Посещаемость, тема занятия и
-              проведение пары здесь не редактируются.
-            </p>
-          </div>
-          <Badge variant="warning">Итог</Badge>
-        </div>
-
-        <div className="mt-3 grid gap-2 text-sm text-[var(--color-text)]">
-          <p className="font-semibold">
-            {gradeElementType ? getRecordName(gradeElementType) : 'Итоговая аттестация'} ·{' '}
-            {discipline
-              ? getDisciplineName(discipline, subjectNameById)
-              : getRecordName(activeFinalAssessment ?? activeFinalAssessmentRound)}
-          </p>
-          <p>
-            {String(activeFinalAssessmentRound.round_number ?? '—')} тур —{' '}
-            {getRoundLabel(activeFinalAssessmentRound.round_type)}
-          </p>
-          <p>{formatFinalAssessmentRoundDateTime(activeFinalAssessmentRound)}</p>
-          <p>Преподаватель: {teacher ? getPersonFullName(teacher) : '—'}</p>
-          <p>Аудитория: {audience ? getRecordName(audience) : '—'}</p>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setActiveFinalAssessmentRoundId('')}
-          >
-            Закрыть справку
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
     <div className="grid gap-4">
       <Card>
         <CardHeader>
