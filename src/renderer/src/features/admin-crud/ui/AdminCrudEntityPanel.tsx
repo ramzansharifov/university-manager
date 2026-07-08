@@ -66,6 +66,7 @@ export interface AdminCrudFieldConfig {
     | 'time'
     | 'textarea'
     | 'select'
+    | 'multiSelect'
     | 'multiText'
     | 'checkbox'
     | 'toggle'
@@ -147,6 +148,12 @@ interface AdminCrudEntityPanelProps {
   onRowClick?: (record: AdminCrudRecord) => void
   extraRowActions?: (record: AdminCrudRecord) => ReactNode
   onAfterMutation?: () => void | Promise<void>
+  beforeSubmit?: (params: {
+    mode: DialogMode
+    entity: AdminEntityKey
+    payload: AdminCrudRecord
+    selectedRecord: AdminCrudRecord | null
+  }) => string | null | Promise<string | null>
   onCreateClick?: () => void
   onEditClick?: (record: AdminCrudRecord) => void
 }
@@ -179,6 +186,7 @@ export function AdminCrudEntityPanel({
   onRowClick,
   extraRowActions,
   onAfterMutation,
+  beforeSubmit,
   onCreateClick,
   onEditClick
 }: AdminCrudEntityPanelProps) {
@@ -424,6 +432,17 @@ export function AdminCrudEntityPanel({
       const payload = {
         ...buildPayload(fields, formValues),
         ...(fixedData ?? {})
+      }
+      const validationError = await beforeSubmit?.({
+        mode: dialogMode,
+        entity,
+        payload,
+        selectedRecord
+      })
+
+      if (validationError) {
+        setFormError(validationError)
+        return
       }
 
       if (dialogMode === 'create') {
@@ -1159,6 +1178,19 @@ function CrudFieldInput({
     )
   }
 
+  if (field.type === 'multiSelect') {
+    return (
+      <MultiSelectInput
+        value={value}
+        options={field.options ?? []}
+        placeholder={field.placeholder}
+        disabled={field.disabled}
+        onChange={onChange}
+        onBlur={onBlur}
+      />
+    )
+  }
+
   if (field.type === 'select') {
     const availableOptions = getAvailableSelectOptions(field, formValues)
     const dependencyValue = field.dependsOn ? formValues[field.dependsOn] : null
@@ -1209,6 +1241,87 @@ function CrudFieldInput({
       onChange={(event) => onChange(event.target.value)}
     />
   )
+}
+
+function MultiSelectInput({
+  value,
+  options,
+  placeholder,
+  disabled,
+  onChange,
+  onBlur
+}: {
+  value: string
+  options: AdminCrudSelectOption[]
+  placeholder?: string
+  disabled?: boolean
+  onChange: (value: string) => void
+  onBlur: () => void
+}) {
+  const selectedValues = parseMultiSelectValue(value)
+
+  function toggleOption(optionValue: string) {
+    const nextValues = selectedValues.includes(optionValue)
+      ? selectedValues.filter((item) => item !== optionValue)
+      : [...selectedValues, optionValue]
+
+    onChange(JSON.stringify(nextValues))
+  }
+
+  if (options.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-[var(--color-border)] px-3 py-3 text-sm text-[var(--color-text-muted)]">
+        {placeholder ?? 'Нет доступных вариантов'}
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+      {placeholder ? <p className="text-xs text-[var(--color-text-muted)]">{placeholder}</p> : null}
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {options.map((option) => (
+          <label
+            key={option.value}
+            className="flex min-h-9 items-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)]"
+          >
+            <input
+              type="checkbox"
+              checked={selectedValues.includes(option.value)}
+              disabled={disabled}
+              onBlur={onBlur}
+              onChange={() => toggleOption(option.value)}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function parseMultiSelectValue(value: string): string[] {
+  const trimmedValue = value.trim()
+
+  if (!trimmedValue) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(trimmedValue)
+
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item)).filter(Boolean)
+    }
+  } catch {
+    return trimmedValue
+      .split(/\n|,|\/|\+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+
+  return []
 }
 
 function MultiTextInput({
@@ -1288,7 +1401,11 @@ function createFormSchema(fields: AdminCrudFieldConfig[]) {
   for (const field of fields) {
     let schema: z.ZodType<string> = z.string()
 
-    if (field.required) {
+    if (field.required && field.type === 'multiSelect') {
+      schema = schema.refine((value) => parseMultiSelectValue(value).length > 0, {
+        message: 'Выбери хотя бы один вариант'
+      })
+    } else if (field.required) {
       schema = schema.refine((value) => value.trim().length > 0, {
         message: 'Поле обязательно'
       })

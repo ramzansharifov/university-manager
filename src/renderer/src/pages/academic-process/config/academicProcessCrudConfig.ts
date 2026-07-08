@@ -275,9 +275,9 @@ export function createCurriculumItemFields(options: {
       label: 'Форма контроля',
       placeholder:
         options.finalGradeElementTypeOptions.length > 0
-          ? 'Выбери форму контроля'
+          ? 'Выбери одну или несколько форм контроля'
           : 'Сначала создай итоговые оценочные элементы в разделе «Журнал обучения»',
-      type: 'select',
+      type: 'multiSelect',
       options: options.finalGradeElementTypeOptions,
       required: true,
       fullWidth: true
@@ -288,6 +288,7 @@ export function createCurriculumItemFields(options: {
 export function createCurriculumItemColumns(maps: {
   subjectNameById: Map<number, string>
   semesterNameById: Map<number, string>
+  finalGradeElementTypeNameById: Map<number, string>
 }): AdminCrudColumnConfig[] {
   return [
     {
@@ -327,7 +328,8 @@ export function createCurriculumItemColumns(maps: {
     {
       key: 'control_form',
       label: 'Контроль',
-      render: (record) => formatControlForms(record.control_form)
+      render: (record) =>
+        formatControlForms(record.control_form, maps.finalGradeElementTypeNameById)
     }
   ]
 }
@@ -769,16 +771,45 @@ export function getSemesterName(record: AdminCrudRecord): string {
   return getRecordName(record)
 }
 
-export function formatControlForms(value: unknown): string {
+export function formatControlForms(
+  value: unknown,
+  finalGradeElementTypeNameById?: Map<number, string>
+): string {
   if (value === null || value === undefined || value === '') {
     return '—'
   }
 
-  return String(value)
-    .split('\n')
-    .map((item) => item.trim())
+  return parseControlFormValues(value)
+    .map((item) => {
+      const id = toNumberOrNull(item)
+
+      return id === null ? item : (finalGradeElementTypeNameById?.get(id) ?? item)
+    })
     .filter(Boolean)
     .join(', ')
+}
+
+function parseControlFormValues(value: unknown): string[] {
+  const text = String(value ?? '').trim()
+
+  if (!text) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(text)
+
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item).trim()).filter(Boolean)
+    }
+  } catch {
+    // Legacy values are plain text, often separated by new lines or punctuation.
+  }
+
+  return text
+    .split(/\n|,|\/|\+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
 function renderDisciplineProgress(

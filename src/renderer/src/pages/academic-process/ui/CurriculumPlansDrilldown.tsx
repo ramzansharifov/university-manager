@@ -130,6 +130,10 @@ export function CurriculumPlansDrilldown() {
   const subjectNameById = useMemo(() => createOptionsMap(subjectOptions), [subjectOptions])
 
   const semesterNameById = useMemo(() => createOptionsMap(semesterOptions), [semesterOptions])
+  const finalGradeElementTypeNameById = useMemo(
+    () => createOptionsMap(finalGradeElementTypeOptions),
+    [finalGradeElementTypeOptions]
+  )
 
   const curriculumPlanFields = useMemo(
     () =>
@@ -163,9 +167,10 @@ export function CurriculumPlansDrilldown() {
     () =>
       createCurriculumItemColumns({
         subjectNameById,
-        semesterNameById
+        semesterNameById,
+        finalGradeElementTypeNameById
       }),
-    [semesterNameById, subjectNameById]
+    [finalGradeElementTypeNameById, semesterNameById, subjectNameById]
   )
 
   const planFilters = useMemo(
@@ -380,7 +385,7 @@ function createFinalGradeElementTypeOptions(items: AdminCrudRecord[]): AdminCrud
       const name = String(item.name ?? '').trim()
 
       return {
-        value: name,
+        value: String(item.id),
         label: name
       }
     })

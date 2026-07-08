@@ -19,6 +19,13 @@ import {
   SelectValue
 } from '../../../shared/ui'
 import {
+  type AudienceAvailability,
+  buildAudienceAvailability,
+  formatBusyReasonTime,
+  getAudienceConflict,
+  getDateOfWeekDay
+} from '../lib/audienceAvailability'
+import {
   createDisciplineOptions,
   createGroupScheduleItemColumns,
   createGroupScheduleItemFields,
@@ -66,6 +73,13 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const [semesters, setSemesters] = useState<AdminCrudRecord[]>([])
   const [lessonPeriods, setLessonPeriods] = useState<AdminCrudRecord[]>([])
   const [academicYears, setAcademicYears] = useState<AdminCrudRecord[]>([])
+  const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
+  const [finalAssessmentRounds, setFinalAssessmentRounds] = useState<AdminCrudRecord[]>([])
+  const [finalAssessments, setFinalAssessments] = useState<AdminCrudRecord[]>([])
+  const [teachers, setTeachers] = useState<AdminCrudRecord[]>([])
+  const [audiences, setAudiences] = useState<AdminCrudRecord[]>([])
+  const [availabilityDayOfWeek, setAvailabilityDayOfWeek] = useState('1')
+  const [availabilityLessonPeriodId, setAvailabilityLessonPeriodId] = useState('')
 
   const [semesterOptions, setSemesterOptions] = useState<AdminCrudSelectOption[]>([])
   const [weekOptions, setWeekOptions] = useState<AdminCrudSelectOption[]>([])
@@ -86,7 +100,10 @@ export function ScheduleItemsDrilldown(): ReactElement {
       teachersResult,
       audiencesResult,
       lessonTypesResult,
-      academicYearsResult
+      academicYearsResult,
+      scheduleItemsResult,
+      finalAssessmentsResult,
+      finalAssessmentRoundsResult
     ] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'faculties',
@@ -172,6 +189,27 @@ export function ScheduleItemsDrilldown(): ReactElement {
         pageSize: 500,
         orderBy: 'starts_at',
         orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'schedule_items',
+        page: 1,
+        pageSize: 10000,
+        orderBy: 'day_of_week',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'final_assessments',
+        page: 1,
+        pageSize: 5000,
+        orderBy: 'id',
+        orderDirection: 'asc'
+      }),
+      window.api.adminCrud.list({
+        entity: 'final_assessment_rounds',
+        page: 1,
+        pageSize: 15000,
+        orderBy: 'assessment_date',
+        orderDirection: 'asc'
       })
     ])
 
@@ -182,6 +220,11 @@ export function ScheduleItemsDrilldown(): ReactElement {
     setDisciplines(disciplinesResult.items)
     setLessonPeriods(lessonPeriodsResult.items)
     setAcademicYears(academicYearsResult.items)
+    setScheduleItems(scheduleItemsResult.items)
+    setFinalAssessments(finalAssessmentsResult.items)
+    setFinalAssessmentRounds(finalAssessmentRoundsResult.items)
+    setTeachers(teachersResult.items)
+    setAudiences(audiencesResult.items)
 
     setSemesterOptions(createOptions(semestersResult.items, getSemesterName))
     setSemesters(semestersResult.items)
@@ -407,6 +450,56 @@ export function ScheduleItemsDrilldown(): ReactElement {
         .filter((entry): entry is [number, AdminCrudRecord] => entry[0] !== null)
     )
   }, [lessonPeriods])
+  const selectedAvailabilityLessonPeriod = useMemo(
+    () =>
+      lessonPeriods.find(
+        (lessonPeriod) => String(lessonPeriod.id) === availabilityLessonPeriodId
+      ) ?? null,
+    [availabilityLessonPeriodId, lessonPeriods]
+  )
+  const availabilityDate = useMemo(() => {
+    if (!selectedWeek || !availabilityDayOfWeek) {
+      return null
+    }
+
+    return getDateOfWeekDay(selectedWeek, Number(availabilityDayOfWeek))
+  }, [availabilityDayOfWeek, selectedWeek])
+  const audienceAvailability = useMemo(
+    () =>
+      buildAudienceAvailability({
+        audiences,
+        date: availabilityDate,
+        startsAt: selectedAvailabilityLessonPeriod?.starts_at,
+        endsAt: selectedAvailabilityLessonPeriod?.ends_at,
+        scheduleItems,
+        finalAssessmentRounds,
+        weeks,
+        lessonPeriods,
+        groups,
+        disciplines,
+        teachers,
+        finalAssessments
+      }),
+    [
+      audiences,
+      availabilityDate,
+      disciplines,
+      finalAssessmentRounds,
+      finalAssessments,
+      groups,
+      lessonPeriods,
+      scheduleItems,
+      selectedAvailabilityLessonPeriod,
+      teachers,
+      weeks
+    ]
+  )
+
+  useEffect(() => {
+    if (!availabilityLessonPeriodId && lessonPeriodOptions.length > 0) {
+      setAvailabilityLessonPeriodId(lessonPeriodOptions[0].value)
+    }
+  }, [availabilityLessonPeriodId, lessonPeriodOptions])
 
   const scheduleItemFields = useMemo(
     () =>
@@ -516,6 +609,50 @@ export function ScheduleItemsDrilldown(): ReactElement {
     setSelectedGroupId('')
     setSelectedSemesterId('')
     setSelectedWeekId('')
+  }
+
+  function validateScheduleItemSubmit({
+    payload,
+    selectedRecord
+  }: {
+    payload: AdminCrudRecord
+    selectedRecord: AdminCrudRecord | null
+  }): string | null {
+    const audienceId = toNumberOrNull(payload.audience_id)
+
+    if (audienceId === null) {
+      return null
+    }
+
+    const week = weeks.find((item) => Number(item.id) === Number(payload.week_id)) ?? null
+    const lessonPeriod =
+      lessonPeriods.find((item) => Number(item.id) === Number(payload.lesson_period_id)) ?? null
+    const dayOfWeek = toNumberOrNull(payload.day_of_week)
+    const date = week && dayOfWeek !== null ? getDateOfWeekDay(week, dayOfWeek) : null
+
+    if (!date || !lessonPeriod?.starts_at || !lessonPeriod.ends_at) {
+      return 'Не удалось определить дату и время пары для проверки аудитории'
+    }
+
+    const conflict = getAudienceConflict({
+      audienceId,
+      date,
+      startsAt: lessonPeriod.starts_at,
+      endsAt: lessonPeriod.ends_at,
+      scheduleItems,
+      finalAssessmentRounds,
+      currentScheduleItemId: toNumberOrNull(selectedRecord?.id),
+      weeks,
+      lessonPeriods,
+      groups,
+      disciplines,
+      teachers,
+      finalAssessments
+    })
+
+    return conflict
+      ? `Аудитория уже занята в это время: ${conflict.title} · ${formatBusyReasonTime(conflict)}`
+      : null
   }
 
   function handleScheduleColumnsChange(value: string): void {
@@ -632,6 +769,18 @@ export function ScheduleItemsDrilldown(): ReactElement {
       ) : null}
 
       {canShowSchedule ? (
+        <AudienceAvailabilityPanel
+          dayOfWeek={availabilityDayOfWeek}
+          lessonPeriodId={availabilityLessonPeriodId}
+          dayOptions={dayOfWeekOptions}
+          lessonPeriodOptions={lessonPeriodOptions}
+          availability={audienceAvailability}
+          onDayOfWeekChange={setAvailabilityDayOfWeek}
+          onLessonPeriodChange={setAvailabilityLessonPeriodId}
+        />
+      ) : null}
+
+      {canShowSchedule ? (
         <AdminCrudEntityPanel
           entity="schedule_items"
           title={`Неделя: ${weekNameById.get(Number(selectedWeekId)) ?? 'выбранная неделя'}`}
@@ -646,6 +795,9 @@ export function ScheduleItemsDrilldown(): ReactElement {
           orderDirection="asc"
           canCreate={canCreateScheduleItem}
           hideSearch
+          beforeSubmit={async ({ payload, selectedRecord }) =>
+            validateScheduleItemSubmit({ payload, selectedRecord })
+          }
           headerActions={
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-[var(--color-text-muted)]">Колонок</span>
@@ -699,6 +851,104 @@ export function ScheduleItemsDrilldown(): ReactElement {
         />
       ) : null}
     </div>
+  )
+}
+
+function AudienceAvailabilityPanel({
+  dayOfWeek,
+  lessonPeriodId,
+  dayOptions,
+  lessonPeriodOptions,
+  availability,
+  onDayOfWeekChange,
+  onLessonPeriodChange
+}: {
+  dayOfWeek: string
+  lessonPeriodId: string
+  dayOptions: AdminCrudSelectOption[]
+  lessonPeriodOptions: AdminCrudSelectOption[]
+  availability: AudienceAvailability[]
+  onDayOfWeekChange: (value: string) => void
+  onLessonPeriodChange: (value: string) => void
+}): ReactElement {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Занятость аудиторий</CardTitle>
+        <CardDescription>
+          Проверь, какие аудитории свободны или заняты в выбранный день и пару.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        <div className="grid gap-4 md:grid-cols-2">
+          <ScheduleFilterSelect
+            label="День недели"
+            value={dayOfWeek}
+            placeholder="Выбери день"
+            options={dayOptions}
+            onChange={onDayOfWeekChange}
+          />
+          <ScheduleFilterSelect
+            label="Пара"
+            value={lessonPeriodId}
+            placeholder="Выбери пару"
+            options={lessonPeriodOptions}
+            disabled={lessonPeriodOptions.length === 0}
+            onChange={onLessonPeriodChange}
+          />
+        </div>
+
+        <div className="mt-4 overflow-x-auto rounded-xl border border-[var(--color-border)]">
+          <table className="w-full min-w-[48rem] border-collapse text-sm">
+            <thead>
+              <tr className="bg-[var(--color-surface-muted)]">
+                <th className="border-b border-r border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
+                  Аудитория
+                </th>
+                <th className="border-b border-r border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
+                  Статус
+                </th>
+                <th className="border-b border-r border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
+                  Чем занята
+                </th>
+                <th className="border-b border-[var(--color-border)] px-4 py-3 text-left font-semibold text-[var(--color-text-muted)]">
+                  Время
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {availability.map((item) => {
+                const reason = item.reasons[0]
+
+                return (
+                  <tr
+                    key={String(item.audience.id)}
+                    className="border-b border-[var(--color-border)] last:border-b-0"
+                  >
+                    <td className="border-r border-[var(--color-border)] px-4 py-3 font-medium text-[var(--color-text)]">
+                      {getRecordName(item.audience)}
+                    </td>
+                    <td className="border-r border-[var(--color-border)] px-4 py-3">
+                      <Badge variant={item.isFree ? 'success' : 'warning'}>
+                        {item.isFree ? 'Свободна' : 'Занята'}
+                      </Badge>
+                    </td>
+                    <td className="border-r border-[var(--color-border)] px-4 py-3 text-[var(--color-text-muted)]">
+                      {reason?.title ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-text-muted)]">
+                      {reason ? formatBusyReasonTime(reason) : '—'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

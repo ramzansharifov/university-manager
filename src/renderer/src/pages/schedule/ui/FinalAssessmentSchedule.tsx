@@ -18,6 +18,13 @@ import {
   SelectValue,
   Textarea
 } from '../../../shared/ui'
+import {
+  type AudienceAvailability,
+  buildAudienceAvailability,
+  combineDateAndTime,
+  formatBusyReasonTime,
+  getAudienceConflict
+} from '../lib/audienceAvailability'
 
 const emptySelectValue = '__empty__'
 
@@ -63,6 +70,7 @@ export function FinalAssessmentSchedule(): ReactElement {
   const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
   const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
   const [lessonCompletionRecords, setLessonCompletionRecords] = useState<AdminCrudRecord[]>([])
+  const [curriculumItems, setCurriculumItems] = useState<AdminCrudRecord[]>([])
   const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
   const [assessments, setAssessments] = useState<AdminCrudRecord[]>([])
   const [rounds, setRounds] = useState<AdminCrudRecord[]>([])
@@ -99,6 +107,7 @@ export function FinalAssessmentSchedule(): ReactElement {
         scheduleItemsResult,
         lessonSessionsResult,
         lessonCompletionRecordsResult,
+        curriculumItemsResult,
         gradeElementTypesResult,
         assessmentsResult,
         roundsResult,
@@ -190,6 +199,13 @@ export function FinalAssessmentSchedule(): ReactElement {
           orderDirection: 'asc'
         }),
         window.api.adminCrud.list({
+          entity: 'curriculum_items',
+          page: 1,
+          pageSize: 5000,
+          orderBy: 'semester_id',
+          orderDirection: 'asc'
+        }),
+        window.api.adminCrud.list({
           entity: 'grade_element_types',
           page: 1,
           pageSize: 500,
@@ -238,6 +254,7 @@ export function FinalAssessmentSchedule(): ReactElement {
       setScheduleItems(scheduleItemsResult.items)
       setLessonSessions(lessonSessionsResult.items)
       setLessonCompletionRecords(lessonCompletionRecordsResult.items)
+      setCurriculumItems(curriculumItemsResult.items)
       setGradeElementTypes(gradeElementTypesResult.items)
       setAssessments(assessmentsResult.items)
       setRounds(roundsResult.items)
@@ -356,10 +373,39 @@ export function FinalAssessmentSchedule(): ReactElement {
       semesterDisciplines
     ]
   )
-  const finalGradeElementTypes = useMemo(
-    () => gradeElementTypes.filter((type) => Number(type.is_final) === 1),
-    [gradeElementTypes]
+  const allowedFinalGradeElementTypes = useMemo(
+    () =>
+      resolveAllowedFinalGradeElementTypesForDiscipline({
+        discipline: selectedDiscipline,
+        curriculumItems,
+        gradeElementTypes
+      }),
+    [curriculumItems, gradeElementTypes, selectedDiscipline]
   )
+
+  useEffect(() => {
+    if (!selectedDisciplineId) {
+      return
+    }
+
+    if (allowedFinalGradeElementTypes.length === 1) {
+      const onlyAllowedTypeId = String(allowedFinalGradeElementTypes[0].id)
+
+      if (selectedFinalTypeId !== onlyAllowedTypeId) {
+        setSelectedFinalTypeId(onlyAllowedTypeId)
+      }
+
+      return
+    }
+
+    if (
+      selectedFinalTypeId &&
+      !allowedFinalGradeElementTypes.some((type) => Number(type.id) === Number(selectedFinalTypeId))
+    ) {
+      setSelectedFinalTypeId('')
+    }
+  }, [allowedFinalGradeElementTypes, selectedDisciplineId, selectedFinalTypeId])
+
   const selectedAssessments = useMemo(
     () =>
       assessments.filter(
@@ -473,6 +519,20 @@ export function FinalAssessmentSchedule(): ReactElement {
 
     if (Number(selectedFinalType.is_final) !== 1) {
       setErrorMessage('Выбранный оценочный элемент не является итоговым')
+      return
+    }
+
+    if (allowedFinalGradeElementTypes.length === 0) {
+      setErrorMessage('В учебном плане для дисциплины не указана форма итогового контроля')
+      return
+    }
+
+    if (
+      !allowedFinalGradeElementTypes.some(
+        (type) => Number(type.id) === Number(selectedFinalType.id)
+      )
+    ) {
+      setErrorMessage('Выбранный итоговый тип не указан в учебном плане дисциплины')
       return
     }
 
@@ -598,6 +658,13 @@ export function FinalAssessmentSchedule(): ReactElement {
       return
     }
 
+    const audienceId = toNumberOrNull(draft.audience_id)
+
+    if (audienceId === null) {
+      setErrorMessage('Выбери аудиторию')
+      return
+    }
+
     const lastLessonDateTime = completionInfo.lastLessonDateTime
     const roundStartDateTime = combineDateAndTime(draft.assessment_date, draft.starts_at)
 
@@ -627,6 +694,27 @@ export function FinalAssessmentSchedule(): ReactElement {
 
     if (roundOrderError) {
       setErrorMessage(roundOrderError)
+      return
+    }
+
+    const conflict = getAudienceConflict({
+      audienceId,
+      date: draft.assessment_date,
+      startsAt: draft.starts_at,
+      endsAt: draft.ends_at,
+      scheduleItems,
+      finalAssessmentRounds: rounds,
+      currentFinalAssessmentRoundId: Number(round.id),
+      weeks,
+      lessonPeriods,
+      groups,
+      disciplines,
+      teachers,
+      finalAssessments: assessments
+    })
+
+    if (conflict) {
+      setErrorMessage(`Аудитория занята: ${conflict.title} · ${formatBusyReasonTime(conflict)}`)
       return
     }
 
@@ -682,7 +770,7 @@ export function FinalAssessmentSchedule(): ReactElement {
           ends_at: draft.ends_at,
           lesson_period_id: null,
           teacher_id: defaultTeacherId,
-          audience_id: toNumberOrNull(draft.audience_id),
+          audience_id: audienceId,
           status: 'scheduled',
           description: draft.description.trim() || null
         }
@@ -770,14 +858,29 @@ export function FinalAssessmentSchedule(): ReactElement {
               disabled={!selectedSemesterId || completedSemesterDisciplines.length === 0}
               onChange={handleDisciplineChange}
             />
-            <FilterSelect
-              label="Итоговый тип"
-              value={selectedFinalTypeId}
-              placeholder="Выбери итоговый тип"
-              options={finalGradeElementTypes.map(toFilterOption)}
-              disabled={!selectedDisciplineId}
-              onChange={setSelectedFinalTypeId}
-            />
+            {selectedDisciplineId && allowedFinalGradeElementTypes.length === 1 ? (
+              <div className="grid gap-2">
+                <span className="text-sm font-medium text-[var(--color-text)]">Итоговый тип</span>
+                <div className="flex min-h-10 items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-sm text-[var(--color-text)]">
+                  {getRecordName(allowedFinalGradeElementTypes[0])}
+                </div>
+              </div>
+            ) : (
+              <FilterSelect
+                label="Итоговый тип"
+                value={selectedFinalTypeId}
+                placeholder={
+                  selectedDisciplineId
+                    ? allowedFinalGradeElementTypes.length > 0
+                      ? 'Выбери итоговый тип'
+                      : 'Форма контроля не указана'
+                    : 'Сначала дисциплину'
+                }
+                options={allowedFinalGradeElementTypes.map(toFilterOption)}
+                disabled={!selectedDisciplineId || allowedFinalGradeElementTypes.length === 0}
+                onChange={setSelectedFinalTypeId}
+              />
+            )}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -830,6 +933,12 @@ export function FinalAssessmentSchedule(): ReactElement {
             <div className="mt-4 rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-3 text-sm text-[var(--color-text)]">
               Эта дисциплина пока недоступна для итоговой аттестации. Завершите все занятия в
               журнале.
+            </div>
+          ) : null}
+
+          {selectedDiscipline && allowedFinalGradeElementTypes.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-3 text-sm text-[var(--color-text)]">
+              В учебном плане для дисциплины не указана форма итогового контроля.
             </div>
           ) : null}
 
@@ -900,6 +1009,35 @@ export function FinalAssessmentSchedule(): ReactElement {
               {assessmentRounds.map((round) => {
                 const draft = roundDrafts[String(round.id)] ?? createRoundDraft(round)
                 const gradeItemId = toNumberOrNull(round.grade_item_id)
+                const audienceAvailability = buildAudienceAvailability({
+                  audiences,
+                  date: draft.assessment_date,
+                  startsAt: draft.starts_at,
+                  endsAt: draft.ends_at,
+                  scheduleItems,
+                  finalAssessmentRounds: rounds,
+                  currentFinalAssessmentRoundId: Number(round.id),
+                  weeks,
+                  lessonPeriods,
+                  groups,
+                  disciplines,
+                  teachers,
+                  finalAssessments: assessments
+                })
+                const roundAudienceOptions = audienceAvailability.map((availability) => {
+                  const busyReason = availability.reasons[0]
+                  const busyText = busyReason
+                    ? ` — занята: ${busyReason.title} · ${formatBusyReasonTime(busyReason)}`
+                    : ''
+
+                  return {
+                    value: String(availability.audience.id),
+                    label: `${getRecordName(availability.audience)}${busyText}`
+                  }
+                })
+                const canShowAudienceAvailability = Boolean(
+                  draft.assessment_date && draft.starts_at && draft.ends_at
+                )
 
                 return (
                   <div
@@ -963,7 +1101,9 @@ export function FinalAssessmentSchedule(): ReactElement {
                         label="Аудитория"
                         value={draft.audience_id}
                         placeholder="Выбери аудиторию"
-                        options={audienceOptions}
+                        options={
+                          canShowAudienceAvailability ? roundAudienceOptions : audienceOptions
+                        }
                         onChange={(value) => updateRoundDraft(round.id, { audience_id: value })}
                       />
                       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm md:col-span-2 xl:col-span-1">
@@ -986,6 +1126,10 @@ export function FinalAssessmentSchedule(): ReactElement {
                         />
                       </label>
                     </div>
+
+                    {canShowAudienceAvailability ? (
+                      <AudienceAvailabilityList availability={audienceAvailability} />
+                    ) : null}
 
                     <div className="mt-4">
                       <Button
@@ -1053,6 +1197,45 @@ function EmptyState({ text }: { text: string }): ReactElement {
   return (
     <div className="rounded-xl border border-dashed border-[var(--color-border)] px-4 py-10 text-center text-sm text-[var(--color-text-muted)]">
       {text}
+    </div>
+  )
+}
+
+function AudienceAvailabilityList({
+  availability
+}: {
+  availability: AudienceAvailability[]
+}): ReactElement {
+  return (
+    <div className="mt-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
+      <p className="text-sm font-semibold text-[var(--color-text)]">Занятость аудиторий</p>
+      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {availability.map((item) => {
+          const busyReason = item.reasons[0]
+
+          return (
+            <div
+              key={String(item.audience.id)}
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-[var(--color-text)]">
+                  {getRecordName(item.audience)}
+                </span>
+                <Badge variant={item.isFree ? 'success' : 'warning'}>
+                  {item.isFree ? 'Свободна' : 'Занята'}
+                </Badge>
+              </div>
+
+              {busyReason ? (
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  {busyReason.title} · {formatBusyReasonTime(busyReason)}
+                </p>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -1330,19 +1513,6 @@ function parseDate(value: string): Date {
   return new Date(Date.UTC(year, month - 1, day))
 }
 
-function combineDateAndTime(dateValue: unknown, timeValue: unknown): Date | null {
-  const date = String(dateValue ?? '').trim()
-  const time = String(timeValue ?? '').trim()
-
-  if (!date || !time) {
-    return null
-  }
-
-  const dateTime = new Date(`${date}T${time}:00`)
-
-  return Number.isFinite(dateTime.getTime()) ? dateTime : null
-}
-
 function formatDateTime(value: Date): string {
   return value.toLocaleString('ru-RU', {
     day: '2-digit',
@@ -1361,6 +1531,76 @@ function getGradeElementTypeMaxScore(gradeElementType: AdminCrudRecord | null | 
   const maxScore = toNumberOrNull(gradeElementType?.max_score)
 
   return maxScore && maxScore > 0 ? maxScore : 100
+}
+
+function resolveAllowedFinalGradeElementTypesForDiscipline({
+  discipline,
+  curriculumItems,
+  gradeElementTypes
+}: {
+  discipline: AdminCrudRecord | null
+  curriculumItems: AdminCrudRecord[]
+  gradeElementTypes: AdminCrudRecord[]
+}): AdminCrudRecord[] {
+  const curriculumItemId = toNumberOrNull(discipline?.curriculum_item_id)
+  const curriculumItem =
+    curriculumItemId === null
+      ? null
+      : (curriculumItems.find((item) => Number(item.id) === curriculumItemId) ?? null)
+
+  if (!curriculumItem?.control_form) {
+    return []
+  }
+
+  const finalTypes = gradeElementTypes.filter((type) => Number(type.is_final) === 1)
+  const rawValues = parseControlFormValues(curriculumItem.control_form)
+  const allowedTypeIds = new Set<number>()
+
+  rawValues.forEach((value) => {
+    const valueId = toNumberOrNull(value)
+
+    if (valueId !== null && finalTypes.some((type) => Number(type.id) === valueId)) {
+      allowedTypeIds.add(valueId)
+      return
+    }
+
+    const normalizedValue = value.toLocaleLowerCase('ru-RU')
+    const matchedType = finalTypes.find(
+      (type) =>
+        String(type.name ?? '')
+          .trim()
+          .toLocaleLowerCase('ru-RU') === normalizedValue
+    )
+
+    if (matchedType?.id) {
+      allowedTypeIds.add(Number(matchedType.id))
+    }
+  })
+
+  return finalTypes.filter((type) => allowedTypeIds.has(Number(type.id)))
+}
+
+function parseControlFormValues(value: unknown): string[] {
+  const text = String(value ?? '').trim()
+
+  if (!text) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(text)
+
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item).trim()).filter(Boolean)
+    }
+  } catch {
+    // Legacy values are plain text.
+  }
+
+  return text
+    .split(/\n|,|\/|\+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
 function getRoundLabel(value: unknown): string {
