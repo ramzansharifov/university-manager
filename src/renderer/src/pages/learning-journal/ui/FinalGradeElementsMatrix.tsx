@@ -57,14 +57,13 @@ export function FinalGradeElementsMatrix(): ReactElement {
   const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
   const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
   const [grades, setGrades] = useState<AdminCrudRecord[]>([])
-  const [gradeCategories, setGradeCategories] = useState<AdminCrudRecord[]>([])
 
   const [selectedFacultyId, setSelectedFacultyId] = useState('')
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState('')
   const [selectedSemesterId, setSelectedSemesterId] = useState('')
   const [selectedDisciplineId, setSelectedDisciplineId] = useState('')
-  const [selectedFinalTypeId, setSelectedFinalTypeId] = useState('')
+  const [selectedFinalGradeItemId, setSelectedFinalGradeItemId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSavingGrade, setIsSavingGrade] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -90,8 +89,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
         lessonCompletionRecordsResult,
         gradeElementTypesResult,
         gradeItemsResult,
-        gradesResult,
-        gradeCategoriesResult
+        gradesResult
       ] = await Promise.all([
         window.api.adminCrud.list({
           entity: 'faculties',
@@ -197,14 +195,6 @@ export function FinalGradeElementsMatrix(): ReactElement {
           pageSize: 20000,
           orderBy: 'id',
           orderDirection: 'asc'
-        }),
-        window.api.adminCrud.list({
-          entity: 'dictionary_items',
-          page: 1,
-          pageSize: 100,
-          filters: { dictionary_key: 'grade_categories' },
-          orderBy: 'sort_order',
-          orderDirection: 'asc'
         })
       ])
 
@@ -223,7 +213,6 @@ export function FinalGradeElementsMatrix(): ReactElement {
       setGradeElementTypes(gradeElementTypesResult.items)
       setGradeItems(gradeItemsResult.items)
       setGrades(gradesResult.items)
-      setGradeCategories(gradeCategoriesResult.items)
     } catch (error) {
       setLoadError(getUserFacingError(error, 'Не удалось загрузить итоговую ведомость'))
     } finally {
@@ -260,9 +249,9 @@ export function FinalGradeElementsMatrix(): ReactElement {
     [disciplines, selectedDisciplineId]
   )
 
-  const selectedFinalType = useMemo(
-    () => gradeElementTypes.find((item) => String(item.id) === selectedFinalTypeId) ?? null,
-    [gradeElementTypes, selectedFinalTypeId]
+  const gradeElementTypeById = useMemo(
+    () => createRecordMap(gradeElementTypes),
+    [gradeElementTypes]
   )
 
   const filteredSpecialties = useMemo(() => {
@@ -347,11 +336,6 @@ export function FinalGradeElementsMatrix(): ReactElement {
       )
   }, [groupDisciplines, selectedGroupId, selectedSemesterId, subjects])
 
-  const finalGradeElementTypes = useMemo(
-    () => gradeElementTypes.filter((item) => Number(item.is_final) === 1),
-    [gradeElementTypes]
-  )
-
   const weekById = useMemo(() => createRecordMap(weeks), [weeks])
   const selectedDisciplineScheduleItems = useMemo(() => {
     if (!selectedGroupId || !selectedSemesterId || !selectedDisciplineId) {
@@ -383,22 +367,43 @@ export function FinalGradeElementsMatrix(): ReactElement {
     [lessonCompletionRecords, lessonSessions, selectedDisciplineScheduleItems]
   )
 
-  const selectedFinalGradeItem = useMemo(() => {
-    if (!selectedDisciplineId || !selectedFinalTypeId) {
-      return null
+  const scheduledFinalGradeItems = useMemo(() => {
+    if (!selectedDisciplineId) {
+      return []
     }
 
-    return (
-      gradeItems.find(
-        (gradeItem) =>
+    return gradeItems
+      .filter((gradeItem) => {
+        const gradeElementTypeId = toNumberOrNull(gradeItem.grade_element_type_id)
+        const gradeElementType =
+          gradeElementTypeId === null ? null : gradeElementTypeById.get(gradeElementTypeId)
+
+        return (
           Number(gradeItem.discipline_id) === Number(selectedDisciplineId) &&
-          Number(gradeItem.grade_element_type_id) === Number(selectedFinalTypeId) &&
-          toNumberOrNull(gradeItem.lesson_session_id) === null &&
-          toNumberOrNull(gradeItem.week_id) === null &&
-          toNumberOrNull(gradeItem.day_of_week) === null
-      ) ?? null
-    )
-  }, [gradeItems, selectedDisciplineId, selectedFinalTypeId])
+          Number(gradeElementType?.is_final) === 1 &&
+          toNumberOrNull(gradeItem.week_id) !== null &&
+          toNumberOrNull(gradeItem.day_of_week) !== null &&
+          toNumberOrNull(gradeItem.lesson_session_id) === null
+        )
+      })
+      .sort(compareScheduledFinalGradeItems)
+  }, [gradeElementTypeById, gradeItems, selectedDisciplineId])
+
+  const selectedFinalGradeItem = useMemo(
+    () =>
+      scheduledFinalGradeItems.find(
+        (gradeItem) => String(gradeItem.id) === selectedFinalGradeItemId
+      ) ?? null,
+    [scheduledFinalGradeItems, selectedFinalGradeItemId]
+  )
+
+  const selectedFinalType = useMemo(() => {
+    const gradeElementTypeId = toNumberOrNull(selectedFinalGradeItem?.grade_element_type_id)
+
+    return gradeElementTypeId === null
+      ? null
+      : (gradeElementTypeById.get(gradeElementTypeId) ?? null)
+  }, [gradeElementTypeById, selectedFinalGradeItem])
 
   const hasCompleteSelection = Boolean(
     selectedFaculty &&
@@ -406,6 +411,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
     selectedGroup &&
     selectedSemester &&
     selectedDiscipline &&
+    selectedFinalGradeItem &&
     selectedFinalType
   )
   const isDisciplineCompleted = disciplineCompletionSummary.isCompleted
@@ -417,7 +423,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
     setSelectedGroupId('')
     setSelectedSemesterId('')
     setSelectedDisciplineId('')
-    setSelectedFinalTypeId('')
+    setSelectedFinalGradeItemId('')
     setGradeError(null)
   }
 
@@ -426,7 +432,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
     setSelectedGroupId('')
     setSelectedSemesterId('')
     setSelectedDisciplineId('')
-    setSelectedFinalTypeId('')
+    setSelectedFinalGradeItemId('')
     setGradeError(null)
   }
 
@@ -434,25 +440,25 @@ export function FinalGradeElementsMatrix(): ReactElement {
     setSelectedGroupId(value)
     setSelectedSemesterId('')
     setSelectedDisciplineId('')
-    setSelectedFinalTypeId('')
+    setSelectedFinalGradeItemId('')
     setGradeError(null)
   }
 
   function handleSemesterChange(value: string): void {
     setSelectedSemesterId(value)
     setSelectedDisciplineId('')
-    setSelectedFinalTypeId('')
+    setSelectedFinalGradeItemId('')
     setGradeError(null)
   }
 
   function handleDisciplineChange(value: string): void {
     setSelectedDisciplineId(value)
-    setSelectedFinalTypeId('')
+    setSelectedFinalGradeItemId('')
     setGradeError(null)
   }
 
-  function handleFinalTypeChange(value: string): void {
-    setSelectedFinalTypeId(value)
+  function handleFinalGradeItemChange(value: string): void {
+    setSelectedFinalGradeItemId(value)
     setGradeError(null)
   }
 
@@ -462,7 +468,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
     setSelectedGroupId('')
     setSelectedSemesterId('')
     setSelectedDisciplineId('')
-    setSelectedFinalTypeId('')
+    setSelectedFinalGradeItemId('')
     setGradeError(null)
   }
 
@@ -483,46 +489,18 @@ export function FinalGradeElementsMatrix(): ReactElement {
     )
   }
 
-  async function ensureFinalGradeItem(): Promise<AdminCrudRecord> {
-    if (selectedFinalGradeItem?.id) {
-      return selectedFinalGradeItem
-    }
-
-    if (!selectedDiscipline?.id || !selectedFinalType?.id) {
-      throw new Error('Выбери дисциплину и итоговый оценочный элемент')
-    }
-
-    const result = await window.api.adminCrud.create({
-      entity: 'grade_items',
-      data: {
-        discipline_id: Number(selectedDiscipline.id),
-        lesson_session_id: null,
-        grade_element_type_id: Number(selectedFinalType.id),
-        grade_category_id: getFinalGradeCategoryId(selectedFinalType, gradeCategories),
-        week_id: null,
-        day_of_week: null,
-        name: `${getRecordName(selectedFinalType)} · ${getDisciplineName(
-          selectedDiscipline,
-          subjects
-        )}`,
-        max_score: getGradeElementTypeMaxScore(selectedFinalType),
-        grade_date: getCurrentDate(),
-        description: 'Итоговая ведомость'
-      }
-    })
-
-    if (!result.item?.id) {
-      throw new Error('Не удалось создать итоговую ведомость')
-    }
-
-    return result.item
-  }
-
   async function saveStudentGrade(
     student: AdminCrudRecord,
     value: GradeSaveValue | null
   ): Promise<void> {
     if (isSavingGrade) {
+      return
+    }
+
+    if (!selectedFinalGradeItem?.id) {
+      setGradeError(
+        'Сначала добавь итоговый оценочный элемент в расписании и выбери его в ведомости'
+      )
       return
     }
 
@@ -544,9 +522,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
     setGradeError(null)
 
     try {
-      const gradeItem =
-        selectedFinalGradeItem ?? (value === null ? null : await ensureFinalGradeItem())
-      const existingGrade = getStudentGradeRecord(student, gradeItem)
+      const existingGrade = getStudentGradeRecord(student, selectedFinalGradeItem)
 
       if (value === null) {
         if (existingGrade?.id) {
@@ -558,10 +534,6 @@ export function FinalGradeElementsMatrix(): ReactElement {
         }
 
         return
-      }
-
-      if (!gradeItem?.id) {
-        throw new Error('Не удалось определить итоговую ведомость')
       }
 
       const payload = {
@@ -579,7 +551,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
         await window.api.adminCrud.create({
           entity: 'grades',
           data: {
-            grade_item_id: Number(gradeItem.id),
+            grade_item_id: Number(selectedFinalGradeItem.id),
             student_id: studentId,
             ...payload,
             comment: null,
@@ -806,16 +778,18 @@ export function FinalGradeElementsMatrix(): ReactElement {
             />
 
             <FilterSelect
-              label="Итоговый элемент"
-              value={selectedFinalTypeId}
+              label="Итоговый элемент из расписания"
+              value={selectedFinalGradeItemId}
               placeholder={
-                finalGradeElementTypes.length > 0
-                  ? 'Выбери итоговый элемент'
-                  : 'Сначала создай итоговые элементы'
+                scheduledFinalGradeItems.length > 0
+                  ? 'Выбери элемент из расписания'
+                  : 'Сначала добавь элемент в расписании'
               }
-              disabled={!selectedDisciplineId || finalGradeElementTypes.length === 0}
-              options={finalGradeElementTypes.map(toFilterOption)}
-              onChange={handleFinalTypeChange}
+              disabled={!selectedDisciplineId || scheduledFinalGradeItems.length === 0}
+              options={scheduledFinalGradeItems.map((gradeItem) =>
+                toScheduledFinalGradeItemOption(gradeItem, gradeElementTypeById, weekById)
+              )}
+              onChange={handleFinalGradeItemChange}
             />
           </div>
 
@@ -829,6 +803,7 @@ export function FinalGradeElementsMatrix(): ReactElement {
             {selectedDiscipline ? (
               <Badge>{getDisciplineName(selectedDiscipline, subjects)}</Badge>
             ) : null}
+            {selectedFinalGradeItem ? <Badge>{getRecordName(selectedFinalGradeItem)}</Badge> : null}
             {selectedFinalType ? (
               <Badge>{getGradeElementTypeDescription(selectedFinalType)}</Badge>
             ) : null}
@@ -848,8 +823,12 @@ export function FinalGradeElementsMatrix(): ReactElement {
         </div>
       ) : null}
 
-      {!hasCompleteSelection ? (
-        <EmptyState text="Выбери факультет, специальность, группу, семестр, дисциплину и итоговый оценочный элемент." />
+      {!hasCompleteSelection && !(selectedDisciplineId && scheduledFinalGradeItems.length === 0) ? (
+        <EmptyState text="Выбери факультет, специальность, группу, семестр, дисциплину и итоговый элемент из расписания." />
+      ) : null}
+
+      {selectedDisciplineId && scheduledFinalGradeItems.length === 0 ? (
+        <EmptyState text="Для выбранной дисциплины нет итогового оценочного элемента в расписании. Сначала добавь экзамен, зачёт или другой итоговый элемент в разделе «Расписание»." />
       ) : null}
 
       {hasCompleteSelection && !isDisciplineCompleted ? (
@@ -1202,22 +1181,6 @@ function getFinalResultLabel(
   return { label: 'Проходной', variant: 'success' }
 }
 
-function getFinalGradeCategoryId(
-  gradeElementType: AdminCrudRecord,
-  gradeCategories: AdminCrudRecord[]
-): number | null {
-  const name = getRecordName(gradeElementType).toLocaleLowerCase('ru-RU')
-  const key =
-    name.includes('экзамен') || name.includes('exam')
-      ? 'exam'
-      : name.includes('зач') || name.includes('credit')
-        ? 'credit'
-        : 'final'
-  const category = gradeCategories.find((item) => String(item.item_key) === key)
-
-  return toNumberOrNull(category?.id)
-}
-
 function getGradeTone(
   score: number | null,
   minScore: number,
@@ -1267,6 +1230,51 @@ function toFilterOption(record: AdminCrudRecord): FilterOption {
   }
 }
 
+function toScheduledFinalGradeItemOption(
+  gradeItem: AdminCrudRecord,
+  gradeElementTypeById: Map<number, AdminCrudRecord>,
+  weekById: Map<number, AdminCrudRecord>
+): FilterOption {
+  const gradeElementTypeId = toNumberOrNull(gradeItem.grade_element_type_id)
+  const gradeElementType =
+    gradeElementTypeId === null ? null : gradeElementTypeById.get(gradeElementTypeId)
+  const weekId = toNumberOrNull(gradeItem.week_id)
+  const week = weekId === null ? null : weekById.get(weekId)
+  const details = [
+    gradeElementType ? getRecordName(gradeElementType) : getRecordName(gradeItem),
+    getWeekShortLabel(week),
+    getDayOfWeekLabel(gradeItem.day_of_week),
+    gradeItem.grade_date ? String(gradeItem.grade_date) : null,
+    gradeItem.max_score ? `максимум ${String(gradeItem.max_score)}` : null
+  ].filter(Boolean)
+
+  return {
+    value: String(gradeItem.id),
+    label: `${getRecordName(gradeItem)} · ${details.join(' · ')}`
+  }
+}
+
+function compareScheduledFinalGradeItems(
+  firstItem: AdminCrudRecord,
+  secondItem: AdminCrudRecord
+): number {
+  const firstWeekId = toNumberOrNull(firstItem.week_id) ?? 0
+  const secondWeekId = toNumberOrNull(secondItem.week_id) ?? 0
+
+  if (firstWeekId !== secondWeekId) {
+    return firstWeekId - secondWeekId
+  }
+
+  const firstDay = toNumberOrNull(firstItem.day_of_week) ?? 0
+  const secondDay = toNumberOrNull(secondItem.day_of_week) ?? 0
+
+  if (firstDay !== secondDay) {
+    return firstDay - secondDay
+  }
+
+  return Number(firstItem.id ?? 0) - Number(secondItem.id ?? 0)
+}
+
 function createRecordMap(records: AdminCrudRecord[]): Map<number, AdminCrudRecord> {
   const map = new Map<number, AdminCrudRecord>()
 
@@ -1306,6 +1314,27 @@ function getSemesterLabel(semester: AdminCrudRecord, academicYears: AdminCrudRec
       : getRecordName(semester)
 
   return academicYear ? `${semesterName} · ${getRecordName(academicYear)}` : semesterName
+}
+
+function getWeekShortLabel(week: AdminCrudRecord | null | undefined): string {
+  const number = toNumberOrNull(week?.number)
+
+  return number === null ? 'неделя не указана' : `${number} неделя`
+}
+
+function getDayOfWeekLabel(value: unknown): string {
+  const labels: Record<number, string> = {
+    1: 'Понедельник',
+    2: 'Вторник',
+    3: 'Среда',
+    4: 'Четверг',
+    5: 'Пятница',
+    6: 'Суббота',
+    7: 'Воскресенье'
+  }
+  const dayNumber = toNumberOrNull(value)
+
+  return dayNumber === null ? 'день не указан' : (labels[dayNumber] ?? `день ${dayNumber}`)
 }
 
 function compareSemesters(firstSemester: AdminCrudRecord, secondSemester: AdminCrudRecord): number {
@@ -1366,15 +1395,6 @@ function getPersonFullName(record: AdminCrudRecord): string {
     .join(' ')
 
   return fullName || getRecordName(record)
-}
-
-function getCurrentDate(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
 }
 
 function toNumberOrNull(value: unknown): number | null {

@@ -766,6 +766,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
           day_of_week: Number(gradeForm.day_of_week),
           name,
           max_score: maxScore,
+          grade_date: getDateOfWeekDay(selectedWeek, Number(gradeForm.day_of_week)),
           description: gradeForm.description.trim() || null
         }
       })
@@ -1623,6 +1624,34 @@ function getLessonCountText(count: number): string {
   }
 
   return 'пар'
+}
+
+function getDateOfWeekDay(week: AdminCrudRecord | null, dayOfWeek: number): string | null {
+  const startsAt = String(week?.starts_at ?? '').trim()
+
+  if (!startsAt) {
+    return null
+  }
+
+  return formatDate(addDays(parseDate(startsAt), dayOfWeek - 1))
+}
+
+function parseDate(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number)
+
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
+}
+
+function formatDate(date: Date): string {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function normalizeNumber(value: unknown): number | null {
