@@ -272,7 +272,9 @@ export function TeacherDetailsPage(): ReactElement {
         finalAssessments: finalAssessmentsResult.items
       })
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить преподавателя')
+      setError(
+        loadError instanceof Error ? loadError.message : 'Не удалось загрузить преподавателя'
+      )
     } finally {
       setIsLoading(false)
     }
@@ -283,7 +285,10 @@ export function TeacherDetailsPage(): ReactElement {
   }, [loadTeacher])
 
   const teacherName = teacher ? getPersonName(teacher) : 'Преподаватель'
-  const subjectLabels = useMemo(() => createTeacherSubjectLabels(teacher, relatedData), [teacher, relatedData])
+  const subjectLabels = useMemo(
+    () => createTeacherSubjectLabels(teacher, relatedData),
+    [teacher, relatedData]
+  )
   const disciplineRows = useMemo(() => createTeacherDisciplineRows(relatedData), [relatedData])
   const scheduleRows = useMemo(() => createTeacherScheduleRows(relatedData), [relatedData])
   const activityRows = useMemo(() => createTeacherActivityRows(relatedData), [relatedData])
@@ -332,7 +337,11 @@ export function TeacherDetailsPage(): ReactElement {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-xl font-bold tracking-tight">{teacherName}</h1>
-                      <Badge>{relatedData.status ? getRecordName(relatedData.status) : 'Статус не указан'}</Badge>
+                      <Badge>
+                        {relatedData.status
+                          ? getRecordName(relatedData.status)
+                          : 'Статус не указан'}
+                      </Badge>
                     </div>
 
                     <p className="mt-1 text-sm text-[var(--color-text-muted)]">
@@ -342,10 +351,16 @@ export function TeacherDetailsPage(): ReactElement {
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {teacher.email ? <Badge variant="muted">{String(teacher.email)}</Badge> : null}
-                      {teacher.phone ? <Badge variant="muted">{String(teacher.phone)}</Badge> : null}
+                      {teacher.email ? (
+                        <Badge variant="muted">{String(teacher.email)}</Badge>
+                      ) : null}
+                      {teacher.phone ? (
+                        <Badge variant="muted">{String(teacher.phone)}</Badge>
+                      ) : null}
                       {teacher.hire_date ? (
-                        <Badge variant="muted">Принят: {formatDateForDisplay(teacher.hire_date)}</Badge>
+                        <Badge variant="muted">
+                          Принят: {formatDateForDisplay(teacher.hire_date)}
+                        </Badge>
                       ) : null}
                     </div>
                   </div>
@@ -375,7 +390,9 @@ export function TeacherDetailsPage(): ReactElement {
                 <Card>
                   <CardHeader>
                     <CardTitle>Личные данные</CardTitle>
-                    <CardDescription>Основная информация из карточки преподавателя.</CardDescription>
+                    <CardDescription>
+                      Основная информация из карточки преподавателя.
+                    </CardDescription>
                   </CardHeader>
 
                   <CardContent>
@@ -383,9 +400,18 @@ export function TeacherDetailsPage(): ReactElement {
                       <InfoItem label="Фамилия" value={teacher.last_name} />
                       <InfoItem label="Имя" value={teacher.first_name} />
                       <InfoItem label="Отчество" value={teacher.middle_name} />
-                      <InfoItem label="Дата рождения" value={formatDateForDisplay(teacher.birth_date)} />
-                      <InfoItem label="Дата приёма" value={formatDateForDisplay(teacher.hire_date)} />
-                      <InfoItem label="Дата увольнения" value={formatDateForDisplay(teacher.dismissal_date)} />
+                      <InfoItem
+                        label="Дата рождения"
+                        value={formatDateForDisplay(teacher.birth_date)}
+                      />
+                      <InfoItem
+                        label="Дата приёма"
+                        value={formatDateForDisplay(teacher.hire_date)}
+                      />
+                      <InfoItem
+                        label="Дата увольнения"
+                        value={formatDateForDisplay(teacher.dismissal_date)}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -436,7 +462,9 @@ export function TeacherDetailsPage(): ReactElement {
                       <FiBookOpen className="h-5 w-5 text-[var(--color-primary)]" />
                       <div>
                         <CardTitle>Дисциплины преподавателя</CardTitle>
-                        <CardDescription>Группы, семестры и дисциплины, которые ведёт преподаватель.</CardDescription>
+                        <CardDescription>
+                          Группы, семестры и дисциплины, которые ведёт преподаватель.
+                        </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
@@ -468,7 +496,9 @@ export function TeacherDetailsPage(): ReactElement {
                     <FiCalendar className="h-5 w-5 text-[var(--color-primary)]" />
                     <div>
                       <CardTitle>Расписание занятий</CardTitle>
-                      <CardDescription>Занятия из расписания, где указан этот преподаватель.</CardDescription>
+                      <CardDescription>
+                        Занятия из расписания, где указан этот преподаватель.
+                      </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -476,7 +506,15 @@ export function TeacherDetailsPage(): ReactElement {
                 <CardContent>
                   {scheduleRows.length > 0 ? (
                     <SimpleTable
-                      headers={['День', 'Пара', 'Дисциплина', 'Группа', 'Тип', 'Аудитория', 'Статус']}
+                      headers={[
+                        'День',
+                        'Пара',
+                        'Дисциплина',
+                        'Группа',
+                        'Тип',
+                        'Аудитория',
+                        'Статус'
+                      ]}
                       rows={scheduleRows.map((row) => [
                         row.day,
                         row.pair,
@@ -497,15 +535,24 @@ export function TeacherDetailsPage(): ReactElement {
             <TabsContent value="activity">
               <div className="grid gap-4">
                 <div className="grid gap-3 md:grid-cols-3">
-                  <SummaryCard icon={<FiClipboard />} label="Проведённые занятия" value={String(relatedData.lessonSessions.length)} />
-                  <SummaryCard label="Туры аттестации" value={String(relatedData.finalAssessmentRounds.length)} />
+                  <SummaryCard
+                    icon={<FiClipboard />}
+                    label="Проведённые занятия"
+                    value={String(relatedData.lessonSessions.length)}
+                  />
+                  <SummaryCard
+                    label="Туры аттестации"
+                    value={String(relatedData.finalAssessmentRounds.length)}
+                  />
                   <SummaryCard label="Всего активностей" value={String(activityRows.length)} />
                 </div>
 
                 <Card>
                   <CardHeader>
                     <CardTitle>Журнал активности</CardTitle>
-                    <CardDescription>Проведённые занятия и туры итоговой аттестации преподавателя.</CardDescription>
+                    <CardDescription>
+                      Проведённые занятия и туры итоговой аттестации преподавателя.
+                    </CardDescription>
                   </CardHeader>
 
                   <CardContent>
@@ -547,15 +594,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function SummaryCard({
-  icon,
-  label,
-  value
-}: {
-  icon?: ReactNode
-  label: string
-  value: string
-}) {
+function SummaryCard({ icon, label, value }: { icon?: ReactNode; label: string; value: string }) {
   return (
     <Card>
       <CardContent className="flex items-center gap-3">
@@ -627,7 +666,10 @@ function SimpleTable({ headers, rows }: { headers: string[]; rows: string[][] })
           {rows.map((row, rowIndex) => (
             <tr key={rowIndex} className="border-t border-[var(--color-border)]">
               {row.map((cell, cellIndex) => (
-                <td key={`${rowIndex}-${cellIndex}`} className="px-4 py-3 align-top text-[var(--color-text)]">
+                <td
+                  key={`${rowIndex}-${cellIndex}`}
+                  className="px-4 py-3 align-top text-[var(--color-text)]"
+                >
                   {cell}
                 </td>
               ))}
@@ -728,7 +770,9 @@ function createTeacherActivityRows(data: TeacherRelatedData): TeacherActivityRow
 
   const lessonRows = data.lessonSessions.map((session, index) => {
     const scheduleItem = getRecordById(session.schedule_item_id, scheduleItemById)
-    const discipline = scheduleItem ? getRecordById(scheduleItem.discipline_id, disciplineById) : null
+    const discipline = scheduleItem
+      ? getRecordById(scheduleItem.discipline_id, disciplineById)
+      : null
     const group = scheduleItem ? getRecordById(scheduleItem.group_id, groupById) : null
 
     return {

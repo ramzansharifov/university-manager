@@ -160,7 +160,9 @@ export function EmployeeDetailsPage(): ReactElement {
       {isLoading ? (
         <Card>
           <CardContent>
-            <p className="text-sm text-[var(--color-text-muted)]">Загрузка карточки сотрудника...</p>
+            <p className="text-sm text-[var(--color-text-muted)]">
+              Загрузка карточки сотрудника...
+            </p>
           </CardContent>
         </Card>
       ) : null}
@@ -178,7 +180,11 @@ export function EmployeeDetailsPage(): ReactElement {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-xl font-bold tracking-tight">{employeeName}</h1>
-                      <Badge>{relatedData.status ? getRecordName(relatedData.status) : 'Статус не указан'}</Badge>
+                      <Badge>
+                        {relatedData.status
+                          ? getRecordName(relatedData.status)
+                          : 'Статус не указан'}
+                      </Badge>
                     </div>
 
                     <p className="mt-1 text-sm text-[var(--color-text-muted)]">
@@ -186,19 +192,31 @@ export function EmployeeDetailsPage(): ReactElement {
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {employee.email ? <Badge variant="muted">{String(employee.email)}</Badge> : null}
-                      {employee.phone ? <Badge variant="muted">{String(employee.phone)}</Badge> : null}
+                      {employee.email ? (
+                        <Badge variant="muted">{String(employee.email)}</Badge>
+                      ) : null}
+                      {employee.phone ? (
+                        <Badge variant="muted">{String(employee.phone)}</Badge>
+                      ) : null}
                       {employee.hire_date ? (
-                        <Badge variant="muted">Принят: {formatDateForDisplay(employee.hire_date)}</Badge>
+                        <Badge variant="muted">
+                          Принят: {formatDateForDisplay(employee.hire_date)}
+                        </Badge>
                       ) : null}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
-                  <MetricCard label="Подразделение" value={getRecordNameOrDash(relatedData.division)} />
+                  <MetricCard
+                    label="Подразделение"
+                    value={getRecordNameOrDash(relatedData.division)}
+                  />
                   <MetricCard label="Должность" value={getRecordNameOrDash(relatedData.position)} />
-                  <MetricCard label="Должностей в отделе" value={String(relatedData.positions.length)} />
+                  <MetricCard
+                    label="Должностей в отделе"
+                    value={String(relatedData.positions.length)}
+                  />
                   <MetricCard label="Коллег" value={String(coworkerRows.length)} />
                 </div>
               </div>
@@ -226,9 +244,18 @@ export function EmployeeDetailsPage(): ReactElement {
                       <InfoItem label="Фамилия" value={employee.last_name} />
                       <InfoItem label="Имя" value={employee.first_name} />
                       <InfoItem label="Отчество" value={employee.middle_name} />
-                      <InfoItem label="Дата рождения" value={formatDateForDisplay(employee.birth_date)} />
-                      <InfoItem label="Дата приёма" value={formatDateForDisplay(employee.hire_date)} />
-                      <InfoItem label="Дата увольнения" value={formatDateForDisplay(employee.dismissal_date)} />
+                      <InfoItem
+                        label="Дата рождения"
+                        value={formatDateForDisplay(employee.birth_date)}
+                      />
+                      <InfoItem
+                        label="Дата приёма"
+                        value={formatDateForDisplay(employee.hire_date)}
+                      />
+                      <InfoItem
+                        label="Дата увольнения"
+                        value={formatDateForDisplay(employee.dismissal_date)}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -241,8 +268,14 @@ export function EmployeeDetailsPage(): ReactElement {
 
                   <CardContent>
                     <div className="grid gap-3">
-                      <InfoItem label="Подразделение" value={getRecordNameOrDash(relatedData.division)} />
-                      <InfoItem label="Должность" value={getRecordNameOrDash(relatedData.position)} />
+                      <InfoItem
+                        label="Подразделение"
+                        value={getRecordNameOrDash(relatedData.division)}
+                      />
+                      <InfoItem
+                        label="Должность"
+                        value={getRecordNameOrDash(relatedData.position)}
+                      />
                       <InfoItem label="Статус" value={getRecordNameOrDash(relatedData.status)} />
                     </div>
                   </CardContent>
@@ -253,9 +286,20 @@ export function EmployeeDetailsPage(): ReactElement {
             <TabsContent value="work">
               <div className="grid gap-4">
                 <div className="grid gap-3 md:grid-cols-3">
-                  <SummaryCard icon={<FiBriefcase />} label="Подразделение" value={getRecordNameOrDash(relatedData.division)} />
-                  <SummaryCard label="Должность" value={getRecordNameOrDash(relatedData.position)} />
-                  <SummaryCard icon={<FiUsers />} label="Коллег в подразделении" value={String(coworkerRows.length)} />
+                  <SummaryCard
+                    icon={<FiBriefcase />}
+                    label="Подразделение"
+                    value={getRecordNameOrDash(relatedData.division)}
+                  />
+                  <SummaryCard
+                    label="Должность"
+                    value={getRecordNameOrDash(relatedData.position)}
+                  />
+                  <SummaryCard
+                    icon={<FiUsers />}
+                    label="Коллег в подразделении"
+                    value={String(coworkerRows.length)}
+                  />
                 </div>
 
                 <Card>
@@ -322,15 +366,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function SummaryCard({
-  icon,
-  label,
-  value
-}: {
-  icon?: ReactNode
-  label: string
-  value: string
-}) {
+function SummaryCard({ icon, label, value }: { icon?: ReactNode; label: string; value: string }) {
   return (
     <Card>
       <CardContent className="flex items-center gap-3">
@@ -394,7 +430,10 @@ function SimpleTable({ headers, rows }: { headers: string[]; rows: string[][] })
           {rows.map((row, rowIndex) => (
             <tr key={rowIndex} className="border-t border-[var(--color-border)]">
               {row.map((cell, cellIndex) => (
-                <td key={`${rowIndex}-${cellIndex}`} className="px-4 py-3 align-top text-[var(--color-text)]">
+                <td
+                  key={`${rowIndex}-${cellIndex}`}
+                  className="px-4 py-3 align-top text-[var(--color-text)]"
+                >
                   {cell}
                 </td>
               ))}
