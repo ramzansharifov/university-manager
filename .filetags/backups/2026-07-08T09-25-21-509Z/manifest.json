@@ -1,0 +1,21 @@
+{
+  "createdAt": "2026-07-08T09:25:21.556Z",
+  "backupPath": ".filetags/backups/2026-07-08T09-25-21-509Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/learning-journal/LearningJournalPage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/learning-journal/LearningJournalPage.tsx"
+    },
+    {
+      "originalPath": "src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/learning-journal/LearningJournalPage.tsx\n   found: yes\n   old: 55 line(s)\n   new: 55 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/LearningJournalPage.tsx\n   found: yes\n   old: 55 line(s)\n   new: 55 line(s)",
+    "Replace file: src/renderer/src/pages/learning-journal/LearningJournalPage.tsx\n   found: yes\n   old: 55 line(s)\n   new: 52 line(s)",
+    "Delete: src/renderer/src/pages/learning-journal/ui/LearningJournalDisciplineGroup.tsx\n   exists: yes"
+  ]
+}
