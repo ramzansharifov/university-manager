@@ -11,7 +11,7 @@ export function LearningJournalPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Журнал обучения</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Журнал группы, оценочные элементы и работа с оценками.
+          Журнал группы, оценочные элементы и ведомости итоговой аттестации по турам.
         </p>
       </div>
 

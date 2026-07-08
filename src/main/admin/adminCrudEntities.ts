@@ -260,6 +260,41 @@ export const adminCrudEntities: Record<AdminEntityKey, AdminCrudEntityConfig> = 
     ['name', 'description']
   ),
 
+  final_assessments: entity(
+    'final_assessments',
+    [
+      'semester_id',
+      'group_id',
+      'discipline_id',
+      'grade_element_type_id',
+      'name',
+      'status',
+      'description'
+    ],
+    ['name', 'status', 'description']
+  ),
+
+  final_assessment_rounds: entity(
+    'final_assessment_rounds',
+    [
+      'final_assessment_id',
+      'round_type',
+      'round_number',
+      'grade_item_id',
+      'week_id',
+      'day_of_week',
+      'assessment_date',
+      'starts_at',
+      'ends_at',
+      'lesson_period_id',
+      'teacher_id',
+      'audience_id',
+      'status',
+      'description'
+    ],
+    ['round_type', 'status', 'description']
+  ),
+
   score_scales: entity(
     'score_scales',
     ['name', 'min_score', 'max_score', 'result_name'],

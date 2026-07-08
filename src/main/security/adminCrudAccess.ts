@@ -44,6 +44,8 @@ const defaultAccessModuleByEntity: Partial<Record<AdminEntityKey, AdminCrudAcces
   attendance_records: 'learning_journal',
   grade_element_types: 'learning_journal',
   grade_items: 'learning_journal',
+  final_assessments: 'learning_journal',
+  final_assessment_rounds: 'learning_journal',
   score_scales: 'learning_journal',
   grades: 'learning_journal',
   lesson_completion_records: 'learning_journal',

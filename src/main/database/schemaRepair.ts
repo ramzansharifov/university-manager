@@ -129,6 +129,7 @@ export function repairDatabaseSchema(database: Database.Database): void {
     ensureColumn(database, 'faculties', 'dean_teacher_id', 'INTEGER')
     ensureColumn(database, 'faculties', 'deputy_dean_teacher_id', 'INTEGER')
     ensureColumn(database, 'grade_items', 'lesson_session_id', 'INTEGER')
+    ensureColumn(database, 'grades', 'result_status', "TEXT NOT NULL DEFAULT 'graded'")
 
     if (tableExists(database, 'academic_years')) {
       database.exec(academicVacationsSql)

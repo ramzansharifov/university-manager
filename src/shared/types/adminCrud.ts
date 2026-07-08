@@ -40,6 +40,8 @@ export type AdminEntityKey =
   | 'attendance_records'
   | 'grade_element_types'
   | 'grade_items'
+  | 'final_assessments'
+  | 'final_assessment_rounds'
   | 'score_scales'
   | 'grades'
   | 'lesson_completion_records'

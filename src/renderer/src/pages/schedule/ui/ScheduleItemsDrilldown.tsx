@@ -4,7 +4,6 @@ import { FiClock, FiEdit2, FiMapPin, FiPlus, FiRefreshCcw, FiTrash2, FiUser } fr
 import type { AdminCrudRecord, AdminCrudSelectOption } from '../../../features/admin-crud'
 import { AdminCrudEntityPanel } from '../../../features/admin-crud'
 import { resolveGroupAcademicYearId } from '../../../shared/lib/academicYear'
-import { createDisciplineProgressMap } from '../../academic-process/lib/disciplineProgress'
 import {
   Badge,
   Button,
@@ -13,19 +12,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-  Textarea
+  SelectValue
 } from '../../../shared/ui'
 import {
   createDisciplineOptions,
@@ -58,24 +49,6 @@ const scheduleGridClasses: Record<ScheduleColumnsPerRow, string> = {
   4: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4'
 }
 
-interface GradeItemForm {
-  day_of_week: string
-  discipline_id: string
-  grade_element_type_id: string
-  name: string
-  max_score: string
-  description: string
-}
-
-const emptyGradeItemForm: GradeItemForm = {
-  day_of_week: '',
-  discipline_id: '',
-  grade_element_type_id: '',
-  name: '',
-  max_score: '',
-  description: ''
-}
-
 export function ScheduleItemsDrilldown(): ReactElement {
   const [selectedFacultyId, setSelectedFacultyId] = useState('')
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
@@ -92,22 +65,13 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const [weeks, setWeeks] = useState<AdminCrudRecord[]>([])
   const [semesters, setSemesters] = useState<AdminCrudRecord[]>([])
   const [lessonPeriods, setLessonPeriods] = useState<AdminCrudRecord[]>([])
-  const [gradeElementTypes, setGradeElementTypes] = useState<AdminCrudRecord[]>([])
-  const [gradeItems, setGradeItems] = useState<AdminCrudRecord[]>([])
   const [academicYears, setAcademicYears] = useState<AdminCrudRecord[]>([])
-  const [curriculumItems, setCurriculumItems] = useState<AdminCrudRecord[]>([])
-  const [scheduleItems, setScheduleItems] = useState<AdminCrudRecord[]>([])
-  const [lessonSessions, setLessonSessions] = useState<AdminCrudRecord[]>([])
 
   const [semesterOptions, setSemesterOptions] = useState<AdminCrudSelectOption[]>([])
   const [weekOptions, setWeekOptions] = useState<AdminCrudSelectOption[]>([])
   const [teacherOptions, setTeacherOptions] = useState<AdminCrudSelectOption[]>([])
   const [audienceOptions, setAudienceOptions] = useState<AdminCrudSelectOption[]>([])
   const [lessonTypeOptions, setLessonTypeOptions] = useState<AdminCrudSelectOption[]>([])
-  const [gradeDialogOpen, setGradeDialogOpen] = useState(false)
-  const [gradeForm, setGradeForm] = useState<GradeItemForm>(emptyGradeItemForm)
-  const [gradeDialogError, setGradeDialogError] = useState<string | null>(null)
-  const [isCreatingGradeItem, setIsCreatingGradeItem] = useState(false)
 
   const loadOptions = useCallback(async (): Promise<void> => {
     const [
@@ -122,12 +86,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
       teachersResult,
       audiencesResult,
       lessonTypesResult,
-      gradeElementTypesResult,
-      gradeItemsResult,
-      academicYearsResult,
-      curriculumItemsResult,
-      scheduleItemsResult,
-      lessonSessionsResult
+      academicYearsResult
     ] = await Promise.all([
       window.api.adminCrud.list({
         entity: 'faculties',
@@ -208,45 +167,10 @@ export function ScheduleItemsDrilldown(): ReactElement {
         orderDirection: 'asc'
       }),
       window.api.adminCrud.list({
-        entity: 'grade_element_types',
-        page: 1,
-        pageSize: 500,
-        orderBy: 'name',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'grade_items',
-        page: 1,
-        pageSize: 2000,
-        orderBy: 'grade_date',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
         entity: 'academic_years',
         page: 1,
         pageSize: 500,
         orderBy: 'starts_at',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'curriculum_items',
-        page: 1,
-        pageSize: 5000,
-        orderBy: 'id',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'schedule_items',
-        page: 1,
-        pageSize: 10000,
-        orderBy: 'id',
-        orderDirection: 'asc'
-      }),
-      window.api.adminCrud.list({
-        entity: 'lesson_sessions',
-        page: 1,
-        pageSize: 10000,
-        orderBy: 'id',
         orderDirection: 'asc'
       })
     ])
@@ -257,12 +181,7 @@ export function ScheduleItemsDrilldown(): ReactElement {
     setSubjects(subjectsResult.items)
     setDisciplines(disciplinesResult.items)
     setLessonPeriods(lessonPeriodsResult.items)
-    setGradeElementTypes(gradeElementTypesResult.items)
-    setGradeItems(gradeItemsResult.items)
     setAcademicYears(academicYearsResult.items)
-    setCurriculumItems(curriculumItemsResult.items)
-    setScheduleItems(scheduleItemsResult.items)
-    setLessonSessions(lessonSessionsResult.items)
 
     setSemesterOptions(createOptions(semestersResult.items, getSemesterName))
     setSemesters(semestersResult.items)
@@ -456,29 +375,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
     )
   }, [selectedGroupDisciplines, selectedSemesterId])
 
-  const selectedWeekDisciplines = selectedSemesterDisciplines
-
-  const disciplineProgressById = useMemo(
-    () =>
-      createDisciplineProgressMap({
-        disciplines,
-        curriculumItems,
-        scheduleItems,
-        lessonSessions
-      }),
-    [curriculumItems, disciplines, lessonSessions, scheduleItems]
-  )
-
-  const fullyScheduledDisciplines = useMemo(
-    () =>
-      selectedWeekDisciplines.filter((discipline) => {
-        const progress = disciplineProgressById.get(Number(discipline.id))
-
-        return progress?.isFullyScheduled === true
-      }),
-    [disciplineProgressById, selectedWeekDisciplines]
-  )
-
   const disciplineOptions = useMemo(
     () =>
       createDisciplineOptions(selectedSemesterDisciplines, {
@@ -487,15 +383,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
       }),
     [groupNameById, selectedSemesterDisciplines, subjectNameById]
   )
-  const gradeDisciplineOptions = useMemo(
-    () =>
-      createDisciplineOptions(fullyScheduledDisciplines, {
-        subjectNameById,
-        groupNameById
-      }),
-    [fullyScheduledDisciplines, groupNameById, subjectNameById]
-  )
-
   const semesterNameById = useMemo(() => createOptionsMap(semesterOptions), [semesterOptions])
   const weekNameById = useMemo(() => createOptionsMap(weekOptions), [weekOptions])
   const lessonPeriodOptions = useMemo(
@@ -510,40 +397,8 @@ export function ScheduleItemsDrilldown(): ReactElement {
   const teacherNameById = useMemo(() => createOptionsMap(teacherOptions), [teacherOptions])
   const audienceNameById = useMemo(() => createOptionsMap(audienceOptions), [audienceOptions])
   const lessonTypeNameById = useMemo(() => createOptionsMap(lessonTypeOptions), [lessonTypeOptions])
-  const finalGradeElementTypes = useMemo(
-    () => gradeElementTypes.filter((gradeElementType) => Number(gradeElementType.is_final) === 1),
-    [gradeElementTypes]
-  )
-  const gradeElementTypeOptions = useMemo(
-    () => createOptions(finalGradeElementTypes, getRecordName),
-    [finalGradeElementTypes]
-  )
-  const allGradeElementTypeOptions = useMemo(
-    () => createOptions(gradeElementTypes, getRecordName),
-    [gradeElementTypes]
-  )
-  const gradeElementTypeNameById = useMemo(
-    () => createOptionsMap(allGradeElementTypeOptions),
-    [allGradeElementTypeOptions]
-  )
   const dayOfWeekNameById = useMemo(() => createOptionsMap(dayOfWeekOptions), [])
   const weekTypeNameByValue = useMemo(() => createWeekTypeMap(), [])
-
-  const selectedWeekGradeItems = useMemo(() => {
-    if (!selectedWeekId) {
-      return []
-    }
-
-    const disciplineIds = new Set(
-      selectedGroupDisciplines.map((discipline) => Number(discipline.id))
-    )
-
-    return gradeItems.filter(
-      (item) =>
-        Number(item.week_id) === Number(selectedWeekId) &&
-        disciplineIds.has(Number(item.discipline_id))
-    )
-  }, [gradeItems, selectedGroupDisciplines, selectedWeekId])
 
   const lessonPeriodById = useMemo(() => {
     return new Map(
@@ -673,114 +528,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
 
   const canShowSchedule = Boolean(selectedGroup && selectedSemesterId && selectedWeek)
   const canCreateScheduleItem = canShowSchedule && selectedSemesterDisciplines.length > 0
-  const canCreateGradeItem =
-    canShowSchedule && fullyScheduledDisciplines.length > 0 && gradeElementTypeOptions.length > 0
-
-  function openGradeItemDialog(): void {
-    setGradeDialogError(null)
-    setGradeForm({
-      day_of_week: '1',
-      discipline_id: fullyScheduledDisciplines[0]?.id
-        ? String(fullyScheduledDisciplines[0].id)
-        : '',
-      grade_element_type_id: gradeElementTypeOptions[0]?.value ?? '',
-      name: '',
-      max_score: '',
-      description: ''
-    })
-    setGradeDialogOpen(true)
-  }
-
-  function updateGradeFormField(field: keyof GradeItemForm, value: string): void {
-    setGradeForm((current) => ({
-      ...current,
-      [field]: value
-    }))
-  }
-
-  async function createGradeItemFromSchedule(): Promise<void> {
-    setGradeDialogError(null)
-
-    if (!selectedWeekId) {
-      setGradeDialogError('Сначала выбери неделю')
-      return
-    }
-
-    if (!gradeForm.day_of_week) {
-      setGradeDialogError('Выбери день недели')
-      return
-    }
-
-    if (!gradeForm.discipline_id) {
-      setGradeDialogError('Выбери дисциплину')
-      return
-    }
-
-    if (!gradeForm.grade_element_type_id) {
-      setGradeDialogError('Выбери тип оценочного элемента')
-      return
-    }
-
-    if (
-      !gradeElementTypeOptions.some((option) => option.value === gradeForm.grade_element_type_id)
-    ) {
-      setGradeDialogError('Выбери итоговый тип оценочного элемента')
-      return
-    }
-
-    const selectedDisciplineProgress = disciplineProgressById.get(Number(gradeForm.discipline_id))
-
-    if (!selectedDisciplineProgress?.isFullyScheduled) {
-      const scheduledPairs = selectedDisciplineProgress?.scheduledPairs ?? 0
-      const requiredPairs = selectedDisciplineProgress?.requiredPairs ?? 0
-
-      setGradeDialogError(
-        `Нельзя добавить итоговый оценочный элемент: по дисциплине ещё не заполнены все пары расписания. Запланировано ${scheduledPairs} из ${requiredPairs}.`
-      )
-      return
-    }
-
-    const name = gradeForm.name.trim()
-
-    if (!name) {
-      setGradeDialogError('Укажи название оценочного элемента')
-      return
-    }
-
-    const maxScore = Number(gradeForm.max_score)
-
-    if (!Number.isFinite(maxScore) || maxScore <= 0) {
-      setGradeDialogError('Укажи корректный максимальный балл')
-      return
-    }
-
-    setIsCreatingGradeItem(true)
-
-    try {
-      await window.api.adminCrud.create({
-        entity: 'grade_items',
-        data: {
-          discipline_id: Number(gradeForm.discipline_id),
-          grade_element_type_id: Number(gradeForm.grade_element_type_id),
-          week_id: Number(selectedWeekId),
-          day_of_week: Number(gradeForm.day_of_week),
-          name,
-          max_score: maxScore,
-          grade_date: getDateOfWeekDay(selectedWeek, Number(gradeForm.day_of_week)),
-          description: gradeForm.description.trim() || null
-        }
-      })
-
-      setGradeDialogOpen(false)
-      await loadOptions()
-    } catch (error) {
-      setGradeDialogError(
-        error instanceof Error ? error.message : 'Не удалось создать оценочный элемент'
-      )
-    } finally {
-      setIsCreatingGradeItem(false)
-    }
-  }
 
   return (
     <div className="grid gap-4">
@@ -885,45 +632,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
       ) : null}
 
       {canShowSchedule ? (
-        <Card>
-          <CardContent className="flex flex-col gap-3 py-4 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-[var(--color-text)]">
-                Оценочные элементы недели
-              </p>
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                Добавь контрольную, лабораторную, зачёт или другой элемент, чтобы он появился в
-                журнале обучения.
-              </p>
-              {gradeElementTypeOptions.length === 0 ? (
-                <p className="mt-2 text-xs font-medium text-[var(--color-warning)]">
-                  Сначала создай типы оценочных элементов в разделе «Журнал обучения → Оценочные
-                  элементы».
-                </p>
-              ) : null}
-              {gradeElementTypeOptions.length > 0 &&
-              selectedWeekDisciplines.length > 0 &&
-              fullyScheduledDisciplines.length === 0 ? (
-                <p className="mt-2 text-xs font-medium text-[var(--color-warning)]">
-                  Итоговый элемент можно добавить после того, как все пары дисциплины будут внесены
-                  в расписание.
-                </p>
-              ) : null}
-            </div>
-
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!canCreateGradeItem}
-              onClick={openGradeItemDialog}
-            >
-              Добавить оценочный элемент
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {canShowSchedule ? (
         <AdminCrudEntityPanel
           entity="schedule_items"
           title={`Неделя: ${weekNameById.get(Number(selectedWeekId)) ?? 'выбранная неделя'}`}
@@ -981,8 +689,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
               teacherNameById={teacherNameById}
               audienceNameById={audienceNameById}
               lessonTypeNameById={lessonTypeNameById}
-              gradeItems={selectedWeekGradeItems}
-              gradeElementTypeNameById={gradeElementTypeNameById}
               columnsPerRow={scheduleColumnsPerRow}
               canCreate={canCreateScheduleItem}
               onCreateDay={(dayNumber) => openCreateDialog({ day_of_week: dayNumber })}
@@ -992,109 +698,6 @@ export function ScheduleItemsDrilldown(): ReactElement {
           )}
         />
       ) : null}
-
-      <Dialog open={gradeDialogOpen} onOpenChange={setGradeDialogOpen}>
-        <DialogContent
-          onPointerDownOutside={(event) => {
-            event.preventDefault()
-          }}
-          onInteractOutside={(event) => {
-            const target = event.target
-
-            if (
-              target instanceof HTMLElement &&
-              target.closest('[data-university-manager-select-content]')
-            ) {
-              event.preventDefault()
-            }
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Добавить оценочный элемент</DialogTitle>
-            <DialogDescription>
-              Элемент появится в расписании выбранной недели и отдельной колонкой в журнале
-              обучения.
-            </DialogDescription>
-          </DialogHeader>
-
-          {gradeDialogError ? (
-            <div className="rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-4 py-3 text-sm text-[var(--color-danger)]">
-              {gradeDialogError}
-            </div>
-          ) : null}
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <GradeItemSelectField
-              label="День недели"
-              value={gradeForm.day_of_week}
-              placeholder="Выбери день"
-              options={dayOfWeekOptions}
-              onChange={(value) => updateGradeFormField('day_of_week', value)}
-            />
-
-            <GradeItemSelectField
-              label="Дисциплина"
-              value={gradeForm.discipline_id}
-              placeholder="Выбери дисциплину"
-              options={gradeDisciplineOptions}
-              hint="Доступны только дисциплины, по которым расписание заполнено полностью."
-              onChange={(value) => updateGradeFormField('discipline_id', value)}
-            />
-
-            <GradeItemSelectField
-              label="Тип оценочного элемента"
-              value={gradeForm.grade_element_type_id}
-              placeholder="Выбери тип элемента"
-              options={gradeElementTypeOptions}
-              onChange={(value) => updateGradeFormField('grade_element_type_id', value)}
-            />
-
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-[var(--color-text)]">
-                Максимальный балл
-              </span>
-              <Input
-                type="number"
-                min="1"
-                value={gradeForm.max_score}
-                placeholder="Например: 100"
-                onChange={(event) => updateGradeFormField('max_score', event.target.value)}
-              />
-            </label>
-
-            <label className="grid gap-2 sm:col-span-2">
-              <span className="text-sm font-medium text-[var(--color-text)]">Название работы</span>
-              <Input
-                value={gradeForm.name}
-                placeholder="Например: Контрольная работа №1"
-                onChange={(event) => updateGradeFormField('name', event.target.value)}
-              />
-            </label>
-
-            <label className="grid gap-2 sm:col-span-2">
-              <span className="text-sm font-medium text-[var(--color-text)]">Описание</span>
-              <Textarea
-                value={gradeForm.description}
-                placeholder="Дополнительная информация"
-                onChange={(event) => updateGradeFormField('description', event.target.value)}
-              />
-            </label>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setGradeDialogOpen(false)}>
-              Отмена
-            </Button>
-            <Button
-              type="button"
-              disabled={isCreatingGradeItem}
-              onClick={() => void createGradeItemFromSchedule()}
-            >
-              {isCreatingGradeItem ? 'Создание...' : 'Создать'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
@@ -1135,44 +738,6 @@ function ScheduleFilterSelect({
   )
 }
 
-function GradeItemSelectField({
-  label,
-  value,
-  placeholder,
-  options,
-  hint,
-  onChange
-}: {
-  label: string
-  value: string
-  placeholder: string
-  options: AdminCrudSelectOption[]
-  hint?: string
-  onChange: (value: string) => void
-}): ReactElement {
-  return (
-    <label className="grid min-w-0 gap-2">
-      <span className="text-sm font-medium text-[var(--color-text)]">{label}</span>
-
-      <Select value={value || undefined} onValueChange={onChange}>
-        <SelectTrigger>
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {hint ? <span className="text-xs text-[var(--color-text-muted)]">{hint}</span> : null}
-    </label>
-  )
-}
-
 function ScheduleWeekBoard({
   items,
   isLoading,
@@ -1185,8 +750,6 @@ function ScheduleWeekBoard({
   teacherNameById,
   audienceNameById,
   lessonTypeNameById,
-  gradeItems,
-  gradeElementTypeNameById,
   columnsPerRow,
   canCreate,
   onCreateDay,
@@ -1204,8 +767,6 @@ function ScheduleWeekBoard({
   teacherNameById: Map<number, string>
   audienceNameById: Map<number, string>
   lessonTypeNameById: Map<number, string>
-  gradeItems: AdminCrudRecord[]
-  gradeElementTypeNameById: Map<number, string>
   columnsPerRow: ScheduleColumnsPerRow
   canCreate: boolean
   onCreateDay: (dayNumber: number) => void
@@ -1234,7 +795,6 @@ function ScheduleWeekBoard({
   })
 
   const itemsByDay = createItemsByDay(sortedItems)
-  const gradeItemsByDay = createGradeItemsByDay(gradeItems)
 
   return (
     <div className={`grid gap-4 ${scheduleGridClasses[columnsPerRow]}`}>
@@ -1252,8 +812,6 @@ function ScheduleWeekBoard({
           teacherNameById={teacherNameById}
           audienceNameById={audienceNameById}
           lessonTypeNameById={lessonTypeNameById}
-          gradeItems={gradeItemsByDay.get(dayNumber) ?? []}
-          gradeElementTypeNameById={gradeElementTypeNameById}
           canCreate={canCreate}
           onCreate={onCreateDay}
           onEdit={onEdit}
@@ -1276,8 +834,6 @@ function ScheduleDayCard({
   teacherNameById,
   audienceNameById,
   lessonTypeNameById,
-  gradeItems,
-  gradeElementTypeNameById,
   canCreate,
   onCreate,
   onEdit,
@@ -1294,8 +850,6 @@ function ScheduleDayCard({
   teacherNameById: Map<number, string>
   audienceNameById: Map<number, string>
   lessonTypeNameById: Map<number, string>
-  gradeItems: AdminCrudRecord[]
-  gradeElementTypeNameById: Map<number, string>
   canCreate: boolean
   onCreate: (dayNumber: number) => void
   onEdit: (record: AdminCrudRecord) => void
@@ -1327,7 +881,7 @@ function ScheduleDayCard({
       </CardHeader>
 
       <CardContent className="grid gap-3 p-4">
-        {items.length === 0 && gradeItems.length === 0 ? (
+        {items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[var(--color-border)] px-3 py-6 text-center text-sm text-[var(--color-text-muted)]">
             {emptyMessage}
           </div>
@@ -1420,36 +974,6 @@ function ScheduleDayCard({
             </div>
           )
         })}
-
-        {gradeItems.length > 0 ? (
-          <div className="grid gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Оценочные элементы
-            </p>
-
-            {gradeItems.map((gradeItem) => (
-              <div
-                key={String(gradeItem.id)}
-                className="rounded-xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 px-3 py-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--color-text)]">
-                      {String(gradeItem.name ?? 'Оценочный элемент')}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      {renderRelation(gradeItem.discipline_id, disciplineNameById)} ·{' '}
-                      {renderRelation(gradeItem.grade_element_type_id, gradeElementTypeNameById)} ·
-                      максимум {String(gradeItem.max_score ?? '—')} баллов
-                    </p>
-                  </div>
-
-                  <Badge variant="warning">Оценка</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   )
@@ -1538,24 +1062,6 @@ function createScheduleDayEntries(
   return result
 }
 
-function createGradeItemsByDay(items: AdminCrudRecord[]): Map<number, AdminCrudRecord[]> {
-  const result = new Map<number, AdminCrudRecord[]>()
-
-  items.forEach((item) => {
-    const dayNumber = toNumberOrNull(item.day_of_week)
-
-    if (dayNumber === null) {
-      return
-    }
-
-    const dayItems = result.get(dayNumber) ?? []
-    dayItems.push(item)
-    result.set(dayNumber, dayItems)
-  })
-
-  return result
-}
-
 function getDayName(dayNumber: number): string {
   return (
     dayOfWeekOptions.find((option) => Number(option.value) === dayNumber)?.label ??
@@ -1624,34 +1130,6 @@ function getLessonCountText(count: number): string {
   }
 
   return 'пар'
-}
-
-function getDateOfWeekDay(week: AdminCrudRecord | null, dayOfWeek: number): string | null {
-  const startsAt = String(week?.starts_at ?? '').trim()
-
-  if (!startsAt) {
-    return null
-  }
-
-  return formatDate(addDays(parseDate(startsAt), dayOfWeek - 1))
-}
-
-function parseDate(value: string): Date {
-  const [year, month, day] = value.split('-').map(Number)
-
-  return new Date(Date.UTC(year, month - 1, day))
-}
-
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
-}
-
-function formatDate(date: Date): string {
-  const year = date.getUTCFullYear()
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(date.getUTCDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
 }
 
 function normalizeNumber(value: unknown): number | null {
