@@ -57,22 +57,15 @@ interface AttendanceRow {
   isPresent: boolean
 }
 
-type GradeResultStatus = 'graded' | 'passed' | 'failed' | 'absent'
-
 interface GradeRow {
   id: string
-  disciplineId: number | null
   discipline: string
-  semester: string
-  semesterOrder: number
   work: string
   type: string
   date: string
   score: string
   numericScore: number | null
   comment: string
-  isFinal: boolean
-  resultStatus: GradeResultStatus
 }
 
 interface DisciplineRow {
@@ -81,28 +74,7 @@ interface DisciplineRow {
   subject: string
   teacher: string
   semester: string
-  semesterOrder: number
   status: string
-}
-
-interface DisciplineSemesterGroup {
-  key: string
-  title: string
-  sortOrder: number
-  rows: DisciplineRow[]
-}
-
-interface RecordBookSemesterGroup {
-  key: string
-  title: string
-  sortOrder: number
-  rows: GradeRow[]
-}
-
-interface GradeDisciplineOption {
-  value: string
-  label: string
-  count: number
 }
 
 const emptyRelatedData: StudentRelatedData = {
@@ -134,7 +106,6 @@ export function StudentDetailsPage() {
   const [relatedData, setRelatedData] = useState<StudentRelatedData>(emptyRelatedData)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedGradeDisciplineId, setSelectedGradeDisciplineId] = useState('all')
 
   const numericStudentId = useMemo(() => Number(studentId), [studentId])
 
@@ -429,25 +400,6 @@ export function StudentDetailsPage() {
   const attendanceRows = useMemo(() => createAttendanceRows(relatedData), [relatedData])
   const gradeRows = useMemo(() => createGradeRows(relatedData), [relatedData])
   const disciplineRows = useMemo(() => createDisciplineRows(relatedData), [relatedData])
-  const disciplineSemesterGroups = useMemo(
-    () => groupDisciplineRowsBySemester(disciplineRows),
-    [disciplineRows]
-  )
-  const gradeDisciplineOptions = useMemo(
-    () => createGradeDisciplineOptions(gradeRows),
-    [gradeRows]
-  )
-  const filteredGradeRows = useMemo(
-    () => filterGradeRowsByDiscipline(gradeRows, selectedGradeDisciplineId),
-    [gradeRows, selectedGradeDisciplineId]
-  )
-  const recordBookGroups = useMemo(() => groupRecordBookRowsBySemester(gradeRows), [gradeRows])
-  const allGradeStats = useMemo(() => createGradeStats(gradeRows), [gradeRows])
-  const gradeStats = useMemo(() => createGradeStats(filteredGradeRows), [filteredGradeRows])
-  const finalGradeStats = useMemo(
-    () => createGradeStats(gradeRows.filter((row) => row.isFinal)),
-    [gradeRows]
-  )
 
   const attendanceStats = useMemo(() => {
     const total = attendanceRows.length
@@ -461,6 +413,25 @@ export function StudentDetailsPage() {
       other: Math.max(0, total - absences - present)
     }
   }, [attendanceRows])
+
+  const gradeStats = useMemo(() => {
+    const numericScores = gradeRows
+      .map((row) => row.numericScore)
+      .filter((score): score is number => score !== null)
+
+    const average =
+      numericScores.length > 0
+        ? numericScores.reduce((sum, score) => sum + score, 0) / numericScores.length
+        : null
+
+    const disciplineCount = new Set(gradeRows.map((row) => row.discipline)).size
+
+    return {
+      total: gradeRows.length,
+      average,
+      disciplineCount
+    }
+  }, [gradeRows])
 
   return (
     <div className="grid gap-5">
@@ -539,7 +510,7 @@ export function StudentDetailsPage() {
                   <MetricCard label="Группа" value={getRecordNameOrDash(relatedData.group)} />
                   <MetricCard label="Курс" value={getCourseLabel(relatedData.group)} />
                   <MetricCard label="Пропуски" value={String(attendanceStats.absences)} />
-                  <MetricCard label="Оценки" value={String(allGradeStats.total)} />
+                  <MetricCard label="Оценки" value={String(gradeStats.total)} />
                 </div>
               </div>
             </CardContent>
@@ -551,7 +522,6 @@ export function StudentDetailsPage() {
               <TabsTrigger value="education">Учёба</TabsTrigger>
               <TabsTrigger value="attendance">Пропуски</TabsTrigger>
               <TabsTrigger value="grades">Работы и оценки</TabsTrigger>
-              <TabsTrigger value="record-book">Зачётка</TabsTrigger>
               <TabsTrigger value="notes">Дополнительно</TabsTrigger>
             </TabsList>
 
@@ -649,11 +619,30 @@ export function StudentDetailsPage() {
                   </CardHeader>
 
                   <CardContent>
-                    {disciplineSemesterGroups.length > 0 ? (
-                      <div className="grid gap-4">
-                        {disciplineSemesterGroups.map((group) => (
-                          <SemesterDisciplineSection key={group.key} group={group} />
-                        ))}
+                    {disciplineRows.length > 0 ? (
+                      <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
+                        <table className="w-full border-collapse text-sm">
+                          <thead className="bg-[var(--color-surface-muted)]">
+                            <tr>
+                              <TableHead>Дисциплина</TableHead>
+                              <TableHead>Предмет</TableHead>
+                              <TableHead>Преподаватель</TableHead>
+                              <TableHead>Семестр</TableHead>
+                              <TableHead>Статус</TableHead>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {disciplineRows.map((row) => (
+                              <tr key={row.id} className="border-t border-[var(--color-border)]">
+                                <TableCell>{row.name}</TableCell>
+                                <TableCell>{row.subject}</TableCell>
+                                <TableCell>{row.teacher}</TableCell>
+                                <TableCell>{row.semester}</TableCell>
+                                <TableCell>{row.status}</TableCell>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     ) : (
                       <EmptyState>Для группы студента пока нет дисциплин.</EmptyState>
@@ -738,45 +727,6 @@ export function StudentDetailsPage() {
 
             <TabsContent value="grades">
               <div className="grid gap-4">
-                <Card>
-                  <CardHeader>
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <CardTitle>Фильтр по дисциплинам</CardTitle>
-                        <CardDescription>
-                          Выбери дисциплину, чтобы видеть только её работы, оценки и средний балл.
-                        </CardDescription>
-                      </div>
-
-                      <Badge variant="muted">
-                        Показано: {filteredGradeRows.length} из {gradeRows.length}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      <FilterButton
-                        active={selectedGradeDisciplineId === 'all'}
-                        onClick={() => setSelectedGradeDisciplineId('all')}
-                      >
-                        Все дисциплины
-                      </FilterButton>
-
-                      {gradeDisciplineOptions.map((option) => (
-                        <FilterButton
-                          key={option.value}
-                          active={selectedGradeDisciplineId === option.value}
-                          onClick={() => setSelectedGradeDisciplineId(option.value)}
-                        >
-                          {option.label}
-                          <span className="ml-1 text-xs opacity-70">({option.count})</span>
-                        </FilterButton>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
                 <div className="grid gap-3 md:grid-cols-3">
                   <SummaryCard
                     icon={<FiTrendingUp />}
@@ -803,7 +753,7 @@ export function StudentDetailsPage() {
                   </CardHeader>
 
                   <CardContent>
-                    {filteredGradeRows.length > 0 ? (
+                    {gradeRows.length > 0 ? (
                       <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
                         <table className="w-full border-collapse text-sm">
                           <thead className="bg-[var(--color-surface-muted)]">
@@ -817,14 +767,16 @@ export function StudentDetailsPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {filteredGradeRows.map((row) => (
+                            {gradeRows.map((row) => (
                               <tr key={row.id} className="border-t border-[var(--color-border)]">
                                 <TableCell>{row.discipline}</TableCell>
                                 <TableCell>{row.work}</TableCell>
                                 <TableCell>{row.type}</TableCell>
                                 <TableCell>{row.date}</TableCell>
                                 <TableCell>
-                                  <Badge variant={getGradeBadgeVariant(row)}>{row.score}</Badge>
+                                  <Badge variant={row.numericScore === null ? 'muted' : 'default'}>
+                                    {row.score}
+                                  </Badge>
                                 </TableCell>
                                 <TableCell>{row.comment}</TableCell>
                               </tr>
@@ -833,62 +785,7 @@ export function StudentDetailsPage() {
                         </table>
                       </div>
                     ) : (
-                      <EmptyState>
-                        {gradeRows.length > 0
-                          ? 'По выбранной дисциплине пока нет результатов работ.'
-                          : 'По студенту пока нет результатов работ.'}
-                      </EmptyState>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="record-book">
-              <div className="grid gap-4">
-                <Card className="overflow-hidden">
-                  <CardHeader className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                          <FiBookOpen className="h-6 w-6" />
-                        </div>
-
-                        <div>
-                          <CardTitle>Зачётная книжка</CardTitle>
-                          <CardDescription>
-                            Итоговые оценочные элементы по семестрам: экзамены, зачёты и другие финальные результаты.
-                          </CardDescription>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[460px]">
-                        <MetricCard label="Итоговых оценок" value={String(finalGradeStats.total)} />
-                        <MetricCard
-                          label="Средний балл"
-                          value={
-                            finalGradeStats.average === null ? '—' : finalGradeStats.average.toFixed(1)
-                          }
-                        />
-                        <MetricCard
-                          label="Дисциплин"
-                          value={String(finalGradeStats.disciplineCount)}
-                        />
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="p-4">
-                    {recordBookGroups.length > 0 ? (
-                      <div className="grid gap-4">
-                        {recordBookGroups.map((group) => (
-                          <RecordBookSemesterSection key={group.key} group={group} />
-                        ))}
-                      </div>
-                    ) : (
-                      <EmptyState>
-                        Итоговых оценочных элементов пока нет. Они появятся здесь после заполнения финальных оценок.
-                      </EmptyState>
+                      <EmptyState>По студенту пока нет результатов работ.</EmptyState>
                     )}
                   </CardContent>
                 </Card>
@@ -1010,114 +907,6 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 function createAttendanceRows(data: StudentRelatedData): AttendanceRow[] {
-function FilterButton({
-  active,
-  children,
-  onClick
-}: {
-  active: boolean
-  children: React.ReactNode
-  onClick: () => void
-}) {
-  return (
-    <Button type="button" size="sm" variant={active ? 'primary' : 'secondary'} onClick={onClick}>
-      {children}
-    </Button>
-  )
-}
-
-function SemesterDisciplineSection({ group }: { group: DisciplineSemesterGroup }) {
-  return (
-    <section className="overflow-hidden rounded-xl border border-[var(--color-border)]">
-      <div className="flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-[var(--color-text)]">{group.title}</h3>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Дисциплины, преподаватели и статус изучения в этом семестре.
-          </p>
-        </div>
-
-        <Badge variant="muted">Дисциплин: {group.rows.length}</Badge>
-      </div>
-
-      <table className="w-full border-collapse text-sm">
-        <thead className="bg-[var(--color-surface)]">
-          <tr>
-            <TableHead>Дисциплина</TableHead>
-            <TableHead>Предмет</TableHead>
-            <TableHead>Преподаватель</TableHead>
-            <TableHead>Статус</TableHead>
-          </tr>
-        </thead>
-        <tbody>
-          {group.rows.map((row) => (
-            <tr key={row.id} className="border-t border-[var(--color-border)]">
-              <TableCell>{row.name}</TableCell>
-              <TableCell>{row.subject}</TableCell>
-              <TableCell>{row.teacher}</TableCell>
-              <TableCell>
-                <Badge variant={row.status === '—' ? 'muted' : 'default'}>{row.status}</Badge>
-              </TableCell>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  )
-}
-
-function RecordBookSemesterSection({ group }: { group: RecordBookSemesterGroup }) {
-  return (
-    <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-base font-bold text-[var(--color-text)]">{group.title}</h3>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Итоговые результаты по дисциплинам семестра.
-          </p>
-        </div>
-
-        <Badge variant="muted">Записей: {group.rows.length}</Badge>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        {group.rows.map((row) => (
-          <article
-            key={row.id}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-[var(--color-text)]">{row.discipline}</p>
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">{row.type}</p>
-              </div>
-
-              <Badge variant={getGradeBadgeVariant(row)}>{row.score}</Badge>
-            </div>
-
-            <div className="mt-3 grid gap-2 text-xs text-[var(--color-text-muted)]">
-              <div className="flex justify-between gap-3">
-                <span>Оценочный элемент</span>
-                <span className="text-right font-medium text-[var(--color-text)]">{row.work}</span>
-              </div>
-
-              <div className="flex justify-between gap-3">
-                <span>Дата</span>
-                <span className="text-right font-medium text-[var(--color-text)]">{row.date}</span>
-              </div>
-
-              {row.comment !== '—' ? (
-                <div className="rounded-lg bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]">
-                  {row.comment}
-                </div>
-              ) : null}
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
   const statusById = createRecordMap(data.attendanceStatuses)
   const sessionById = createRecordMap(data.lessonSessions)
   const scheduleItemById = createRecordMap(data.scheduleItems)
@@ -1158,14 +947,12 @@ function createGradeRows(data: StudentRelatedData): GradeRow[] {
   const gradeItemById = createRecordMap(data.gradeItems)
   const disciplineById = createRecordMap(data.disciplines)
   const subjectById = createRecordMap(data.subjects)
-  const semesterById = createRecordMap(data.semesters)
   const gradeElementTypeById = createRecordMap(data.gradeElementTypes)
 
   return data.grades
     .map((grade, index) => {
       const gradeItem = getRecordById(grade.grade_item_id, gradeItemById)
       const discipline = gradeItem ? getRecordById(gradeItem.discipline_id, disciplineById) : null
-      const semester = discipline ? getRecordById(discipline.semester_id, semesterById) : null
       const gradeElementType = gradeItem
         ? getRecordById(gradeItem.grade_element_type_id, gradeElementTypeById)
         : null
@@ -1174,18 +961,13 @@ function createGradeRows(data: StudentRelatedData): GradeRow[] {
 
       return {
         id: String(grade.id ?? index),
-        disciplineId: toNumberOrNull(discipline?.id ?? gradeItem?.discipline_id),
         discipline: discipline ? getDisciplineName(discipline, subjectById) : '—',
-        semester: semester ? getRecordName(semester) : 'Семестр не указан',
-        semesterOrder: getSemesterOrder(semester),
         work: gradeItem ? getRecordName(gradeItem) : `Работа #${String(grade.grade_item_id ?? '')}`,
         type: gradeElementType ? getRecordName(gradeElementType) : '—',
         date: formatDateForDisplay(gradeItem?.grade_date),
         score: getScoreLabel(grade, gradeItem, gradeElementType),
         numericScore,
-        comment: formatValue(grade.comment),
-        isFinal: isTruthy(gradeElementType?.is_final),
-        resultStatus
+        comment: formatValue(grade.comment)
       }
     })
     .sort((first, second) => second.date.localeCompare(first.date, 'ru'))
@@ -1206,151 +988,13 @@ function createDisciplineRows(data: StudentRelatedData): DisciplineRow[] {
       name: getDisciplineName(discipline, subjectById),
       subject: subject ? getRecordName(subject) : '—',
       teacher: teacher ? getPersonName(teacher) : '—',
-      semester: semester ? getRecordName(semester) : 'Семестр не указан',
-      semesterOrder: getSemesterOrder(semester),
+      semester: semester ? getRecordName(semester) : '—',
       status: formatValue(discipline.status)
     }
   })
 }
 
 function getLessonLabel(
-function groupDisciplineRowsBySemester(rows: DisciplineRow[]): DisciplineSemesterGroup[] {
-  const groups = new Map<string, DisciplineSemesterGroup>()
-
-  rows.forEach((row) => {
-    const key = createSemesterGroupKey(row.semester, row.semesterOrder)
-    const group =
-      groups.get(key) ??
-      ({
-        key,
-        title: formatSemesterGroupTitle(row.semester, row.semesterOrder),
-        sortOrder: row.semesterOrder,
-        rows: []
-      } satisfies DisciplineSemesterGroup)
-
-    group.rows.push(row)
-    groups.set(key, group)
-  })
-
-  return Array.from(groups.values())
-    .map((group) => ({
-      ...group,
-      rows: [...group.rows].sort((first, second) => first.name.localeCompare(second.name, 'ru'))
-    }))
-    .sort((first, second) => first.sortOrder - second.sortOrder)
-}
-
-function createGradeDisciplineOptions(rows: GradeRow[]): GradeDisciplineOption[] {
-  const options = new Map<string, GradeDisciplineOption>()
-
-  rows.forEach((row) => {
-    if (row.disciplineId === null) {
-      return
-    }
-
-    const value = String(row.disciplineId)
-    const option = options.get(value) ?? {
-      value,
-      label: row.discipline,
-      count: 0
-    }
-
-    option.count += 1
-    options.set(value, option)
-  })
-
-  return Array.from(options.values()).sort((first, second) =>
-    first.label.localeCompare(second.label, 'ru')
-  )
-}
-
-function filterGradeRowsByDiscipline(rows: GradeRow[], selectedDisciplineId: string): GradeRow[] {
-  if (selectedDisciplineId === 'all') {
-    return rows
-  }
-
-  return rows.filter((row) => String(row.disciplineId ?? '') === selectedDisciplineId)
-}
-
-function groupRecordBookRowsBySemester(rows: GradeRow[]): RecordBookSemesterGroup[] {
-  const groups = new Map<string, RecordBookSemesterGroup>()
-
-  rows
-    .filter((row) => row.isFinal)
-    .forEach((row) => {
-      const key = createSemesterGroupKey(row.semester, row.semesterOrder)
-      const group =
-        groups.get(key) ??
-        ({
-          key,
-          title: formatSemesterGroupTitle(row.semester, row.semesterOrder),
-          sortOrder: row.semesterOrder,
-          rows: []
-        } satisfies RecordBookSemesterGroup)
-
-      group.rows.push(row)
-      groups.set(key, group)
-    })
-
-  return Array.from(groups.values())
-    .map((group) => ({
-      ...group,
-      rows: [...group.rows].sort((first, second) =>
-        first.discipline.localeCompare(second.discipline, 'ru')
-      )
-    }))
-    .sort((first, second) => first.sortOrder - second.sortOrder)
-}
-
-function createGradeStats(rows: GradeRow[]) {
-  const numericScores = rows
-    .map((row) => row.numericScore)
-    .filter((score): score is number => score !== null)
-
-  const average =
-    numericScores.length > 0
-      ? numericScores.reduce((sum, score) => sum + score, 0) / numericScores.length
-      : null
-
-  return {
-    total: rows.length,
-    average,
-    disciplineCount: new Set(rows.map((row) => row.discipline)).size
-  }
-}
-
-function createSemesterGroupKey(semester: string, semesterOrder: number): string {
-  return `${String(semesterOrder).padStart(4, '0')}-${semester}`
-}
-
-function formatSemesterGroupTitle(semester: string, semesterOrder: number): string {
-  if (Number.isFinite(semesterOrder) && semesterOrder !== Number.MAX_SAFE_INTEGER) {
-    if (semesterOrder === 1) return 'Первый семестр'
-    if (semesterOrder === 2) return 'Второй семестр'
-    if (semesterOrder === 3) return 'Третий семестр'
-    if (semesterOrder === 4) return 'Четвёртый семестр'
-
-    return `${semesterOrder} семестр`
-  }
-
-  return semester
-}
-
-function getGradeBadgeVariant(row: GradeRow): 'default' | 'success' | 'warning' | 'danger' | 'muted' {
-  if (row.resultStatus === 'absent' || row.resultStatus === 'failed') {
-    return 'danger'
-  }
-
-  if (row.resultStatus === 'passed') {
-    return 'success'
-  }
-
-  if (row.isFinal) {
-    return 'warning'
-  }
-
-  return row.numericScore === null ? 'muted' : 'default'
-}
   scheduleItem: AdminCrudRecord | null,
   period: AdminCrudRecord | null
 ): string {
@@ -1434,21 +1078,6 @@ function getCourseLabel(group: AdminCrudRecord | null): string {
 
 function getRecordNameOrDash(record: AdminCrudRecord | null): string {
   return record ? getRecordName(record) : '—'
-}
-function getSemesterOrder(semester: AdminCrudRecord | null): number {
-  const order = toNumberOrNull(semester?.number ?? semester?.id)
-
-  return order ?? Number.MAX_SAFE_INTEGER
-}
-
-function isTruthy(value: unknown): boolean {
-  if (value === true || value === 1) {
-    return true
-  }
-
-  const normalizedValue = String(value ?? '').trim().toLowerCase()
-
-  return normalizedValue === '1' || normalizedValue === 'true' || normalizedValue === 'yes'
 }
 
 function getDisciplineName(

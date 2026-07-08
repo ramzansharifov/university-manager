@@ -1,0 +1,25 @@
+{
+  "createdAt": "2026-07-08T09:34:52.635Z",
+  "backupPath": ".filetags/backups/2026-07-08T09-34-52-603Z",
+  "filesBackedUp": [
+    {
+      "originalPath": "src/renderer/src/pages/people/StudentDetailsPage.tsx",
+      "backupRelativePath": "files/src/renderer/src/pages/people/StudentDetailsPage.tsx"
+    }
+  ],
+  "directoriesRecorded": [],
+  "plannedChanges": [
+    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1217 line(s)\n   new: 1245 line(s)",
+    "Insert after: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1245 line(s)\n   new: 1246 line(s)",
+    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1246 line(s)\n   new: 1246 line(s)",
+    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1246 line(s)\n   new: 1246 line(s)",
+    "Insert after: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1246 line(s)\n   new: 1247 line(s)",
+    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1247 line(s)\n   new: 1228 line(s)",
+    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1228 line(s)\n   new: 1320 line(s)",
+    "Insert after: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1320 line(s)\n   new: 1428 line(s)",
+    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1428 line(s)\n   new: 1435 line(s)",
+    "Replace file: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1435 line(s)\n   new: 1436 line(s)",
+    "Insert after: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1436 line(s)\n   new: 1573 line(s)",
+    "Insert after: src/renderer/src/pages/people/StudentDetailsPage.tsx\n   found: yes\n   old: 1573 line(s)\n   new: 1588 line(s)"
+  ]
+}
