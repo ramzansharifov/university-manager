@@ -14,10 +14,6 @@ const routeAccessRules: RouteAccessRule[] = [
     matches: (pathname) => pathname === '/'
   },
   {
-    module: 'schedule',
-    matches: (pathname) => isExactOrNested(pathname, '/student')
-  },
-  {
     module: 'university',
     matches: (pathname) => isExactOrNested(pathname, '/university')
   },

@@ -15,7 +15,6 @@ import { TeacherDetailsPage } from '../../pages/people/TeacherDetailsPage'
 import { ReportsPage } from '../../pages/reports/ReportsPage'
 import { SchedulePage } from '../../pages/schedule/SchedulePage'
 import { SettingsPage } from '../../pages/settings/SettingsPage'
-import { StudentPortalPage } from '../../pages/student-portal/StudentPortalPage'
 import { UniversityPage } from '../../pages/university/UniversityPage'
 import { RequireAuth } from './RequireAuth'
 
@@ -32,13 +31,6 @@ export function AppRouter() {
           <Route path="/people/students/:studentId" element={<StudentDetailsPage />} />
           <Route path="/people/teachers/:teacherId" element={<TeacherDetailsPage />} />
           <Route path="/people/employees/:employeeId" element={<EmployeeDetailsPage />} />
-          <Route path="/student" element={<Navigate to="/student/schedule" replace />} />
-          <Route path="/student/schedule" element={<StudentPortalPage section="schedule" />} />
-          <Route path="/student/curriculum" element={<StudentPortalPage section="curriculum" />} />
-          <Route path="/student/teachers" element={<StudentPortalPage section="teachers" />} />
-          <Route path="/student/group" element={<StudentPortalPage section="group" />} />
-          <Route path="/student/journal" element={<StudentPortalPage section="journal" />} />
-          <Route path="/student/performance" element={<StudentPortalPage section="performance" />} />
           <Route path="/filters" element={<FiltersPage />} />
           <Route path="/filters/students" element={<Navigate to="/filters" replace />} />
           <Route path="/filters/teachers" element={<Navigate to="/filters" replace />} />

@@ -6,7 +6,6 @@ import { useAuth } from '../../app/providers/AuthProvider'
 import {
   canAccessNavigationItem,
   mainNavigationItems,
-  studentNavigationItems,
   systemNavigationItems
 } from '../../shared/navigation/appNavigation'
 import {
@@ -33,16 +32,13 @@ export function AppSidebar(): ReactElement {
     return window.localStorage.getItem(sidebarCollapsedStorageKey) === 'true'
   })
 
-  const isStudentProfile = auth.user?.profileType === 'student'
-  const navigationItems = isStudentProfile ? studentNavigationItems : mainNavigationItems
-
-  const visibleMainItems = navigationItems.filter((item) =>
+  const visibleMainItems = mainNavigationItems.filter((item) =>
     canAccessNavigationItem(auth.user, item)
   )
 
-  const visibleSystemItems = isStudentProfile
-    ? []
-    : systemNavigationItems.filter((item) => canAccessNavigationItem(auth.user, item))
+  const visibleSystemItems = systemNavigationItems.filter((item) =>
+    canAccessNavigationItem(auth.user, item)
+  )
 
   function toggleSidebar(): void {
     setIsSidebarCollapsed((currentValue) => {
@@ -87,9 +83,7 @@ export function AppSidebar(): ReactElement {
 
         <SidebarContent className={isSidebarCollapsed ? 'px-2 py-3' : undefined}>
           <SidebarSection>
-            {!isSidebarCollapsed ? (
-              <SidebarSectionTitle>{isStudentProfile ? 'Студент' : 'Основное'}</SidebarSectionTitle>
-            ) : null}
+            {!isSidebarCollapsed ? <SidebarSectionTitle>Основное</SidebarSectionTitle> : null}
 
             <div className="grid gap-1">
               {visibleMainItems.map((item) => (

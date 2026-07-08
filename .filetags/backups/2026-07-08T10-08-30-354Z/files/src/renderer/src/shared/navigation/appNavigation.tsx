@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import {
   FiActivity,
-  FiAward,
   FiBarChart2,
   FiBookOpen,
   FiCalendar,
@@ -12,7 +11,6 @@ import {
   FiMapPin,
   FiSettings,
   FiShield,
-  FiUserCheck,
   FiUsers
 } from 'react-icons/fi'
 import type { AuthUser } from '../../../../shared/types/auth'
@@ -28,56 +26,6 @@ export interface AppNavigationItem {
   permissions?: string[]
 }
 
-export const studentNavigationItems: AppNavigationItem[] = [
-  {
-    title: 'Расписание',
-    description: 'Моё расписание и просмотр расписания других групп',
-    path: '/student/schedule',
-    icon: <FiCalendar />,
-    module: 'schedule',
-    profileTypes: ['student']
-  },
-  {
-    title: 'Учебный план',
-    description: 'Подробный учебный план специальности по курсам',
-    path: '/student/curriculum',
-    icon: <FiBookOpen />,
-    module: 'academic_process',
-    profileTypes: ['student']
-  },
-  {
-    title: 'Преподаватели',
-    description: 'Мои преподаватели и их полное расписание',
-    path: '/student/teachers',
-    icon: <FiUserCheck />,
-    module: 'schedule',
-    profileTypes: ['student']
-  },
-  {
-    title: 'Моя группа',
-    description: 'Факультет, специальность, группа, куратор и однокурсники',
-    path: '/student/group',
-    icon: <FiUsers />,
-    module: 'academic_process',
-    profileTypes: ['student']
-  },
-  {
-    title: 'Журнал',
-    description: 'Темы занятий, посещаемость и контрольные',
-    path: '/student/journal',
-    icon: <FiClipboard />,
-    module: 'learning_journal',
-    profileTypes: ['student']
-  },
-  {
-    title: 'Успеваемость',
-    description: 'Оценки, итоговые элементы и зачётная книжка',
-    path: '/student/performance',
-    icon: <FiAward />,
-    module: 'reports',
-    profileTypes: ['student']
-  }
-]
 export const mainNavigationItems: AppNavigationItem[] = [
   {
     title: 'Главная',
@@ -168,11 +116,7 @@ export const systemNavigationItems: AppNavigationItem[] = [
   }
 ]
 
-export const allNavigationItems = [
-  ...studentNavigationItems,
-  ...mainNavigationItems,
-  ...systemNavigationItems
-]
+export const allNavigationItems = [...mainNavigationItems, ...systemNavigationItems]
 
 export function getNavigationItemByPath(pathname: string): AppNavigationItem | undefined {
   return allNavigationItems.find((item) => item.path === pathname)
@@ -180,9 +124,6 @@ export function getNavigationItemByPath(pathname: string): AppNavigationItem | u
 
 export function canAccessNavigationItem(user: AuthUser | null, item: AppNavigationItem): boolean {
   if (!user) {
-    return false
-  }
-  if (item.profileTypes && !item.profileTypes.includes(user.profileType)) {
     return false
   }
 
